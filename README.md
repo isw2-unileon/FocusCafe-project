@@ -1,3 +1,45 @@
+# FocusCafe
+**Where studying fuels progress.**
+
+## The idea
+FocusCafe is a gamified web platform where every user owns a virtual café. 
+
+**No studying. No energy. No growth.**
+
+Users can earn "energy" by completing focused study sessions. After each session, an AI generates questions based on the selected topic to verify real understanding. Correct answers reward energy, which can then be used to fulfill customer orders and level up.
+
+If you run out of "energy", the only way to get back into the game is by studying.
+
+## How it works
+- Users upload their own study materials
+- AI generates comprehension questions
+- Energy-based progression system
+- Leveling and gamified growth
+- Real-time collaborative café rooms
+
+Multiple users can join the same café "salon" and manage it together, contributing energy earned from their individual study sessions.
+
+## Built-in Motivation Engine
+A global leaderboard turns studying into a competitive challenge. Ranking is based on AI-validated performance.
+
+Users can track their position based on real study performance, not just time logged.
+
+**The more you truly understand, the higher you climb**.
+
+## Educational Purposes
+This platform promotes:
+- Active recall
+- Time-blocked study sessions
+- Immediate feedback
+- Motivation through gamification
+- Collaborative learning dynamics
+
+It transforms long hours of studying into engaging and interactive progress.
+
+
+---
+---
+
 # Monorepo Template: Go + React/Vite
 
 A monorepo template for full-stack applications with a **Go** backend and a **React + TypeScript + Vite** frontend.
