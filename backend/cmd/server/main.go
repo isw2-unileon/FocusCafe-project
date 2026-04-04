@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/isw2-unileon/proyect-scaffolding/backend/internal/config"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/config"
 )
 
 var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
