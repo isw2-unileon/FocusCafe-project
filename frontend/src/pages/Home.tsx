@@ -1,13 +1,14 @@
 import { useNavigate } from "react-router-dom";
-import { Zap, Coffee, Trophy, Users, BookOpen, ChevronRight } from 'lucide-react';
+import { Zap, BookOpen, ChevronRight } from 'lucide-react';
 import { StatCard } from "../components/StatCard";
-import { useGame } from "@/context/GameContext";
+import { useGame } from "@/context/useGame";
+import { OrderList } from "@/components/userOrders";
 
 const Home = () => {
     const {user, loading} = useGame();
     const navigate = useNavigate();
     
-    if(loading) return <div className="min-h-screen flex items-center justify-center">Loading Caffe Salon...</div>;
+    if(loading) return <div className="min-h-screen flex items-center justify-center">Loading Cafeteria...</div>;
     if(!user) return <div className="min-h-screen flex items-center justify-center">User data not found. Please log in again.</div>;
 
 
@@ -34,8 +35,12 @@ const Home = () => {
                 {/* Stats Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                     <StatCard icon={<Zap className="text-yellow-500" size={20}/>} label="Energy" value={`${user.energy} / ${user.max_energy}`} color="bg-yellow-50" />
-                    {/*<StatCard icon={<Coffee className="text-orange-700" size={20}/>} label="Orders" value={ordersReady} color="bg-orange-50" />
-                    <StatCard icon={<Trophy className="text-amber-500" size={20}/>} label="Ranking" value={ranking} color="bg-amber-50" />
+                    <section className="md:col-span-2">
+                        <div className="bg-white rounded-2xl shadow-sm border border-amber-100 overflow-hidden">
+                            <OrderList />
+                        </div>
+                    </section>
+                    {/*<StatCard icon={<Trophy className="text-amber-500" size={20}/>} label="Ranking" value={`${user.ranking}`} color="bg-amber-50" />
                     <StatCard icon={<Users className="text-blue-500" size={20}/>} label="Online" value={onlineUsers} color="bg-blue-50" />*/}
                 </div>
 

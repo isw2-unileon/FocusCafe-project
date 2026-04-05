@@ -3,7 +3,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 
 import Home from '@/pages/Home';
-import { GameProvider } from "./context/GameContext";
+import { GameProvider } from "./context/GameProvider";
 //import Login from '@/pages/Login';
 //import Register from '@/pages/Register';
 //import Dashboard from '@/pages/Dashboard';
@@ -24,7 +24,7 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/home" element={<Home />} />
               {/*<Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/studySession" element={<StudySession />} />
+              <Route path="/study" element={<StudySession />} />
               <Route path="/adminDashboard" element={<AdminDashboard />} />*/}
             </Route>
 
