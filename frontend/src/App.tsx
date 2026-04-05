@@ -3,6 +3,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 
 import Home from '@/pages/Home';
+import { GameProvider } from "./context/GameContext";
 //import Login from '@/pages/Login';
 //import Register from '@/pages/Register';
 //import Dashboard from '@/pages/Dashboard';
@@ -11,24 +12,26 @@ import Home from '@/pages/Home';
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/*Public routes*/}
-        
-        {/*<Route path="/" element={<Login />} />
-        <Route path="/register" element={<Register />} />*/}
-        
-        {/*Private routes*/}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/home" element={<Home />} />
-            {/*<Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/studySession" element={<StudySession />} />
-            <Route path="/adminDashboard" element={<AdminDashboard />} />*/}
-          </Route>
+    <GameProvider>
+      <BrowserRouter>
+        <Routes>
+          {/*Public routes*/}
+          <Route path="/" element={<Navigate to="/home" />} />
+          {/*<Route path="/" element={<Login />} />
+          <Route path="/register" element={<Register />} />*/}
+          
+          {/*Private routes*/}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/home" element={<Home />} />
+              {/*<Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/studySession" element={<StudySession />} />
+              <Route path="/adminDashboard" element={<AdminDashboard />} />*/}
+            </Route>
 
 
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </BrowserRouter>
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </BrowserRouter>
+    </GameProvider>
   );
 }
