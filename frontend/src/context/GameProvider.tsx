@@ -1,4 +1,4 @@
-import {useState, useEffect, ReactNode } from "react";
+import {useState, useEffect, ReactNode, useCallback } from "react";
 import { UserStats } from "@/types/user";
 import { GameContext } from "./GameContext";
 import { UserService } from "@/services/user_service";
@@ -16,7 +16,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     const [orders, setOrders] = useState<UserOrder[]>([]);
 
     //Load user data from backend (or mock) when the provider mounts
-    const loadUserData = async ()=>{
+    const loadUserData = useCallback(async ()=>{
         try{
 
             //TO-DO: Replace with actual user ID from authentication context
@@ -33,7 +33,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     //
     const handleCompleteOrder = async (orderId: number) => {

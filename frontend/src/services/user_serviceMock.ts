@@ -38,11 +38,11 @@ export class UserServiceMock implements IUserService {
         }
     ];
 
-    async getRemoteUserStats(token: string): Promise<UserStats> {
+    async getRemoteUserStats(_token: string): Promise<UserStats> {
         return this.mockUserStats;
     }
 
-    async getUserOrders(token: string): Promise<UserOrder[]> {
+    async getUserOrders(_token: string): Promise<UserOrder[]> {
         //console.log("Mock: Getting orders:", token);
         // Simulate network delay
         //await new Promise(resolve => setTimeout(resolve, 10));
