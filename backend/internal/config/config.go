@@ -26,7 +26,7 @@ func Load() *Config {
 		Port:            getEnv("PORT", "8080"),
 		GinMode:         getEnv("GIN_MODE", "release"),
 		CORSAllowOrigin: getEnv("CORS_ALLOW_ORIGIN", "*"),
-		DatabaseURL:     getEnv("DATABASE_URL", "postgresql://postgres:inso2026focuscafe@db.uhetjanenchdncjtmybm.supabase.co:5432/postgres"),
+		DatabaseURL:     getEnv("DATABASE_URL", "postgresql://postgres.uhetjanenchdncjtmybm:inso2026focuscafe@aws-1-eu-west-1.pooler.supabase.com:5432/postgres"),
 	}
 }
 
