@@ -13,11 +13,12 @@ type Config struct {
 	Port            string
 	GinMode         string
 	CORSAllowOrigin string
+	DatabaseURL     string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
 func Load() *Config {
-	err := godotenv.Load()
+	err := godotenv.Load("../../../.env")
 	if err != nil {
 		log.Printf("No .env file found, using environment variables")
 	}
@@ -25,6 +26,7 @@ func Load() *Config {
 		Port:            getEnv("PORT", "8080"),
 		GinMode:         getEnv("GIN_MODE", "release"),
 		CORSAllowOrigin: getEnv("CORS_ALLOW_ORIGIN", "*"),
+		DatabaseURL:     getEnv("DATABASE_URL", "postgresql://postgres:inso2026focuscafe@db.uhetjanenchdncjtmybm.supabase.co:5432/postgres"),
 	}
 }
 
