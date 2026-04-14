@@ -8,7 +8,7 @@ import (
 type Quiz struct {
 	ID          uint64    `json:"id" gorm:"primaryKey;autoIncrement"`
 	SessionID   uint64    `json:"session_id" gorm:"not null"`
-	GeneratedAt time.Time `json:"generated_at" gorm:"default:now()"`
+	GeneratedAt time.Time `json:"generated_at" gorm:"default:CURRENT_TIMESTAMP"`
 
 	// Relationships
 	Session   StudySession `json:"-" gorm:"foreignKey:SessionID"`

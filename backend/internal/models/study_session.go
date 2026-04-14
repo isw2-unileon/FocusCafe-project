@@ -11,7 +11,7 @@ type StudySession struct {
 	ID              uint64     `json:"id" gorm:"primaryKey;autoIncrement"`
 	UserID          uuid.UUID  `json:"user_id" gorm:"not null;type:uuid"`
 	MaterialID      uint64     `json:"material_id" gorm:"not null"`
-	DurationMinutes int        `json:"duration_minutes" gorm:"not null"`
+	DurationMinutes int64      `json:"duration_minutes" gorm:"not null"`
 	StartTime       time.Time  `json:"start_time" gorm:"not null"`
 	EndTime         *time.Time `json:"end_time"`
 	Status          string     `json:"status" gorm:"not null"`

@@ -29,18 +29,6 @@ func main() {
 		log.Fatalf("Migration failed: %v", err)
 	}
 
-	log.Println("Seeding Cafe Orders...")
-	orders := []models.CafeOrder{
-		{Name: "Espresso", Category: "Coffee", EnergyCost: 20, RewardXP: 10},
-		{Name: "Cappuccino", Category: "Coffee", EnergyCost: 40, RewardXP: 25},
-		{Name: "Croissant", Category: "Snack", EnergyCost: 30, RewardXP: 15},
-		{Name: "Full Breakfast", Category: "Meal", EnergyCost: 100, RewardXP: 60},
-	}
-
-	for _, o := range orders {
-		db.Where(models.CafeOrder{Name: o.Name}).FirstOrCreate(&o)
-	}
-
 	log.Println("Seeding Sample User...")
 	// Note: In a real scenario, this UUID should match an existing auth.user id in Supabase
 	sampleID, _ := uuid.Parse("00000000-0000-0000-0000-000000000001")
