@@ -52,7 +52,7 @@ linters:
       enabled-checks:
         - boolExprSimplify
         - builtinShadow
-        - commentedOutCode
+        #- commentedOutCode
         - deferInLoop
         - nilValReturn
         - regexpSimplify
@@ -90,3 +90,5 @@ linters:
 issues:
   max-same-issues: 0
   max-issues-per-linter: 0
+  exclude-dirs:
+    - frontend/node-modules

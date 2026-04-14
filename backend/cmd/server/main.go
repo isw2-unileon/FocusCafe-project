@@ -10,28 +10,56 @@ import (
 	"syscall"
 	"time"
 
+	// "github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/config"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/handlers"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/supabase"
 )
 
 var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 func main() {
 	ctx := context.Background()
-
 	cfg := config.Load()
-
 	gin.SetMode(cfg.GinMode)
 
+	// Create jwt adapter
+	adapterJWT, err := supabase.NewJWTAdapter(cfg.SupabaseJWTSecret)
+	if err != nil {
+		logger.Error("failed to create jwt adapter", "error", err)
+		os.Exit(1)
+	}
+
 	r := gin.New()
+
+	// r.Use(cors.New(cors.Config{
+	// 	AllowOrigins: []string{"http://localhost:5173"},
+	// 	AllowMethods: []string{"POST", "GET", "OPTIONS"},
+	// 	AllowHeaders: []string{"Content-Type", "Authorization"},
+	// }))
+
 	r.Use(gin.Logger(), gin.Recovery())
+
+	// h := &handlers.Handler{
+	// 	SupabaseURL: cfg.SupabaseURL,
+	// 	SupabaseKey: cfg.SupabaseKey,
+	// 	Auth:        adapterJWT,
+	// }
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
+	// Public routes
 	api := r.Group("/api")
-	api.GET("/hello", func(c *gin.Context) {
+	// api.POST("/login", h.Login)
+	// api.POST("/register", h.Register)
+
+	// Protected route
+	protected := api.Group("/")
+	protected.Use(handlers.Auth(adapterJWT))
+	protected.GET("/hello", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
 	})
 
