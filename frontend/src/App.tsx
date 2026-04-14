@@ -3,22 +3,22 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 
 import Home from '@/pages/Home';
-import { GameProvider } from "./context/GameProvider";
-//import Login from '@/pages/Login';
-//import Register from '@/pages/Register';
+//import { GameProvider } from "./context/GameProvider";
+import Login from '@/pages/Login';
+import Register from '@/pages/Register';
 //import Dashboard from '@/pages/Dashboard';
 //import StudySession from '@/pages/StudySession';
 //import AdminDashboard from '@/pages/AdminDashboard';
 
 export default function App() {
   return (
-    <GameProvider>
+    //<GameProvider>
       <BrowserRouter>
         <Routes>
           {/*Public routes*/}
-          <Route path="/" element={<Navigate to="/home" />} />
-          {/*<Route path="/" element={<Login />} />
-          <Route path="/register" element={<Register />} />*/}
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           
           {/*Private routes*/}
             <Route element={<ProtectedRoute />}>
@@ -32,6 +32,6 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </BrowserRouter>
-    </GameProvider>
+    //</GameProvider>
   );
 }
