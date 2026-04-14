@@ -2,12 +2,12 @@ import {useState, useEffect, ReactNode, useCallback } from "react";
 import { UserStats } from "@/types/user";
 import { GameContext } from "./GameContext";
 import { UserService } from "@/services/user_service";
-import { UserServiceMock } from "@/services/user_serviceMock";
+//import { UserServiceMock } from "@/services/user_serviceMock";
 import { UserOrder } from "@/types/user-order";
 
 //TO-DO: Implement authentication context to get actual user ID and token instead of using localStorage and mock data
 const nodeEnv = process.env.NODE_ENV || "development";
-const userServ = nodeEnv === "production" ? new UserService() : new UserServiceMock();
+//const userServ = nodeEnv === "production" ? new UserService() : new UserServiceMock();
 console.log("Using user service:", nodeEnv === "production" ? "UserService" : "UserServiceMock");
 
 export const GameProvider = ({ children }: { children: ReactNode }) => {
@@ -22,12 +22,12 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
             //TO-DO: Replace with actual user ID from authentication context
             const userId = Number(localStorage.getItem('userId')) || 123;
 
-            const [stats, userOrders] = await Promise.all([
+            /*const [stats, userOrders] = await Promise.all([
                 userServ.getRemoteUserStats(`token_for_user_${userId}`),
                 userServ.getUserOrders(`token_for_user_${userId}`)
             ]);
             setOrders(userOrders);
-            setUser(stats);
+            setUser(stats);*/
         } catch (error) {
             console.error("Error loading user data:", error);
         } finally {
@@ -36,6 +36,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     //
+    /*
     const handleCompleteOrder = async (orderId: number) => {
         try{
             await userServ.completeOrder(orderId, `token_for_user_${user?.id}`);
@@ -45,6 +46,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
             console.error("Error completing order:", error);
         }
     };
+
+
 
     useEffect(() => {
         loadUserData()}, [loadUserData]);
@@ -58,5 +61,5 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
             refresh: loadUserData}}>
             {children}
         </GameContext.Provider>
-    );
+    );*/
 };
