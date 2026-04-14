@@ -8,6 +8,9 @@ interface GameContextType {
     completeOrder: (orderId: number) => Promise<void>;
     loading: boolean;
     refresh: () => void; //function to refresh user data
+    addXP: (amount: number) => Promise<void>;
 }
+
+
 
 export const GameContext = createContext<GameContextType | undefined>(undefined);

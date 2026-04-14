@@ -46,6 +46,19 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const addXP = async (amount: number) => {
+        try {
+            // Opción A: Llamada real al backend de Go [cite: 16, 21]
+            //await UserService.updateXP(user.id, amount); 
+            
+            // Opción B: Actualización local para pruebas
+            console.log(`Adding ${amount} XP to user...`);
+            await loadUserData(); // refresh user data to get updated XP from backend (or mock) after adding XP
+        } catch (error) {
+            console.error("Error updating XP:", error);
+        }
+    };
+
     useEffect(() => {
         loadUserData()}, [loadUserData]);
 
@@ -55,7 +68,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
             orders,
             completeOrder: handleCompleteOrder,
             loading, 
-            refresh: loadUserData}}>
+            refresh: loadUserData,
+            addXP}}>
             {children}
         </GameContext.Provider>
     );
