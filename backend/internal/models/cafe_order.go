@@ -1,12 +1,10 @@
 package models
 
-import "gorm.io/gorm"
-
 // CafeOrder represents an item available in the cafe menu.
 type CafeOrder struct {
-	gorm.Model
-	Name       string `json:"name"`
+	ID         uint64 `json:"id" gorm:"primaryKey;autoIncrement"`
+	Name       string `json:"name" gorm:"not null"`
 	Category   string `json:"category"` // e.g., "Coffee", "Snack", "Meal"
-	EnergyCost int    `json:"energy_cost"`
-	RewardXP   int    `json:"reward_xp"`
+	EnergyCost int    `json:"energy_cost" gorm:"not null"`
+	RewardXP   int    `json:"reward_xp" gorm:"not null"`
 }

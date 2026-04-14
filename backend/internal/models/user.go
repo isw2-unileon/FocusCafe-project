@@ -1,13 +1,27 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"github.com/google/uuid"
+	"gorm.io/gorm"
+)
 
-// User represents a student in the system with their game statistics.
+// User represents the public.users table in Supabase.
+// It is linked to auth.users via ID.
 type User struct {
+	ID        uuid.UUID `json:"id" gorm:"primaryKey;type:uuid"`
+	FirstName string    `json:"first_name" gorm:"not null"`
+	LastName  string    `json:"last_name" gorm:"not null"`
+	Username  string    `json:"username" gorm:"not null"`
+	Email     string    `json:"email" gorm:"unique;not null"`
+	Role      string    `json:"role" gorm:"default:'user'"`
+	
+	// Relationships
+	Progress *UserProgress `json:"progress,omitempty" gorm:"foreignKey:UserID"`
+	Orders   []UserOrder   `json:"orders,omitempty" gorm:"foreignKey:UserID"`
+	
 	gorm.Model
-	Name      string      `json:"name"`
-	Energy    int         `json:"energy" gorm:"default:500"`
-	MaxEnergy int         `json:"max_energy" gorm:"default:500"`
-	Level     int         `json:"level" gorm:"default:1"`
-	Orders    []UserOrder `json:"orders,omitempty" gorm:"foreignKey:UserID"`
+}
+
+func (User) TableName() string {
+	return "users"
 }
