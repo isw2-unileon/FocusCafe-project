@@ -1,9 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import {useNavigate} from "react-router-dom";
-import {BookOpen, Clock, Upload, CheckCircle2, AlertCicle, Coffee, Brain} from 'lucide-react';
+import {BookOpen, Clock, Upload, CheckCircle2, Coffee, Brain} from 'lucide-react';
 import { useGame } from "@/context/useGame";
 
 type SessionState = 'SETUP' |'STUDYING'|'QUIZ'|'RESULTS';
+
+interface QuizQuestion {
+    question: string;
+    options: string[];
+    correct: number;
+}
 
 const StudySession = () => {
     const {user, addXP} = useGame();
@@ -12,11 +18,11 @@ const StudySession = () => {
     // Form states:
     const [state, setState] = useState<SessionState>('SETUP');
     const [files, setFiles] = useState<FileList | null>(null);
-    cosnt [studyMinutes, setStudyMinutes] = useState(25);
+    const [studyMinutes, setStudyMinutes] = useState(25); // Default to 25 minutes
     const [timeLeft, setTimeLeft] = useState(0);
 
     // Quiz states:
-    const [quiz, setQuiz] = useState<any[]>([]);
+    const [quiz, setQuiz] = useState<QuizQuestion[]>([]);
     const [userAnswers, setUserAnswers] = useState<number[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
 
@@ -63,7 +69,7 @@ const StudySession = () => {
     };
 
     const handleFinishQuiz = () => {
-        const correctAnswers = userAnswers.filter((ans, i) => ans === quiz[i].correct).length;
+        const correctAnswers = userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correct).length;
         const score = correctAnswers / quiz.length;
 
         if (score >= 0.75) { // If user scores 75% or higher, they earn XP. It could be adjusted based on difficulty or other factors.
@@ -163,7 +169,7 @@ const StudySession = () => {
                             <CheckCircle2 size={48} />
                         </div>
                         <h2 className="text-4xl font-black mb-2">Session Complete!</h2>
-                        <p className="text-stone-500 mb-8 font-medium">You scored {userAnswers.filter((ans, i) => ans === quiz[i].correct).length} / {quiz.length}</p>
+                        <p className="text-stone-500 mb-8 font-medium">You scored {userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correct).length} / {quiz.length}</p>
                         
                         <div className="bg-orange-50 border border-orange-100 p-6 rounded-2xl mb-8">
                             <p className="text-orange-800 font-bold text-lg">+100 XP Earned!</p>
