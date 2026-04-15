@@ -1,57 +1,12 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Coffee, LogIn } from 'lucide-react';
+import { useAuth } from '../context/useAuth';
 
 export default function Login() {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const navigate = useNavigate();
-
-
-    const handleLogin = async () => {
-        
-        try {
-            const res = await fetch('http://localhost:8081/api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-            });
-
-            const data = await res.json();
-
-            
-            console.log("Respuesta completa del backend:", data);
-
-           /* const provider = data?.user?.app_metadata?.provider 
-                          || data?.user?.app_metadata?.providers?.[0];
-
-            if (provider !== 'email') {
-               
-                window.location.href = 'http://localhost:8081/api/auth/google';
-                return;
-            } 
-*/
-            if (!res.ok) {
-                setError(data.error);
-                return;
-            }
-
-            localStorage.setItem('token', data.token);
-            const token = localStorage.getItem('token'); 
-            console.log(token); 
-            
-            
-            navigate('/home');
-
-        } catch {
-            setError('No se pudo conectar con el servidor');
-        }
-    };
-
-    const handleGoogleLogin = () => {
-      window.location.href = 'http://localhost:8081/api/auth/google';
-    };
+  const [email, setEmail] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
+  const { login, loginWithGoogle, error } = useAuth();
 
   return (
     <div className="min-h-screen bg-orange-50 flex items-center justify-center p-4">
@@ -66,7 +21,6 @@ export default function Login() {
         </div>
 
         <div className="space-y-4">
-
           {error && (
             <p className="text-red-500 text-sm text-center font-medium">{error}</p>
           )}
@@ -86,20 +40,22 @@ export default function Login() {
           />
           <button
             type="button"
-            onClick={handleLogin}
+            onClick={() => login(email, password)}
             className="w-full bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-orange-700 transition-all flex items-center justify-center gap-2"
           >
             <LogIn size={20} />
             Entrar al Café
           </button>
+
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-gray-200" />
             <span className="text-gray-400 text-sm">o continúa con</span>
             <div className="flex-1 h-px bg-gray-200" />
           </div>
+
           <button
             type="button"
-            onClick={handleGoogleLogin}
+            onClick={loginWithGoogle}
             className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl border-2 border-gray-200 bg-white hover:bg-gray-50 transition-all font-bold text-gray-700"
           >
             <svg width="20" height="20" viewBox="0 0 18 18">
@@ -110,6 +66,7 @@ export default function Login() {
             </svg>
             Entra con Google
           </button>
+
           <Link
             to="/register"
             className="block w-full text-center text-orange-800 text-sm font-bold opacity-60 hover:opacity-100 transition-opacity"
