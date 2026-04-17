@@ -2,6 +2,8 @@ version: "2"
 
 run:
   timeout: 5m
+  skip-dirs:
+    - frontend/node_modules
 
 linters:
   enable:
@@ -90,5 +92,3 @@ linters:
 issues:
   max-same-issues: 0
   max-issues-per-linter: 0
-  exclude-dirs:
-    - frontend/node-modules
