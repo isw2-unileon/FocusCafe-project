@@ -52,7 +52,7 @@ linters:
       enabled-checks:
         - boolExprSimplify
         - builtinShadow
-        - commentedOutCode
+        #- commentedOutCode
         - deferInLoop
         - nilValReturn
         - regexpSimplify

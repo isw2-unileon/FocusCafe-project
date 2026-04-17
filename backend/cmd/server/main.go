@@ -14,16 +14,23 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/config"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/handlers"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/supabase"
 )
 
 var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 func main() {
 	ctx := context.Background()
-
 	cfg := config.Load()
 
 	gin.SetMode(cfg.GinMode)
+
+	// Create jwt adapter
+	adapterJWT, err := supabase.NewJWTAdapter(cfg.SupabaseURL)
+	if err != nil {
+		logger.Error("failed to create jwt adapter", "error", err)
+		os.Exit(1)
+	}
 
 	r := gin.New()
 
@@ -38,7 +45,7 @@ func main() {
 	h := &handlers.Handler{
 		SupabaseURL: cfg.SupabaseURL,
 		SupabaseKey: cfg.SupabaseKey,
-		//Auth:        adapterJWT,
+		Auth:        adapterJWT,
 	}
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -47,17 +54,15 @@ func main() {
 	// Public routes
 	api := r.Group("/api")
 	api.POST("/login", h.Login)
-	//api.POST("/register", h.Register)
+	// api.POST("/register", h.Register)
 	api.GET("/auth/google", h.GoogleAuth)
 
 	// Protected route
 	protected := api.Group("/")
-	//protected.Use(handlers.Auth(adapterJWT))
-	{
-		protected.GET("/hello", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
-		})
-	}
+	protected.Use(handlers.Auth(adapterJWT))
+	protected.GET("/hello", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
+	})
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
