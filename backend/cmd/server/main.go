@@ -22,10 +22,11 @@ var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 func main() {
 	ctx := context.Background()
 	cfg := config.Load()
+
 	gin.SetMode(cfg.GinMode)
 
 	// Create jwt adapter
-	adapterJWT, err := supabase.NewJWTAdapter(cfg.SupabaseJWTSecret)
+	adapterJWT, err := supabase.NewJWTAdapter(cfg.SupabaseURL)
 	if err != nil {
 		logger.Error("failed to create jwt adapter", "error", err)
 		os.Exit(1)

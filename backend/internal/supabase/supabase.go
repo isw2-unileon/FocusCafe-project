@@ -1,59 +1,81 @@
 package supabase
 
 import (
-	"crypto/ecdsa"
+	"context"
 	"fmt"
+	"time"
 
+	"github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/auth"
 )
 
 // JWTAdapter handles Supabase JWT verification
 type JWTAdapter struct {
-	publicKey *ecdsa.PublicKey
+	jwks keyfunc.Keyfunc
 }
 
 // NewJWTAdapter creates a new instance of JWTAdpater
-func NewJWTAdapter(pemString string) (*JWTAdapter, error) {
-	// Parse public key
-	key, err := jwt.ParseECPublicKeyFromPEM([]byte(pemString))
-	if err != nil {
-		return nil, fmt.Errorf("error parsing public key: %w", err)
+func NewJWTAdapter(supabaseURL string) (*JWTAdapter, error) {
+	if supabaseURL == "" {
+		return nil, fmt.Errorf("supabase URL is required")
 	}
-	return &JWTAdapter{publicKey: key}, nil
+
+	jwksURL := supabaseURL + "/auth/v1/.well-known/jwks.json"
+
+	// Search for the key
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// Download the key
+	jwks, err := keyfunc.NewDefaultCtx(ctx, []string{jwksURL})
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch keys from Supabase: %w", err)
+	}
+	return &JWTAdapter{jwks: jwks}, nil
 }
 
 // ValidateToken checks the validity of a given JWT string
 func (a *JWTAdapter) ValidateToken(tokenString string) (*auth.UserClaims, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// Verification of method ES256
-		if _, ok := token.Method.(*jwt.SigningMethodECDSA); !ok {
-			return nil, fmt.Errorf("unexpected signature method %v", token.Header["alg"])
-		}
-		return a.publicKey, nil
-	})
+	// Usamos ParseWithClaims (que es más potente que Parse)
+	parser := jwt.NewParser(
+		jwt.WithValidMethods([]string{"ES256", "RS256"}), // Obligamos a usar los métodos de Supabase
+	)
 
-	if err != nil || !token.Valid {
-		return nil, fmt.Errorf("invalid token")
+	token, err := parser.Parse(tokenString, a.jwks.Keyfunc)
+	if err != nil {
+		fmt.Printf("DEBUG: Error at parsing: %v\n", err)
+		return nil, err
+	}
+
+	if !token.Valid {
+		fmt.Println("False signature")
+		return nil, fmt.Errorf("token invalid signature")
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		return nil, fmt.Errorf("error in claims")
 	}
+	fmt.Printf("Extracted claims: %v\n", claims)
 
-	email, ok := claims["email"].(string)
-	if !ok {
-		email = ""
+	id, _ := claims["sub"].(string)
+	email, _ := claims["email"].(string)
+	role, _ := claims["role"].(string)
+
+	// // Extract rol frfom appMetadata
+	// var role string
+	// if appMetadata, ok := claims["app_metadata"].(map[string]any); ok {
+	// 	role, _ = appMetadata["role"].(string)
+	// }
+
+	if id == "" {
+		return nil, fmt.Errorf("token doesn't contain userId (sub)")
 	}
 
-	id, ok := claims["sub"].(string)
-
-	if !ok {
-		return nil, fmt.Errorf("token doesn't contain userId")
-	}
 	return &auth.UserClaims{
-		Email: email,
 		ID:    id,
+		Email: email,
+		Role:  role,
 	}, nil
 }
