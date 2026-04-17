@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	// "github.com/gin-contrib/cors"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/config"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/handlers"
@@ -34,28 +34,28 @@ func main() {
 
 	r := gin.New()
 
-	// r.Use(cors.New(cors.Config{
-	// 	AllowOrigins: []string{"http://localhost:5173"},
-	// 	AllowMethods: []string{"POST", "GET", "OPTIONS"},
-	// 	AllowHeaders: []string{"Content-Type", "Authorization"},
-	// }))
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: []string{"http://localhost:5173"},
+		AllowMethods: []string{"POST", "GET", "OPTIONS"},
+		AllowHeaders: []string{"Content-Type", "Authorization"},
+	}))
 
 	r.Use(gin.Logger(), gin.Recovery())
 
-	// h := &handlers.Handler{
-	// 	SupabaseURL: cfg.SupabaseURL,
-	// 	SupabaseKey: cfg.SupabaseKey,
-	// 	Auth:        adapterJWT,
-	// }
-
+	h := &handlers.Handler{
+		SupabaseURL: cfg.SupabaseURL,
+		SupabaseKey: cfg.SupabaseKey,
+		Auth:        adapterJWT,
+	}
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
 	// Public routes
 	api := r.Group("/api")
-	// api.POST("/login", h.Login)
+	api.POST("/login", h.Login)
 	// api.POST("/register", h.Register)
+	api.GET("/auth/google", h.GoogleAuth)
 
 	// Protected route
 	protected := api.Group("/")

@@ -5,6 +5,11 @@ import { UserOrder } from "@/types/user-order";
 const baseUrl = "/api/users";
 
 export class UserService implements IUserService {
+    
+    static updateXP(id: number, amount: number) {
+        throw new Error("Method not implemented.");
+    }
+
     async getRemoteUserStats(token: string): Promise<UserStats> {
         const headers: HeadersInit = {
         "Content-Type": "application/json",

@@ -37,9 +37,8 @@ func NewJWTAdapter(supabaseURL string) (*JWTAdapter, error) {
 
 // ValidateToken checks the validity of a given JWT string
 func (a *JWTAdapter) ValidateToken(tokenString string) (*auth.UserClaims, error) {
-	// Usamos ParseWithClaims (que es más potente que Parse)
 	parser := jwt.NewParser(
-		jwt.WithValidMethods([]string{"ES256", "RS256"}), // Obligamos a usar los métodos de Supabase
+		jwt.WithValidMethods([]string{"ES256", "RS256"}),
 	)
 
 	token, err := parser.Parse(tokenString, a.jwks.Keyfunc)
