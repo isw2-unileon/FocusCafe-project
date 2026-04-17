@@ -42,6 +42,7 @@ export const OrderList = () => {
             console.log(`Order ${orderId} completed`);
         }catch(error){
             alert("Error completing order")
+            console.error(error)
         }
     };
 
