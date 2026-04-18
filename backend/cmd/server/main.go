@@ -54,7 +54,7 @@ func main() {
 	// Public routes
 	api := r.Group("/api")
 	api.POST("/login", h.Login)
-	// api.POST("/register", h.Register)
+	api.POST("/register", h.Register)
 	api.GET("/auth/google", h.GoogleAuth)
 
 	// Protected route
