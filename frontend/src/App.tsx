@@ -17,23 +17,23 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           {/*Public routes*/}
-          <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
+          {/*<Route path="/" element={<Login />} />
+          <Route path="/register" element={<Register />} />*/}
+          
           {/*Private routes*/}
             <Route element={<ProtectedRoute />}>
               <Route path="/home" element={<Home />} />
+              <Route path="/study" element={<StudySession />} />
               
               {/*<Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/study" element={<StudySession />} />
               <Route path="/adminDashboard" element={<AdminDashboard />} />*/}
             </Route>
-
-
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </BrowserRouter>
-
-    </AuthProvider>  );
+    </AuthProvider>
+  );
 }
