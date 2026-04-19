@@ -9,27 +9,30 @@ import { useAuth } from "@/context/AuthContext";
 import { UserStats } from "@/types/user";
 
 const Home = () => {
-    const {logout } = useAuth();
-    const [userStats, setUserStats] = useState<UserStats | null>(null);
+    const {logout, setUserStats } = useAuth();
+    const [userStats, setUserStatsHome] = useState<UserStats | null>(null);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     
-    getRemoteUserStats()
+    useEffect(() => {
+        getRemoteUserStats()
         .then((data) => {
             setUserStats(data);
+            setUserStatsHome(data);
         })
         .catch((err) => {
-            console.error("Error al cargar stats:", err);
+            console.error("Error loading stats:", err);
             navigate("/");
         })
         .finally(() => {
-            setLoading(false); // Se ejecuta tanto si va bien como si va mal
-    });
+            setLoading(false);
+        });
+    }, [navigate, setUserStats]);
 
 
     const handleLogout = () => {
-        logout(); // Limpia localStorage y estado
-        navigate('/'); // Al login
+        logout();
+        navigate('/');
     };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center">Loading Cafeteria...</div>;
@@ -62,7 +65,7 @@ const Home = () => {
                         </Link>
 
                         <button 
-                            onClick={() => navigate('/')} 
+                            onClick={handleLogout} 
                             className="text-stone-400 hover:text-red-500 font-bold text-sm transition-colors"
                         >
                             Logout
