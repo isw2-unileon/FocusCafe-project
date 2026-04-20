@@ -1,6 +1,13 @@
+import { createClient } from '@supabase/supabase-js';
+
 const API_URL = 'http://localhost:8081/api';
 
-// ---- LOGIN (ya lo tenías) ----
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
+
+// ---- LOGIN ----
 export const loginWithEmail = async (email: string, password: string): Promise<string> => {
   const res = await fetch(`${API_URL}/login`, {
     method: 'POST',
@@ -16,7 +23,7 @@ export const loginWithGoogle = (): void => {
   window.location.href = `${API_URL}/auth/google`;
 };
 
-// ---- REGISTER (nuevo) ----
+// ---- REGISTER ----
 export interface RegisterData {
   firstName: string;
   lastName: string;
@@ -42,14 +49,24 @@ export const registerWithEmail = async (data: RegisterData): Promise<void> => {
 };
 
 export const registerWithGoogle = async (): Promise<void> => {
-  const { createClient } = await import('@supabase/supabase-js');
-  const supabase = createClient(
-    import.meta.env.VITE_SUPABASE_URL,
-    import.meta.env.VITE_SUPABASE_ANON_KEY
-  );
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: 'http://localhost:5173/home' },
+    options: { redirectTo: 'http://localhost:5173/auth/callback' },
   });
   if (error) throw new Error(error.message);
+};
+
+// ---- SYNC (Google OAuth callback) ----
+export const syncGoogleUser = async (): Promise<boolean> => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return false;
+
+  const res = await fetch(`${API_URL}/auth/sync`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`
+    }
+  });
+
+  return res.ok;
 };

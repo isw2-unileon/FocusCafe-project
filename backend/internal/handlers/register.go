@@ -157,3 +157,36 @@ func (h *Handler) createUserProfile(userID string, req RegisterRequest) error {
 
 	return nil
 }
+
+// createUserProgress inserta el progreso inicial del usuario en public.user_progress
+func (h *Handler) createUserProgress(userID string) error {
+	body, _ := json.Marshal(map[string]any{
+		"user_id": userID,
+		"energy":  500,
+		"level":   1,
+	})
+
+	progressReq, _ := http.NewRequest(
+		http.MethodPost,
+		h.SupabaseURL+"/rest/v1/user_progress",
+		bytes.NewBuffer(body),
+	)
+	progressReq.Header.Set("Content-Type", "application/json")
+	progressReq.Header.Set("apikey", h.SupabaseKey)
+	progressReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", h.SupabaseKey))
+	progressReq.Header.Set("Prefer", "return=representation")
+
+	resp, err := http.DefaultClient.Do(progressReq)
+	if err != nil {
+		return fmt.Errorf("error al crear el progreso del usuario")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		var progressErr map[string]any
+		json.NewDecoder(resp.Body).Decode(&progressErr)
+		return fmt.Errorf("error al guardar el progreso")
+	}
+
+	return nil
+}
