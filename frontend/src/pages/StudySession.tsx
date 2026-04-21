@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {useNavigate} from "react-router-dom";
 import {BookOpen, Clock, Upload, CheckCircle2, Coffee, Brain} from 'lucide-react';
-import { useGame } from "@/context/useGame";
+import { useAuth } from '@/context/AuthContext';
 
 type SessionState = 'SETUP' |'STUDYING'|'QUIZ'|'RESULTS';
 
@@ -12,7 +12,7 @@ interface QuizQuestion {
 }
 
 const StudySession = () => {
-    const {user, addXP} = useGame();
+    const { userStats, isAuthenticated } = useAuth();
     const navigate = useNavigate();
 
     // Form states:
@@ -25,6 +25,12 @@ const StudySession = () => {
     const [quiz, setQuiz] = useState<QuizQuestion[]>([]);
     const [userAnswers, setUserAnswers] = useState<number[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
+
+    useEffect(() => {
+        if (!isAuthenticated) {
+            navigate('/');
+        }
+    }, [isAuthenticated, navigate]);
 
     // Timer logic:
     useEffect(() => {
@@ -73,10 +79,21 @@ const StudySession = () => {
         const score = correctAnswers / quiz.length;
 
         if (score >= 0.75) { // If user scores 75% or higher, they earn XP. It could be adjusted based on difficulty or other factors.
-            addXP(100); // Award 100 XP for passing the quiz. 
+            //addXP(100); // Award 100 XP for passing the quiz. 
         }
         setState('RESULTS');
     };
+
+    if (!userStats) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-stone-100">
+                <div className="text-center">
+                    <Coffee className="animate-bounce mx-auto text-orange-600 mb-4" size={40} />
+                    <p className="font-bold text-stone-600">Loading your profile...</p>
+                </div>
+            </div>
+        );
+    }
 
     return ( // Overall container with padding and background color
         <div className="min-h-screen bg-stone-100 p-6">
@@ -173,7 +190,7 @@ const StudySession = () => {
                         
                         <div className="bg-orange-50 border border-orange-100 p-6 rounded-2xl mb-8">
                             <p className="text-orange-800 font-bold text-lg">+100 XP Earned!</p>
-                            <p className="text-orange-600 text-sm">Keep it up to reach Level {user!.level + 1}</p>
+                            <p className="text-orange-600 text-sm">Keep it up to reach Level {userStats!.level + 1}</p>
                         </div>
 
                         <button onClick={() => navigate('/home')} className="bg-stone-900 text-white px-8 py-4 rounded-xl font-bold hover:bg-stone-800 transition-all">RETURN TO CAFETERIA</button>
