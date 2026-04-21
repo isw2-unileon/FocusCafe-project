@@ -1,44 +1,88 @@
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Zap, BookOpen, ChevronRight } from 'lucide-react';
 import { StatCard } from "../components/StatCard";
-import { useGame } from "@/context/useGame";
-import { OrderList } from "@/components/userOrders";
+import { getRemoteUserStats } from "@/services/user_service";
+import { OrderList } from "@/components/OrderList";
+import { AvatarDashboard } from "@/components/AvatarDashboard";
+import { useAuth } from "@/context/AuthContext";
+import { UserStats } from "@/types/user";
 
 const Home = () => {
-    const {user, loading} = useGame();
+    const {logout, setUserStats } = useAuth();
+    const [userStats, setUserStatsHome] = useState<UserStats | null>(null);
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     
-    if(loading) return <div className="min-h-screen flex items-center justify-center">Loading Cafeteria...</div>;
-    if(!user) return <div className="min-h-screen flex items-center justify-center">User data not found. Please log in again.</div>;
+    useEffect(() => {
+        getRemoteUserStats()
+        .then((data) => {
+            setUserStats(data);
+            setUserStatsHome(data);
+        })
+        .catch((err) => {
+            console.error("Error loading stats:", err);
+            navigate("/");
+        })
+        .finally(() => {
+            setLoading(false);
+        });
+    }, [navigate, setUserStats]);
 
 
-    //TO-DO: Add an icon for the Dashboard interface, maybe a graduation cap or a book?
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    };
+
+    if (loading) return <div className="min-h-screen flex items-center justify-center">Loading Cafeteria...</div>;
+
+    if (!userStats) return <div className="min-h-screen flex items-center justify-center text-center">
+        Expired session.<br/>Please, login again.
+    </div>;
+
+    const handleStudySessionClick = () => {
+        navigate("/study")
+    }
+
     return (
         <div className="min-h-screen bg-stone-100 p-6">
             <div className="max-w-5xl mx-auto">
                 {/* Header Section */}
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-2xl font-black text-stone-800 flex items-center gap-2">
-                        ☕ Welcome back, {`${user.name}`}!
+                        ☕ Welcome back, {`${userStats.name}`}!
                         <span className="text-sm font-medium bg-white px-3 py-1 rounded-full border">
-                            Level {`${user.level}`}
+                            Level {`${userStats.level}`}
                         </span>
                     </h2>
-                    <button 
-                        onClick={() => navigate('/')} 
-                        className="text-stone-400 hover:text-red-500 font-bold text-sm transition-colors"
-                    >
-                        Logout
-                    </button>
+                    <div className="flex items-center gap-4">
+                        <Link 
+                            to="/dashboard"
+                            className="transition-transform hover:scale-105 active:scale-95"
+                        >
+                            <AvatarDashboard/>
+                        </Link>
+
+                        <button 
+                            onClick={handleLogout} 
+                            className="text-stone-400 hover:text-red-500 font-bold text-sm transition-colors"
+                        >
+                            Logout
+                        </button>
+                    </div>
+                    
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                    <StatCard icon={<Zap className="text-yellow-500" size={20}/>} label="Energy" value={`${user.energy} / ${user.max_energy}`} color="bg-yellow-50" />
-                    <section className="md:col-span-2">
-                        <div className="bg-white rounded-2xl shadow-sm border border-amber-100 overflow-hidden">
-                            <OrderList />
-                        </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 items-stretch">
+                    <StatCard 
+                        icon={<Zap className="text-yellow-500" size={22}/>} 
+                        label="Energy" value={`${userStats.energy} / ${userStats.max_energy}`} 
+                        color="bg-yellow-50" 
+                    />
+                    <section className="col-span-2 md:col-span-2">
+                        <OrderList />
                     </section>
                     {/*<StatCard icon={<Trophy className="text-amber-500" size={20}/>} label="Ranking" value={`${user.ranking}`} color="bg-amber-50" />
                     <StatCard icon={<Users className="text-blue-500" size={20}/>} label="Online" value={onlineUsers} color="bg-blue-50" />*/}
@@ -58,7 +102,7 @@ const Home = () => {
                         onClick={() => navigate('/study')}
                         className="bg-white text-stone-900 px-12 py-6 rounded-2xl font-black text-xl shadow-2xl hover:bg-orange-600 hover:text-white transition-all flex items-center gap-3 active:scale-95 group"
                         >
-                        <BookOpen size={28} /> BREW COFFEE (STUDY)
+                        <BookOpen size={28}  onClick={handleStudySessionClick}/> BREW COFFEE (STUDY)
                         <ChevronRight className="group-hover:translate-x-1 transition-transform" />
                         </button>
                     </div>
