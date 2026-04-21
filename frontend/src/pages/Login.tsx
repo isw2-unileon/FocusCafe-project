@@ -17,7 +17,7 @@ export default function Login() {
             <Coffee size={40} className="text-orange-600" />
           </div>
           <h1 className="text-4xl font-black text-orange-900 tracking-tight">FocusCafe</h1>
-          <p className="text-orange-600 font-medium mt-1">Donde el estudio rinde frutos</p>
+          <p className="text-orange-600 font-medium mt-1">Where studying pays off</p>
         </div>
 
         <div className="space-y-4">
@@ -33,7 +33,7 @@ export default function Login() {
           />
           <input
             type="password"
-            placeholder="Contraseña"
+            placeholder="Password"
             value={password}
             onChange={e => setPassword(e.target.value)}
             className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-orange-400 outline-none transition-all"
@@ -44,12 +44,12 @@ export default function Login() {
             className="w-full bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-orange-700 transition-all flex items-center justify-center gap-2"
           >
             <LogIn size={20} />
-            Entrar al Café
+            Enter the Café
           </button>
 
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-gray-200" />
-            <span className="text-gray-400 text-sm">o continúa con</span>
+            <span className="text-gray-400 text-sm">or continue with</span>
             <div className="flex-1 h-px bg-gray-200" />
           </div>
 
@@ -64,14 +64,14 @@ export default function Login() {
               <path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332Z"/>
               <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.166 6.656 3.58 9 3.58Z"/>
             </svg>
-            Entra con Google
+            Sign in with Google
           </button>
 
           <Link
             to="/register"
             className="block w-full text-center text-orange-800 text-sm font-bold opacity-60 hover:opacity-100 transition-opacity"
           >
-            ¿Nuevo aquí? Regístrate
+            New here? Sign up
           </Link>
         </div>
 
