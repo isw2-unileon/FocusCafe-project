@@ -16,6 +16,7 @@ type Config struct {
 	SupabaseURL       string
 	SupabaseKey       string
 	SupabaseJWTSecret string
+	DatabaseURL       string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -32,6 +33,7 @@ func Load() *Config {
 		SupabaseURL:       getEnv("SUPABASE_URL", ""),
 		SupabaseKey:       getEnv("SUPABASE_KEY", ""),
 		SupabaseJWTSecret: getEnv("SUPABASE_JWT_SECRET", ""),
+		DatabaseURL:       getEnv("DATABASE_URL", ""),
 	}
 }
 
