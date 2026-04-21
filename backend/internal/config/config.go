@@ -21,12 +21,9 @@ type Config struct {
 
 // Load reads configuration from environment variables with sensible defaults.
 func Load() *Config {
-	err := godotenv.Load("../../../.env")
-	if err != nil {
-		log.Printf("No .env file found, using environment variables")
-	}
+	_ = godotenv.Load() // Busca en el directorio de ejecución
 
-	return &Config{
+	cfg := &Config{
 		Port:              getEnv("PORT", "8080"),
 		GinMode:           getEnv("GIN_MODE", "release"),
 		CORSAllowOrigin:   getEnv("CORS_ALLOW_ORIGIN", "*"),
@@ -35,6 +32,10 @@ func Load() *Config {
 		SupabaseJWTSecret: getEnv("SUPABASE_JWT_SECRET", ""),
 		DatabaseURL:       getEnv("DATABASE_URL", ""),
 	}
+
+	log.Printf("Configuración cargada (Puerto: %s, Modo: %s)", cfg.Port, cfg.GinMode)
+
+	return cfg
 }
 
 func getEnv(key, fallback string) string {
