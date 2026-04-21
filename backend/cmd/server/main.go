@@ -59,6 +59,7 @@ func main() {
 	api.POST("/login", h.Login)
 	api.POST("/register", h.Register)
 	api.GET("/auth/google", h.GoogleAuth)
+	api.POST("/auth/sync", h.SyncUser)
 
 	// Protected route
 	protected := api.Group("/")

@@ -6,6 +6,7 @@ import Home from '@/pages/Home';
 //import { GameProvider } from "./context/GameProvider";
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
+import AuthCallback from './pages/AuthCallback';
 //import Dashboard from '@/pages/Dashboard';
 import StudySession from '@/pages/StudySession';
 import { AuthProvider } from "./context/AuthContext";
@@ -20,9 +21,7 @@ export default function App() {
           <Route path="/" element={<Navigate to="/login" replace />} /> 
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-
-          {/*<Route path="/" element={<Login />} />
-          <Route path="/register" element={<Register />} />*/}
+          <Route path="/auth/callback" element={<AuthCallback />} />
           
           {/*Private routes*/}
             <Route element={<ProtectedRoute />}>

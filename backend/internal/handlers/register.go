@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// RegisterRequest Contains the data required to register a new user.
 type RegisterRequest struct {
 	FirstName       string `json:"first_name"`
 	LastName        string `json:"last_name"`
@@ -92,14 +93,17 @@ func (h *Handler) createAuthUser(email, password string) (string, error) {
 	defer resp.Body.Close()
 
 	var data map[string]any
-	json.NewDecoder(resp.Body).Decode(&data)
+	err = json.NewDecoder(resp.Body).Decode(&data)
+	if err != nil {
+		return "", err
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		msg := "error al crear el usuario"
 		if errMsg, ok := data["msg"].(string); ok {
 			msg = errMsg
 		}
-		return "", fmt.Errorf(msg)
+		return "", fmt.Errorf("%s", msg)
 	}
 
 	return extractUserID(data)
@@ -151,8 +155,47 @@ func (h *Handler) createUserProfile(userID string, req RegisterRequest) error {
 
 	if resp.StatusCode != http.StatusCreated {
 		var profileErr map[string]any
-		json.NewDecoder(resp.Body).Decode(&profileErr)
+		err := json.NewDecoder(resp.Body).Decode(&profileErr)
+		if err != nil {
+			return err
+		}
 		return fmt.Errorf("error al guardar el perfil")
+	}
+
+	return nil
+}
+
+// createUserProgress inserta el progreso inicial del usuario en public.user_progress
+func (h *Handler) createUserProgress(userID string) error {
+	body, _ := json.Marshal(map[string]any{
+		"user_id": userID,
+		"energy":  500,
+		"level":   1,
+	})
+
+	progressReq, _ := http.NewRequest(
+		http.MethodPost,
+		h.SupabaseURL+"/rest/v1/user_progress",
+		bytes.NewBuffer(body),
+	)
+	progressReq.Header.Set("Content-Type", "application/json")
+	progressReq.Header.Set("apikey", h.SupabaseKey)
+	progressReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", h.SupabaseKey))
+	progressReq.Header.Set("Prefer", "return=representation")
+
+	resp, err := http.DefaultClient.Do(progressReq)
+	if err != nil {
+		return fmt.Errorf("error al crear el progreso del usuario")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		var progressErr map[string]any
+		err := json.NewDecoder(resp.Body).Decode(&progressErr)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("error al guardar el progreso")
 	}
 
 	return nil
