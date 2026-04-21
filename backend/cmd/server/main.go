@@ -13,6 +13,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/config"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/database"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/handlers"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/supabase"
 )
@@ -22,6 +23,8 @@ var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
 func main() {
 	ctx := context.Background()
 	cfg := config.Load()
+
+	database.InitDB(cfg)
 
 	gin.SetMode(cfg.GinMode)
 
