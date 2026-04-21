@@ -25,11 +25,11 @@ func supabaseMultiStub(
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		switch {
-		case r.URL.Path == "/auth/v1/signup":
+		switch r.URL.Path {
+		case "/auth/v1/signup":
 			w.WriteHeader(authStatus)
 			_ = json.NewEncoder(w).Encode(authBody)
-		case r.URL.Path == "/rest/v1/users":
+		case "/rest/v1/users":
 			w.WriteHeader(profileStatus)
 			_ = json.NewEncoder(w).Encode(profileBody)
 		default:
