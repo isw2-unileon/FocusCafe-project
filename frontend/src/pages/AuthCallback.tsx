@@ -11,7 +11,7 @@ export default function AuthCallback() {
       navigate(ok ? '/home' : '/login');
     };
     sync();
-  }, []);
+  }, [navigate]);
 
   return <p>Loading...</p>;
 }

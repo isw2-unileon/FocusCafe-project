@@ -42,7 +42,7 @@ func newHandler(supabaseURL string) *handlers.Handler {
 // POST /auth/v1/token with the provided status code and body.
 func supabaseStub(t *testing.T, statusCode int, body interface{}) *httptest.Server {
 	t.Helper()
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(statusCode)
 		if err := json.NewEncoder(w).Encode(body); err != nil {

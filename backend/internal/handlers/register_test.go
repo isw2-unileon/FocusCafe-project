@@ -28,10 +28,10 @@ func supabaseMultiStub(
 		switch {
 		case r.URL.Path == "/auth/v1/signup":
 			w.WriteHeader(authStatus)
-			json.NewEncoder(w).Encode(authBody)
+			_ = json.NewEncoder(w).Encode(authBody)
 		case r.URL.Path == "/rest/v1/users":
 			w.WriteHeader(profileStatus)
-			json.NewEncoder(w).Encode(profileBody)
+			_ = json.NewEncoder(w).Encode(profileBody)
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}

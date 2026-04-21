@@ -92,14 +92,17 @@ func (h *Handler) createAuthUser(email, password string) (string, error) {
 	defer resp.Body.Close()
 
 	var data map[string]any
-	json.NewDecoder(resp.Body).Decode(&data)
+	err = json.NewDecoder(resp.Body).Decode(&data)
+	if err != nil {
+		return "", err
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		msg := "error al crear el usuario"
 		if errMsg, ok := data["msg"].(string); ok {
 			msg = errMsg
 		}
-		return "", fmt.Errorf(msg)
+		return "", fmt.Errorf("%s", msg)
 	}
 
 	return extractUserID(data)
@@ -151,7 +154,10 @@ func (h *Handler) createUserProfile(userID string, req RegisterRequest) error {
 
 	if resp.StatusCode != http.StatusCreated {
 		var profileErr map[string]any
-		json.NewDecoder(resp.Body).Decode(&profileErr)
+		err := json.NewDecoder(resp.Body).Decode(&profileErr)
+		if err != nil {
+			return err
+		}
 		return fmt.Errorf("error al guardar el perfil")
 	}
 
@@ -184,7 +190,10 @@ func (h *Handler) createUserProgress(userID string) error {
 
 	if resp.StatusCode != http.StatusCreated {
 		var progressErr map[string]any
-		json.NewDecoder(resp.Body).Decode(&progressErr)
+		err := json.NewDecoder(resp.Body).Decode(&progressErr)
+		if err != nil {
+			return err
+		}
 		return fmt.Errorf("error al guardar el progreso")
 	}
 
