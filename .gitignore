@@ -37,3 +37,7 @@ Thumbs.db
 coverage/
 playwright-report/
 test-results/
+
+# ai
+backend/uploads/*
+!backend/uploads/.gitkeep
