@@ -1,12 +1,74 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Coffee } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 export default function Register() {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+
+  const handleRegister = async () => {
+    setError('');
+
+    if (!firstName || !lastName) {
+      setError('Nombre y apellido son obligatorios.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Las contraseñas no coinciden.');
+      return;
+    }
+
+    try {
+      const res = await fetch('http://localhost:8081/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          first_name: firstName,
+          last_name: lastName,
+          email,
+          password,
+          confirm_password: confirmPassword,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error);
+        return;
+      }
+
+      navigate('/login');
+    } catch {
+      setError('No se pudo conectar con el servidor');
+    }
+  };
+
+  const handleGoogleRegister = async () => {
+    setError('');
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: 'http://localhost:5173/home',
+      },
+    });
+    if (error) setError(error.message);
+  };
+
   return (
-    
     <div className="min-h-screen bg-orange-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-[2.5rem] shadow-2xl p-10 border-b-8 border-orange-200">
-
         <div className="text-center mb-8">
           <div className="bg-orange-100 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
             <Coffee size={40} className="text-orange-600" />
@@ -14,56 +76,62 @@ export default function Register() {
           <h1 className="text-4xl font-black text-orange-900 tracking-tight">FocusCafe</h1>
           <p className="text-orange-600 font-medium mt-1">Donde el estudio rinde frutos</p>
         </div>
-
         <div className="space-y-4">
-
-          {/* Nombre y Apellido en la misma fila */}
           <div className="flex gap-3">
             <input
               type="text"
               placeholder="Nombre"
+              value={firstName}
+              onChange={e => setFirstName(e.target.value)}
               className="w-1/2 p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-orange-400 outline-none transition-all"
             />
             <input
               type="text"
               placeholder="Apellido"
+              value={lastName}
+              onChange={e => setLastName(e.target.value)}
               className="w-1/2 p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-orange-400 outline-none transition-all"
             />
           </div>
-
           <input
             type="email"
             placeholder="Email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
             className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-orange-400 outline-none transition-all"
           />
           <input
             type="password"
             placeholder="Contraseña"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
             className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-orange-400 outline-none transition-all"
           />
           <input
             type="password"
             placeholder="Confirmar contraseña"
+            value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
             className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-orange-400 outline-none transition-all"
           />
-
+          {error && (
+            <p className="text-red-500 text-sm text-center">{error}</p>
+          )}
           <button
             type="button"
+            onClick={handleRegister}
             className="w-full bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-orange-700 transition-all flex items-center justify-center gap-2"
           >
             Crear mi Café
           </button>
-
-          {/* Separador */}
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-gray-200" />
             <span className="text-gray-400 text-sm">o continúa con</span>
             <div className="flex-1 h-px bg-gray-200" />
           </div>
-
-          {/* Botón Google */}
           <button
             type="button"
+            onClick={handleGoogleRegister}
             className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl border-2 border-gray-200 bg-white hover:bg-gray-50 transition-all font-bold text-gray-700"
           >
             <svg width="20" height="20" viewBox="0 0 18 18">
@@ -74,14 +142,12 @@ export default function Register() {
             </svg>
             Registrarse con Google
           </button>
-
           <Link
             to="/login"
             className="block w-full text-center text-orange-800 text-sm font-bold opacity-60 hover:opacity-100 transition-opacity"
           >
             ¿Ya tienes cuenta? Inicia sesión
           </Link>
-
         </div>
       </div>
     </div>

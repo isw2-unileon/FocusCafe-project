@@ -1,32 +1,59 @@
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Zap, BookOpen, ChevronRight } from 'lucide-react';
 import { StatCard } from "../components/StatCard";
-import { getRemoteUserStats } from "@/services/user_serviceMock";
+import { getRemoteUserStats } from "@/services/user_service";
 import { OrderList } from "@/components/OrderList";
 import { AvatarDashboard } from "@/components/AvatarDashboard";
-
+import { useAuth } from "@/context/AuthContext";
+import { UserStats } from "@/types/user";
 
 const Home = () => {
-    const user = getRemoteUserStats();
+    const {logout, setUserStats } = useAuth();
+    const [userStats, setUserStatsHome] = useState<UserStats | null>(null);
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     
-    //if(loading) return <div className="min-h-screen flex items-center justify-center">Loading Cafeteria...</div>;
-    if(!user) return <div className="min-h-screen flex items-center justify-center">User data not found. Please log in again.</div>;
+    useEffect(() => {
+        getRemoteUserStats()
+        .then((data) => {
+            setUserStats(data);
+            setUserStatsHome(data);
+        })
+        .catch((err) => {
+            console.error("Error loading stats:", err);
+            navigate("/");
+        })
+        .finally(() => {
+            setLoading(false);
+        });
+    }, [navigate, setUserStats]);
+
+
+    const handleLogout = () => {
+        logout();
+        navigate('/');
+    };
+
+    if (loading) return <div className="min-h-screen flex items-center justify-center">Loading Cafeteria...</div>;
+
+    if (!userStats) return <div className="min-h-screen flex items-center justify-center text-center">
+        Expired session.<br/>Please, login again.
+    </div>;
 
     const handleStudySessionClick = () => {
         navigate("/study")
     }
 
-    //TO-DO: Add an icon for the Dashboard interface, maybe a graduation cap or a book?
     return (
         <div className="min-h-screen bg-stone-100 p-6">
             <div className="max-w-5xl mx-auto">
                 {/* Header Section */}
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-2xl font-black text-stone-800 flex items-center gap-2">
-                        ☕ Welcome back, {`${user.name}`}!
+                        ☕ Welcome back, {`${userStats.name}`}!
                         <span className="text-sm font-medium bg-white px-3 py-1 rounded-full border">
-                            Level {`${user.level}`}
+                            Level {`${userStats.level}`}
                         </span>
                     </h2>
                     <div className="flex items-center gap-4">
@@ -38,7 +65,7 @@ const Home = () => {
                         </Link>
 
                         <button 
-                            onClick={() => navigate('/')} 
+                            onClick={handleLogout} 
                             className="text-stone-400 hover:text-red-500 font-bold text-sm transition-colors"
                         >
                             Logout
@@ -51,7 +78,7 @@ const Home = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 items-stretch">
                     <StatCard 
                         icon={<Zap className="text-yellow-500" size={22}/>} 
-                        label="Energy" value={`${user.energy} / ${user.max_energy}`} 
+                        label="Energy" value={`${userStats.energy} / ${userStats.max_energy}`} 
                         color="bg-yellow-50" 
                     />
                     <section className="col-span-2 md:col-span-2">

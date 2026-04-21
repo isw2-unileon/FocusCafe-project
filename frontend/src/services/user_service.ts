@@ -1,56 +1,44 @@
 import { UserStats } from "@/types/user";
-import { IUserService } from "@/services/interfaces/IUserService";
 import { UserOrder } from "@/types/user-order";
+import axios , {InternalAxiosRequestConfig} from 'axios';
 
-const baseUrl = "/api/users";
-
-export class UserService implements IUserService {
-    async getRemoteUserStats(token: string): Promise<UserStats> {
-        const headers: HeadersInit = {
-        "Content-Type": "application/json",
-        };
-
-        //Add the authorization header with the token
-        headers["Authorization"] = `Bearer ${token}`;
-
-        const response = await fetch(
-            `${baseUrl}/me/stats`,
-            {headers}
-        );
-        if(!response.ok){
-            throw new Error("Failed to fetch user stats");
-        }
-        return response.json();
+const api = axios.create({
+    baseURL: "/api/users",
+    headers: {
+        "Content-Type": "application/json"
     }
+})
 
-    async getUserOrders(token: string): Promise<UserOrder[]> {
-        
-        const headers: HeadersInit = {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-        };
-
-        const response = await fetch(`${baseUrl}/me/orders/active`, {headers});
-
-        if(!response.ok){
-            throw new Error("Failed to obtain active orders");
-        }
-        return response.json();
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
     }
+    return config;
+});
 
-    async completeOrder(orderId: number, token: string): Promise<UserStats> {
-        const headers: HeadersInit = {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-        };
-
-        const response = await fetch(`${baseUrl}/orders/${orderId}/complete`, {
-            method: "POST",
-            headers
+export async function getRemoteUserStats(): Promise<UserStats> {
+        // const response = await api.get("/me/stats");
+        // return response.data;
+        return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve({
+                id: 1, // Just a mock implementation, using token length as id
+                name: "pepe",
+                energy: 100,
+                max_energy: 500,
+                level: 5
+            });
+        }, 500);
         });
-        if(!response.ok){
-            throw new Error("Failed to complete order");
-        }
-        return response.json();
     }
-}
+
+export async function getUserOrders(): Promise<UserOrder[]> {
+        const response = await api.get("/me/orders/active");
+        return response.data;
+    }
+
+export async function completeOrder(orderId: number): Promise<UserStats> {
+        const response = await api.post(`/orders/${orderId}/complete`);
+        return response.data;
+    }
