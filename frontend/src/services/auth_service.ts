@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-const API_URL = 'http://localhost:8081/api';
+const API_URL = import.meta.env.VITE_API_URL;
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
