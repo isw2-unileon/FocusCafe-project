@@ -149,7 +149,42 @@ const Dashboard = () => {
             {/* Divider */}
             <div className="border-t border-stone-200 my-8"></div>
 
-            {/* Contact Information */}
+            {/* Progress Section */}
+            <div className="mb-8">
+              <h3 className="text-xl font-black text-stone-800 mb-4">📊 Tu Progreso</h3>
+              
+              {profile.progress ? (
+                <div className="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm">
+                  {/* Energy Bar */}
+                  <div className="mb-6">
+                    <p className="text-sm font-semibold text-stone-600 mb-3">Energía</p>
+                    <div className="w-full bg-stone-200 rounded-full h-4 overflow-hidden">
+                      <div 
+                        className="bg-gradient-to-r from-orange-500 to-orange-600 h-4 rounded-full transition-all duration-500"
+                        style={{ width: `${(profile.progress.energy / 500) * 100}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-stone-500 mt-2">
+                      {profile.progress.energy} / 500
+                    </p>
+                  </div>
+
+                  {/* Level */}
+                  <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-xl p-4 border border-red-100">
+                    <p className="text-sm font-semibold text-stone-600 mb-2">Nivel Actual</p>
+                    <p className="text-3xl font-black text-red-600">{profile.progress.level}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-orange-50 rounded-2xl p-6 border border-orange-100 shadow-sm">
+                  <p className="text-lg font-semibold text-orange-900 mb-2">¡Todavía no has empezado!</p>
+                  <p className="text-stone-600">Empieza a estudiar para aumentar tu progreso</p>
+                </div>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-stone-200 my-8"></div>
             <div className="space-y-4">
               <h3 className="text-xl font-black text-stone-800 mb-4">Información de Contacto</h3>
 
