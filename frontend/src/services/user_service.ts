@@ -4,7 +4,7 @@ import { UserProfile } from "@/types/user-profile";
 import axios , {InternalAxiosRequestConfig} from 'axios';
 
 const api = axios.create({
-    baseURL: "/api/users",
+    baseURL: import.meta.env.VITE_API_URL+"/users",
     headers: {
         "Content-Type": "application/json"
     }
