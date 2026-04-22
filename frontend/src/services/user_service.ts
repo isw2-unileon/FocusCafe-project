@@ -48,3 +48,8 @@ export async function getCurrentProfile(): Promise<UserProfile> {
         const response = await api.get('/me');
         return response.data;
     }
+
+export async function updateUserProfile(data: { first_name: string; last_name: string }): Promise<UserProfile> {
+        const response = await api.put('/me', data);
+        return response.data;
+    }

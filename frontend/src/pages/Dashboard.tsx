@@ -236,12 +236,12 @@ const Dashboard = () => {
           >
             Volver al Inicio
           </button>
-          <button
-            onClick={() => alert('Editar perfil - Próximamente')}
-            className="flex-1 bg-orange-600 text-white px-6 py-4 rounded-2xl font-bold hover:bg-orange-700 transition-colors"
-          >
-            Editar Perfil
-          </button>
+           <button
+             onClick={() => navigate('/edit-profile')}
+             className="flex-1 bg-orange-600 text-white px-6 py-4 rounded-2xl font-bold hover:bg-orange-700 transition-colors"
+           >
+             Editar Perfil
+           </button>
         </div>
       </div>
     </div>
