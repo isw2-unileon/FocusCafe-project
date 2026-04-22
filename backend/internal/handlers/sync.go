@@ -14,7 +14,7 @@ import (
 func (h *Handler) SyncUser(c *gin.Context) {
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "token requerido"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "required token"})
 		return
 	}
 
@@ -22,7 +22,7 @@ func (h *Handler) SyncUser(c *gin.Context) {
 
 	userData, err := h.fetchSupabaseUser(token)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "token inválido"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
 		return
 	}
 
@@ -34,7 +34,7 @@ func (h *Handler) SyncUser(c *gin.Context) {
 
 	exists, err := h.userExists(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "error al comprobar el usuario"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "error while verifying the user"})
 		return
 	}
 
@@ -47,7 +47,7 @@ func (h *Handler) SyncUser(c *gin.Context) {
 	}
 
 	if err := h.createUserProfileSync(userID, email, firstName, lastName); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "error al guardar el perfil"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "error while saving the profile"})
 		return
 	}
 
@@ -127,10 +127,8 @@ func (h *Handler) userExists(userID string) (bool, error) {
 
 	return len(existing) > 0, nil
 }
-
 func (h *Handler) createUserProfileSync(userID, email, firstName, lastName string) error {
 	username := strings.Split(email, "@")[0]
-
 	body, _ := json.Marshal(map[string]string{
 		"id":         userID,
 		"first_name": firstName,
@@ -148,10 +146,16 @@ func (h *Handler) createUserProfileSync(userID, email, firstName, lastName strin
 	req.Header.Set("Prefer", "return=representation")
 
 	resp, err := http.DefaultClient.Do(req)
-	if err != nil || resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("error creating profile")
+	if err != nil {
+		return fmt.Errorf("error de red: %w", err)
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusCreated {
+		var errBody map[string]any
+		json.NewDecoder(resp.Body).Decode(&errBody)
+		fmt.Printf("Error Supabase: %v\n", errBody)
+		return fmt.Errorf("supabase %d: %v", resp.StatusCode, errBody) // ← ahora ves el motivo
+	}
 	return nil
 }
