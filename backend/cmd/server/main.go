@@ -39,7 +39,7 @@ func main() {
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{cfg.CORSAllowOrigin},
-		AllowMethods: []string{"POST", "GET", "OPTIONS"},
+		AllowMethods: []string{"POST", "GET", "PUT", "OPTIONS"},
 		AllowHeaders: []string{"Content-Type", "Authorization"},
 	}))
 
