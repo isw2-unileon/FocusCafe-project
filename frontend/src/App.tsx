@@ -7,7 +7,7 @@ import Home from '@/pages/Home';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import AuthCallback from './pages/AuthCallback';
-//import Dashboard from '@/pages/Dashboard';
+import Dashboard from '@/pages/Dashboard';
 import StudySession from '@/pages/StudySession';
 import { AuthProvider } from "./context/AuthContext";
 //import AdminDashboard from '@/pages/AdminDashboard';
@@ -27,9 +27,9 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/home" element={<Home />} />
               <Route path="/study" element={<StudySession />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               
-              {/*<Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/adminDashboard" element={<AdminDashboard />} />*/}
+              {/*<Route path="/adminDashboard" element={<AdminDashboard />} />*/}
             </Route>
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

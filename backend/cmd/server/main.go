@@ -64,6 +64,7 @@ func main() {
 	// Protected route
 	protected := api.Group("/")
 	protected.Use(handlers.Auth(adapterJWT))
+	protected.GET("/users/me", h.GetUserProfile)
 	protected.GET("/hello", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
 	})
