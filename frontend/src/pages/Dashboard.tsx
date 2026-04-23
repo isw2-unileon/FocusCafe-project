@@ -71,10 +71,10 @@ const Dashboard = () => {
           <h1 className="text-3xl font-black text-stone-800">Mi Perfil</h1>
         </div>
 
-        {/* Profile Card */}
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-stone-200 mb-6">
-          {/* Header Background */}
-          <div className="h-32 bg-gradient-to-r from-orange-500 to-orange-600"></div>
+         {/* Profile Card */}
+         <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border-8 border-white mb-6">
+           {/* Header Background */}
+           <div className="h-32 bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600"></div>
 
           {/* Profile Content */}
           <div className="px-8 pb-8">
@@ -153,8 +153,8 @@ const Dashboard = () => {
             <div className="mb-8">
               <h3 className="text-xl font-black text-stone-800 mb-4">📊 Tu Progreso</h3>
               
-              {profile.progress ? (
-                <div className="bg-white rounded-2xl p-6 border border-stone-200 shadow-sm">
+               {profile.progress ? (
+                 <div className="bg-orange-50 rounded-2xl p-6 border border-orange-100 shadow-sm">
                   {/* Energy Bar */}
                   <div className="mb-6">
                     <p className="text-sm font-semibold text-stone-600 mb-3">Energía</p>
@@ -214,17 +214,13 @@ const Dashboard = () => {
             {/* Divider */}
             <div className="border-t border-stone-200 my-8"></div>
 
-            {/* Metadata */}
-            <div className="grid grid-cols-2 gap-4 p-4 bg-stone-50 rounded-2xl">
-              <div>
-                <p className="text-xs font-bold uppercase text-gray-500 tracking-tight mb-1">Último actualizado</p>
-                <p className="text-sm font-semibold text-stone-700">{formatDate(profile.updated_at)}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold uppercase text-gray-500 tracking-tight mb-1">ID de Usuario</p>
-                <p className="text-xs font-mono text-stone-600 break-all">{profile.id.slice(0, 12)}...</p>
-              </div>
-            </div>
+             {/* Metadata */}
+             <div className="grid grid-cols-1 gap-4 p-4 bg-stone-50 rounded-2xl">
+               <div>
+                 <p className="text-xs font-bold uppercase text-gray-500 tracking-tight mb-1">Último actualizado</p>
+                 <p className="text-sm font-semibold text-stone-700">{formatDate(profile.updated_at)}</p>
+               </div>
+             </div>
           </div>
         </div>
 
