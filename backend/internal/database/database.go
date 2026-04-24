@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// DB is the global database connection instance.
 var DB *gorm.DB
 
 // InitDB initializes the connection to the database (Supabase/PostgreSQL).
@@ -16,7 +17,6 @@ func InitDB(cfg *config.Config) {
 
 	// We use the DatabaseURL from the config (DSN).
 	DB, err = gorm.Open(postgres.Open(cfg.DatabaseURL), &gorm.Config{})
-
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}

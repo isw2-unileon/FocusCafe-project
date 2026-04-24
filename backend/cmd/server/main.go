@@ -102,6 +102,6 @@ func main() {
 	logger.Info("server stopped")
 
 	if _, err := os.Stat("uploads"); os.IsNotExist(err) {
-		os.Mkdir("uploads", 0o755)
+		_ = os.Mkdir("uploads", 0o750)
 	}
 }

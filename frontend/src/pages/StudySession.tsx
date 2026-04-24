@@ -49,38 +49,96 @@ const StudySession = () => {
         return `${m}:${s < 10 ? '0' : ''}${s}`;
     };
 
-    const handleStartStudy = () => {
+    const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
+
+    const handleStartStudy = async () => {
+        // Comprobación de seguridad para TypeScript
         if(!files || files.length === 0) {
             alert("Please upload at least one file to start studying.");
             return;
         }
-        setTimeLeft(studyMinutes * 60); // Convert minutes to seconds
-        setState('STUDYING'); // Start the study session
+
+        const selectedFile = files[0];
+        if (!selectedFile) return; // Esto quita el error de "undefined"
+
+        const formData = new FormData();
+        formData.append('pdf', selectedFile); // Ahora TypeScript sabe que no es undefined
+        formData.append('subject_name', 'General Study');
+
+        try {
+            const response = await fetch('http://localhost:8080/api/study/start', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    // Asegúrate de que el nombre de la clave coincida con tu AuthContext
+                    'Authorization': `Bearer ${localStorage.getItem('token')}` 
+                }
+            });
+
+            if (!response.ok) throw new Error("Failed to start session");
+
+            const data = await response.json();
+            setCurrentSessionId(data.session_id);
+            
+            setTimeLeft(studyMinutes * 60);
+            setState('STUDYING');
+        } catch (error) {
+            console.error("Error starting session:", error);
+            alert("Server connection failed. Check if the backend is running.");
+        }
     };
 
     const handleStartQuiz = async () => {
+        if (!currentSessionId) return;
+
         setIsGenerating(true);
         setState('QUIZ');
 
-        //Mocking the Backend Call to Go API
-        // This would be: fetch('/api/generate-quiz', { method: 'POST', body: formData })
-        setTimeout(() => {
-            // Mock quiz data
+        try {
+            const response = await fetch(`http://localhost:8080/api/study/generate-quiz/${currentSessionId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+
+            if (!response.ok) throw new Error("AI failed to generate quiz");
+
+            const data = await response.json();
+            // Asumiendo que el backend devuelve un array de preguntas bajo la clave "quiz"
+            setQuiz(data.quiz); 
+        } catch (error) {
+            console.error("Quiz generation error:", error);
+            // Mock de emergencia por si falla la IA
             setQuiz([
-                { question: "What is the primary concept of the uploaded text?", options: ["Option A", "Option B", "Option C", "Option D"], correct: 0 },
-                { question: "Based on page 2, why is X important?", options: ["Reason 1", "Reason 2", "Reason 3", "Reason 4"], correct: 2 },
+                { question: "Error generating quiz. Please try again.", options: ["Back"], correct: 0 }
             ]);
+        } finally {
             setIsGenerating(false);
-        }, 2000);
+        }
     };
 
-    const handleFinishQuiz = () => {
+    const handleFinishQuiz = async () => {
         const correctAnswers = userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correct).length;
-        const score = correctAnswers / quiz.length;
+        const pointsEarned = correctAnswers * 2; // 2 puntos por acierto
 
-        if (score >= 0.75) { // If user scores 75% or higher, they earn XP. It could be adjusted based on difficulty or other factors.
-            //addXP(100); // Award 100 XP for passing the quiz. 
+        // Enviar progreso al backend
+        try {
+            await fetch('http://localhost:8080/api/user/progress', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ 
+                    points: pointsEarned,
+                    session_id: currentSessionId
+                })
+            });
+        } catch (e) {
+            console.error("Error saving progress");
         }
+
         setState('RESULTS');
     };
 
@@ -151,7 +209,7 @@ const StudySession = () => {
                         {isGenerating ? (
                             <div className="text-center py-12">
                                 <Brain className="mx-auto text-orange-500 animate-bounce mb-4" size={48} />
-                                <h2 className="text-2xl font-black">IA is crafting your test...</h2>
+                                <h2 className="text-2xl font-black">AI is crafting your test...</h2>
                                 <p className="text-stone-500">Analysing your PDFs to check your knowledge.</p>
                             </div>
                         ) : (
@@ -191,6 +249,17 @@ const StudySession = () => {
                         <div className="bg-orange-50 border border-orange-100 p-6 rounded-2xl mb-8">
                             <p className="text-orange-800 font-bold text-lg">+100 XP Earned!</p>
                             <p className="text-orange-600 text-sm">Keep it up to reach Level {userStats!.level + 1}</p>
+                        </div>
+                        <div className="bg-orange-50 border border-orange-100 p-6 rounded-2xl mb-8">
+                            <p className="text-orange-800 font-bold text-lg">+{userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correct).length * 2} Points Earned!</p>
+                            <div className="w-full bg-orange-200 h-2 rounded-full mt-2">
+                                {/* Supongamos que calculamos el % hacia el siguiente nivel */}
+                                <div 
+                                    className="bg-orange-600 h-2 rounded-full transition-all duration-1000" 
+                                    style={{ width: `${(userStats!.energy % (userStats!.max_energy * 10)) * 10}%` }}
+                                ></div>
+                            </div>
+                            <p className="text-orange-600 text-xs mt-2 uppercase font-black">Progress to Level {userStats!.level + 1}</p>
                         </div>
 
                         <button onClick={() => navigate('/home')} className="bg-stone-900 text-white px-8 py-4 rounded-xl font-bold hover:bg-stone-800 transition-all">RETURN TO CAFETERIA</button>

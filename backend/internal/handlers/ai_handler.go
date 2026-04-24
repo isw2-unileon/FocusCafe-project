@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// CreateQuizFromSession Handles the AI quiz generation request for a given session
 func CreateQuizFromSession(c *gin.Context) {
 	sessionID := c.Param("session_id")
 

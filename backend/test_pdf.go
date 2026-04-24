@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	godotenv.Load()
+	_ = godotenv.Load()
 
 	// 1. Leer el PDF
 	fmt.Println("Leyendo PDF...")

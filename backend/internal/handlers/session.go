@@ -10,6 +10,7 @@ import (
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
 )
 
+// StartStudySessionHandler initializes a new study session with a PDF
 func StartStudySessionHandler(c *gin.Context) {
 	userVal, exists := c.Get("user")
 	if !exists {
