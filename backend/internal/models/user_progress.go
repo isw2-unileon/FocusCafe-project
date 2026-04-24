@@ -15,6 +15,7 @@ type UserProgress struct {
 	User User `json:"-" gorm:"foreignKey:UserID"`
 }
 
+// TableName overrides the default table name for the model.
 func (UserProgress) TableName() string {
 	return "user_progress"
 }

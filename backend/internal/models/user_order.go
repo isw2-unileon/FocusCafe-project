@@ -19,6 +19,7 @@ type UserOrder struct {
 	CafeOrder CafeOrder `json:"cafe_order" gorm:"foreignKey:CafeOrderID"`
 }
 
+// TableName overrides the default table name for the model.
 func (UserOrder) TableName() string {
 	return "user_orders"
 }

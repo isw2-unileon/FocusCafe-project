@@ -40,7 +40,7 @@ func TestSupabaseSchemaValidation(t *testing.T) {
 	for _, v := range validations {
 		// Obtener nombre de tabla de forma segura
 		stmt := &gorm.Statement{DB: DB}
-		stmt.Parse(v.model)
+		_ = stmt.Parse(v.model)
 		tableName := stmt.Schema.Table
 
 		t.Run("Table_"+tableName, func(t *testing.T) {

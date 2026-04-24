@@ -9,8 +9,9 @@ import (
 	"google.golang.org/api/option"
 )
 
+// GenerateQuizSystemPrompt is the prompt used to instruct the AI.
 const GenerateQuizSystemPrompt = `
-Eres un experto profesor universitario en pedagogía. Tu tarea es generar cuestionarios de alta calidad.
+Eres un experto docente universitario en pedagogía. Tu tarea es generar cuestionarios de alta calidad.
 
 **REGLAS CRÍTICAS DE SALIDA:**
 1. Responde ÚNICAMENTE con un objeto JSON puro. Sin Markdown (sin etiquetas json), sin introducciones.
@@ -32,6 +33,7 @@ Eres un experto profesor universitario en pedagogía. Tu tarea es generar cuesti
 3. Genera 5 preguntas de dificultad media.
 `
 
+// GenerateQuiz sends the text to the AI to create questions.
 func GenerateQuiz(pdfText string) (string, error) {
 	ctx := context.Background()
 	client, err := genai.NewClient(ctx, option.WithAPIKey(os.Getenv("GEMINI_API_KEY")))

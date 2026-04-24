@@ -7,6 +7,7 @@ import (
 	"github.com/ledongthuc/pdf"
 )
 
+// ReadPdf extracts text from a PDF file at the given path.
 func ReadPdf(path string) (string, error) {
 	f, r, err := pdf.Open(path)
 	if err != nil {

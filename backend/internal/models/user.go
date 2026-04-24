@@ -25,6 +25,7 @@ type User struct {
 	Orders   []UserOrder   `json:"orders,omitempty" gorm:"foreignKey:UserID"`
 }
 
+// TableName overrides the default table name for the model.
 func (User) TableName() string {
 	return "users"
 }
