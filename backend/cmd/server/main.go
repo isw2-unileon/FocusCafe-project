@@ -68,6 +68,9 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
 	})
 
+	protected.POST("/study/start", handlers.StartStudySessionHandler)
+	protected.POST("/study/generate-quiz/:session_id", handlers.CreateQuizFromSession)
+
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      r,
