@@ -39,7 +39,7 @@ func main() {
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{cfg.CORSAllowOrigin},
-		AllowMethods: []string{"POST", "GET", "OPTIONS"},
+		AllowMethods: []string{"POST", "GET", "PUT", "OPTIONS"},
 		AllowHeaders: []string{"Content-Type", "Authorization"},
 	}))
 
@@ -64,6 +64,8 @@ func main() {
 	// Protected route
 	protected := api.Group("/")
 	protected.Use(handlers.Auth(adapterJWT))
+	protected.GET("/users/me", h.GetUserProfile)
+	protected.PUT("/users/me", h.UpdateUserProfile)
 	protected.GET("/hello", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
 	})
