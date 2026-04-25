@@ -47,12 +47,12 @@ func (h *Handler) Login(c *gin.Context) {
 func (h *Handler) authenticateUser(email, password string) (string, interface{}, error) {
 	body, err := buildLoginBody(email, password)
 	if err != nil {
-		return "", nil, fmt.Errorf("error al construir la petición")
+		return "", nil, fmt.Errorf("error creating the request")
 	}
 
 	resp, err := h.callSupabaseAuth(body)
 	if err != nil {
-		return "", nil, fmt.Errorf("error al conectar con Supabase")
+		return "", nil, fmt.Errorf("error connecting to Supabase")
 	}
 	defer resp.Body.Close()
 
@@ -104,14 +104,14 @@ func parseAuthResponse(resp *http.Response) (string, interface{}, error) {
 	if resp.StatusCode != http.StatusOK {
 		errMsg, ok := result["error_description"].(string)
 		if !ok || errMsg == "" {
-			errMsg = "Credenciales incorrectas"
+			errMsg = "Incorrect credentials"
 		}
 		return "", nil, fmt.Errorf("%s", errMsg)
 	}
 
 	token, ok := result["access_token"].(string)
 	if !ok {
-		return "", nil, fmt.Errorf("error al obtener el token")
+		return "", nil, fmt.Errorf("error retrieving the token")
 	}
 
 	return token, result["user"], nil

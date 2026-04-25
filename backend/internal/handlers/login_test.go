@@ -134,7 +134,7 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseResponse: map[string]interface{}{"error": "unknown"},
 			expectedStatus:   http.StatusUnauthorized,
 			checkBody: func(t *testing.T, body map[string]interface{}) {
-				assert.Equal(t, "Credenciales incorrectas", body["error"])
+				assert.Equal(t, "Incorrect credentials", body["error"])
 			},
 		},
 	}
@@ -245,7 +245,7 @@ func TestLogin_ParseAuthResponse(t *testing.T) {
 			supabaseStatus:   http.StatusOK,
 			supabaseBody:     map[string]interface{}{"user": map[string]string{"id": "1"}},
 			expectedStatus:   http.StatusUnauthorized,
-			expectedErrorMsg: "error al obtener el token",
+			expectedErrorMsg: "error retrieving the token",
 		},
 		{
 			name:           "Supabase returns 200 with valid token",

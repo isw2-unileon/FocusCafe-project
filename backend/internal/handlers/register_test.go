@@ -16,7 +16,7 @@ import (
 // ─────────────────────────────────────────────
 
 // supabaseMultiStub starts an httptest.Server that routes requests to
-// /auth/v1/signup and /rest/v1/users to their respective handlers.
+// /auth/v1/signup, /rest/v1/users and /rest/v1/user_progress to their respective handlers.
 func supabaseMultiStub(
 	t *testing.T,
 	authStatus int, authBody interface{},
@@ -33,6 +33,9 @@ func supabaseMultiStub(
 		case "/rest/v1/users":
 			w.WriteHeader(profileStatus)
 			_ = json.NewEncoder(w).Encode(profileBody)
+		case "/rest/v1/user_progress":
+			w.WriteHeader(http.StatusCreated)
+			_ = json.NewEncoder(w).Encode([]interface{}{})
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -92,7 +95,7 @@ func TestRegister_Validation_TableDriven(t *testing.T) {
 			name:           "Malformed JSON body",
 			body:           "not-json",
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "cuerpo de solicitud inválido",
+			expectedError:  "invalid request body",
 		},
 		{
 			name: "Missing first_name",
@@ -101,7 +104,7 @@ func TestRegister_Validation_TableDriven(t *testing.T) {
 				"email": "ada@focus.com", "password": "secret123", "confirm_password": "secret123",
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "nombre y apellido son obligatorios",
+			expectedError:  "error: first name and surname are required",
 		},
 		{
 			name: "Missing last_name",
@@ -110,7 +113,7 @@ func TestRegister_Validation_TableDriven(t *testing.T) {
 				"email": "ada@focus.com", "password": "secret123", "confirm_password": "secret123",
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "nombre y apellido son obligatorios",
+			expectedError:  "error: first name and surname are required",
 		},
 		{
 			name: "Missing email",
@@ -119,7 +122,7 @@ func TestRegister_Validation_TableDriven(t *testing.T) {
 				"email": "", "password": "secret123", "confirm_password": "secret123",
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "email es obligatorio",
+			expectedError:  "error: email is mandatory",
 		},
 		{
 			name: "Password too short (less than 6 chars)",
@@ -128,7 +131,7 @@ func TestRegister_Validation_TableDriven(t *testing.T) {
 				"email": "ada@focus.com", "password": "abc", "confirm_password": "abc",
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "la contraseña debe tener al menos 6 caracteres",
+			expectedError:  "error: the password must be at least 6 characters long",
 		},
 		{
 			name: "Passwords do not match",
@@ -137,7 +140,7 @@ func TestRegister_Validation_TableDriven(t *testing.T) {
 				"email": "ada@focus.com", "password": "secret123", "confirm_password": "different",
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "las contraseñas no coinciden",
+			expectedError:  "error: the passwords do not match",
 		},
 		{
 			name: "Fields with only whitespace trimmed to empty",
@@ -146,7 +149,7 @@ func TestRegister_Validation_TableDriven(t *testing.T) {
 				"email": "ada@focus.com", "password": "secret123", "confirm_password": "secret123",
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedError:  "nombre y apellido son obligatorios",
+			expectedError:  "error: first name and surname are required",
 		},
 	}
 
@@ -216,21 +219,21 @@ func TestRegister_AuthUser_TableDriven(t *testing.T) {
 			authStatus:     http.StatusInternalServerError,
 			authBody:       map[string]interface{}{},
 			expectedStatus: http.StatusConflict,
-			expectedError:  "error al crear el usuario",
+			expectedError:  "error: error creating the user",
 		},
 		{
 			name:           "Supabase Auth returns 200 but missing user field",
 			authStatus:     http.StatusOK,
 			authBody:       map[string]interface{}{"something": "unexpected"},
 			expectedStatus: http.StatusConflict,
-			expectedError:  "respuesta inesperada de Supabase Auth",
+			expectedError:  "error: unexpected response from Supabase Auth",
 		},
 		{
 			name:           "Supabase Auth returns 200 but user has no id",
 			authStatus:     http.StatusOK,
 			authBody:       map[string]interface{}{"user": map[string]interface{}{"email": "ada@focus.com"}},
 			expectedStatus: http.StatusConflict,
-			expectedError:  "no se pudo obtener el ID del usuario",
+			expectedError:  "error: the user ID could not be retrieved",
 		},
 	}
 

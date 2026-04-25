@@ -15,13 +15,14 @@ export const loginWithEmail = async (email: string, password: string): Promise<s
     body: JSON.stringify({ email, password }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Error al iniciar sesión');
+  if (!res.ok) throw new Error(data.error || 'Error logging in');
   return data.token;
 };
 
 export const loginWithGoogle = (): void => {
   window.location.href = `${API_URL}/auth/google`;
 };
+
 
 // ---- REGISTER ----
 export interface RegisterData {
@@ -45,7 +46,7 @@ export const registerWithEmail = async (data: RegisterData): Promise<void> => {
     }),
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.error || 'Error al registrarse');
+  if (!res.ok) throw new Error(json.error || 'Error during registration');
 };
 
 export const registerWithGoogle = async (): Promise<void> => {
@@ -55,6 +56,7 @@ export const registerWithGoogle = async (): Promise<void> => {
   });
   if (error) throw new Error(error.message);
 };
+
 
 // ---- SYNC (Google OAuth callback) ----
 export const syncGoogleUser = async (): Promise<boolean> => {
