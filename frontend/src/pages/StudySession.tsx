@@ -41,7 +41,7 @@ const StudySession = () => {
             handleStartQuiz();
         }
         return () => clearInterval(timer);
-    }, [state, timeLeft]);    
+    }, [state, timeLeft, handleStartQuiz]);    
     
     const formatTime = (seconds: number) => {
         const m = Math.floor(seconds / 60);
@@ -88,7 +88,7 @@ const StudySession = () => {
         }
     };
 
-    const handleStartQuiz = async () => {
+    async function handleStartQuiz() {
         if (!currentSessionId) return;
 
         setIsGenerating(true);
@@ -116,7 +116,7 @@ const StudySession = () => {
         } finally {
             setIsGenerating(false);
         }
-    };
+    }
 
     const handleFinishQuiz = async () => {
         const correctAnswers = userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correct).length;
@@ -135,7 +135,7 @@ const StudySession = () => {
                     session_id: currentSessionId
                 })
             });
-        } catch (e) {
+        } catch (_e) {
             console.error("Error saving progress");
         }
 
