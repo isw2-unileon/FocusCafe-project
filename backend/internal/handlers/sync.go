@@ -165,10 +165,13 @@ func (h *Handler) createUserProfileSync(userID, email, firstName, lastName strin
 	}
 	defer resp.Body.Close()
 
-	//if resp.StatusCode != http.StatusCreated {
+	// if resp.StatusCode != http.StatusCreated {
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 		var errBody map[string]any
-		json.NewDecoder(resp.Body).Decode(&errBody)
+
+		if err := json.NewDecoder(resp.Body).Decode(&errBody); err != nil {
+			return fmt.Errorf("error decoding supabase response: %w", err)
+		}
 		fmt.Printf("Error Supabase: %v\n", errBody)
 		return fmt.Errorf("supabase %d: %v", resp.StatusCode, errBody) // ← ahora ves el motivo
 	}
