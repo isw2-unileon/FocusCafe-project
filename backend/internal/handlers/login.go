@@ -47,12 +47,12 @@ func (h *Handler) Login(c *gin.Context) {
 func (h *Handler) authenticateUser(email, password string) (string, interface{}, error) {
 	body, err := buildLoginBody(email, password)
 	if err != nil {
-		return "", nil, fmt.Errorf("Error creating the request")
+		return "", nil, fmt.Errorf("error creating the request")
 	}
 
 	resp, err := h.callSupabaseAuth(body)
 	if err != nil {
-		return "", nil, fmt.Errorf("Error connecting to Supabase")
+		return "", nil, fmt.Errorf("error connecting to Supabase")
 	}
 	defer resp.Body.Close()
 
