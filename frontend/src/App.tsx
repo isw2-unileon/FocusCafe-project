@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { Toaster } from 'react-hot-toast';
 
 
 import Home from '@/pages/Home';
@@ -7,7 +8,8 @@ import Home from '@/pages/Home';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import AuthCallback from './pages/AuthCallback';
-//import Dashboard from '@/pages/Dashboard';
+import Dashboard from '@/pages/Dashboard';
+import EditProfile from '@/pages/EditProfile';
 import StudySession from '@/pages/StudySession';
 import { AuthProvider } from "./context/AuthContext";
 //import AdminDashboard from '@/pages/AdminDashboard';
@@ -16,6 +18,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <Toaster position="top-center" />
         <Routes>
           {/*Public routes*/}
           <Route path="/" element={<Navigate to="/login" replace />} /> 
@@ -23,14 +26,15 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           
-          {/*Private routes*/}
-            <Route element={<ProtectedRoute />}>
-              <Route path="/home" element={<Home />} />
-              <Route path="/study" element={<StudySession />} />
-              
-              {/*<Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/adminDashboard" element={<AdminDashboard />} />*/}
-            </Route>
+           {/*Private routes*/}
+             <Route element={<ProtectedRoute />}>
+               <Route path="/home" element={<Home />} />
+               <Route path="/study" element={<StudySession />} />
+               <Route path="/dashboard" element={<Dashboard />} />
+               <Route path="/edit-profile" element={<EditProfile />} />
+               
+               {/*<Route path="/adminDashboard" element={<AdminDashboard />} />*/}
+             </Route>
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </BrowserRouter>

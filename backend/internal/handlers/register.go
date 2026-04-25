@@ -23,7 +23,7 @@ type RegisterRequest struct {
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "cuerpo de solicitud inválido"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
 
@@ -43,6 +43,11 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
+	if err := h.createUserProgress(userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	c.JSON(http.StatusCreated, gin.H{
 		"id":         userID,
 		"email":      req.Email,
@@ -58,16 +63,16 @@ func validateRegisterRequest(req *RegisterRequest) error {
 	req.Email = strings.TrimSpace(req.Email)
 
 	if req.FirstName == "" || req.LastName == "" {
-		return fmt.Errorf("nombre y apellido son obligatorios")
+		return fmt.Errorf("error: first name and surname are required")
 	}
 	if req.Email == "" {
-		return fmt.Errorf("email es obligatorio")
+		return fmt.Errorf("error: email is mandatory")
 	}
 	if len(req.Password) < 6 {
-		return fmt.Errorf("la contraseña debe tener al menos 6 caracteres")
+		return fmt.Errorf("error: the password must be at least 6 characters long")
 	}
 	if req.Password != req.ConfirmPassword {
-		return fmt.Errorf("las contraseñas no coinciden")
+		return fmt.Errorf("error: the passwords do not match")
 	}
 	return nil
 }
@@ -88,7 +93,7 @@ func (h *Handler) createAuthUser(email, password string) (string, error) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("error al conectar con Supabase Auth")
+		return "", fmt.Errorf("error: error connecting to Supabase Auth")
 	}
 	defer resp.Body.Close()
 
@@ -99,7 +104,7 @@ func (h *Handler) createAuthUser(email, password string) (string, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		msg := "error al crear el usuario"
+		msg := "error: error creating the user"
 		if errMsg, ok := data["msg"].(string); ok {
 			msg = errMsg
 		}
@@ -113,12 +118,12 @@ func (h *Handler) createAuthUser(email, password string) (string, error) {
 func extractUserID(data map[string]any) (string, error) {
 	userMap, ok := data["user"].(map[string]any)
 	if !ok {
-		return "", fmt.Errorf("respuesta inesperada de Supabase Auth")
+		return "", fmt.Errorf("error: unexpected response from Supabase Auth")
 	}
 
 	userID, ok := userMap["id"].(string)
 	if !ok || userID == "" {
-		return "", fmt.Errorf("no se pudo obtener el ID del usuario")
+		return "", fmt.Errorf("error: the user ID could not be retrieved")
 	}
 
 	return userID, nil
@@ -153,6 +158,8 @@ func (h *Handler) createUserProfile(userID string, req RegisterRequest) error {
 	}
 	defer resp.Body.Close()
 
+	fmt.Printf(">>> Profile insert status: %d\n", resp.StatusCode)
+
 	if resp.StatusCode != http.StatusCreated {
 		var profileErr map[string]any
 		err := json.NewDecoder(resp.Body).Decode(&profileErr)
@@ -171,6 +178,7 @@ func (h *Handler) createUserProgress(userID string) error {
 		"user_id": userID,
 		"energy":  500,
 		"level":   1,
+		"xp":      0,
 	})
 
 	progressReq, _ := http.NewRequest(
@@ -195,7 +203,7 @@ func (h *Handler) createUserProgress(userID string) error {
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf("error al guardar el progreso")
+		return fmt.Errorf("error: rror saving progress")
 	}
 
 	return nil

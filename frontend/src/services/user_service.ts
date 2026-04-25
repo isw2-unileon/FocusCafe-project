@@ -1,9 +1,10 @@
 import { UserStats } from "@/types/user";
 import { UserOrder } from "@/types/user-order";
+import { UserProfile } from "@/types/user-profile";
 import axios , {InternalAxiosRequestConfig} from 'axios';
 
 const api = axios.create({
-    baseURL: "/api/users",
+    baseURL: import.meta.env.VITE_API_URL+"/users",
     headers: {
         "Content-Type": "application/json"
     }
@@ -40,5 +41,15 @@ export async function getUserOrders(): Promise<UserOrder[]> {
 
 export async function completeOrder(orderId: number): Promise<UserStats> {
         const response = await api.post(`/orders/${orderId}/complete`);
+        return response.data;
+    }
+
+export async function getCurrentProfile(): Promise<UserProfile> {
+        const response = await api.get('/me');
+        return response.data;
+    }
+
+export async function updateUserProfile(data: { first_name: string; last_name: string }): Promise<UserProfile> {
+        const response = await api.put('/me', data);
         return response.data;
     }
