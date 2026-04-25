@@ -33,8 +33,7 @@ func (h *Handler) SyncUser(c *gin.Context) {
 		return
 	}
 
-	// Imprimimos para evitar errores de "unused variable"
-	fmt.Printf("DEBUG: ID=%s, Email=%s, Name=%s %s\n", userID, email, firstName, lastName)
+	//	fmt.Printf("DEBUG: ID=%s, Email=%s, Name=%s %s\n", userID, email, firstName, lastName)
 
 	exists, err := h.userExists(userID)
 	if err != nil {

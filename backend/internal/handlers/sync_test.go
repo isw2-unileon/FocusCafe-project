@@ -18,13 +18,12 @@ import (
 // authStatus/authBody  → GET  /auth/v1/user
 // existsBody           → GET  /rest/v1/users?id=eq.*
 // profileStatus        → POST /rest/v1/users
-// progressStatus       → POST /rest/v1/user_progress
+// /rest/v1/user_progress always returns 201
 func syncStub(
 	t *testing.T,
 	authStatus int, authBody interface{},
 	existsBody interface{},
 	profileStatus int,
-	progressStatus int,
 ) *httptest.Server {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -43,7 +42,7 @@ func syncStub(
 			_ = json.NewEncoder(w).Encode([]interface{}{})
 
 		case r.Method == http.MethodPost && r.URL.Path == "/rest/v1/user_progress":
-			w.WriteHeader(progressStatus)
+			w.WriteHeader(http.StatusCreated)
 			_ = json.NewEncoder(w).Encode([]interface{}{})
 
 		default:
@@ -55,12 +54,12 @@ func syncStub(
 }
 
 // validAuthBody returns a typical Supabase /auth/v1/user response.
-func validAuthBody(userID, email, fullName string) map[string]interface{} {
+func validAuthBody(email string) map[string]interface{} {
 	return map[string]interface{}{
-		"id":    userID,
+		"id":    "uuid-001",
 		"email": email,
 		"user_metadata": map[string]interface{}{
-			"full_name": fullName,
+			"full_name": "Ada Lovelace",
 		},
 	}
 }
@@ -84,7 +83,7 @@ func TestSyncUser_Auth_TableDriven(t *testing.T) {
 			name:           "Missing Authorization header",
 			authHeader:     "",
 			authStatus:     http.StatusOK,
-			authBody:       validAuthBody("uuid-001", "user@focus.com", "Ada Lovelace"),
+			authBody:       validAuthBody("user@focus.com"),
 			expectedStatus: http.StatusUnauthorized,
 			expectedError:  "required token",
 		},
@@ -104,7 +103,6 @@ func TestSyncUser_Auth_TableDriven(t *testing.T) {
 			stub := syncStub(t,
 				tt.authStatus, tt.authBody,
 				[]interface{}{},
-				http.StatusCreated,
 				http.StatusCreated,
 			)
 			h := newHandler(stub.URL)
@@ -149,7 +147,7 @@ func TestSyncUser_ExtractUserData_TableDriven(t *testing.T) {
 		},
 		{
 			name:           "Auth response with full_name in metadata",
-			authBody:       validAuthBody("uuid-001", "user@focus.com", "Ada Lovelace"),
+			authBody:       validAuthBody("user@focus.com"),
 			expectedStatus: http.StatusCreated,
 			expectedError:  "",
 		},
@@ -183,7 +181,6 @@ func TestSyncUser_ExtractUserData_TableDriven(t *testing.T) {
 				http.StatusOK, tt.authBody,
 				[]interface{}{}, // user does not exist yet
 				http.StatusCreated,
-				http.StatusCreated,
 			)
 			h := newHandler(stub.URL)
 
@@ -214,9 +211,8 @@ func TestSyncUser_UserAlreadyExists(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	stub := syncStub(t,
-		http.StatusOK, validAuthBody("uuid-001", "user@focus.com", "Ada Lovelace"),
+		http.StatusOK, validAuthBody("user@focus.com"),
 		[]interface{}{map[string]interface{}{"id": "uuid-001"}}, // user exists
-		http.StatusCreated,
 		http.StatusCreated,
 	)
 	h := newHandler(stub.URL)
@@ -268,10 +264,9 @@ func TestSyncUser_ProfileCreation_TableDriven(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			stub := syncStub(t,
-				http.StatusOK, validAuthBody("uuid-001", "user@focus.com", "Ada Lovelace"),
+				http.StatusOK, validAuthBody("user@focus.com"),
 				[]interface{}{}, // user does not exist
 				tt.profileStatus,
-				http.StatusCreated,
 			)
 			h := newHandler(stub.URL)
 
@@ -300,9 +295,8 @@ func TestSyncUser_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	stub := syncStub(t,
-		http.StatusOK, validAuthBody("uuid-001", "ada@focus.com", "Ada Lovelace"),
+		http.StatusOK, validAuthBody("ada@focus.com"),
 		[]interface{}{}, // user does not exist yet
-		http.StatusCreated,
 		http.StatusCreated,
 	)
 	h := newHandler(stub.URL)
