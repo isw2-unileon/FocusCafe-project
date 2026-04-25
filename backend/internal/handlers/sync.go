@@ -27,10 +27,14 @@ func (h *Handler) SyncUser(c *gin.Context) {
 	}
 
 	userID, email, firstName, lastName, err := extractUserData(userData)
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Imprimimos para evitar errores de "unused variable"
+	fmt.Printf("DEBUG: ID=%s, Email=%s, Name=%s %s\n", userID, email, firstName, lastName)
 
 	exists, err := h.userExists(userID)
 	if err != nil {
@@ -48,6 +52,7 @@ func (h *Handler) SyncUser(c *gin.Context) {
 
 	if err := h.createUserProfileSync(userID, email, firstName, lastName); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "error while saving the profile"})
+
 		return
 	}
 
@@ -90,15 +95,25 @@ func (h *Handler) fetchSupabaseUser(token string) (map[string]any, error) {
 
 func extractUserData(userData map[string]any) (userID, email, firstName, lastName string, err error) {
 	userID, _ = userData["id"].(string)
+	email, _ = userData["email"].(string)
+
 	if userID == "" {
 		return "", "", "", "", fmt.Errorf("missing user id")
 	}
 
-	email, _ = userData["email"].(string)
-
 	if meta, ok := userData["user_metadata"].(map[string]any); ok {
-		firstName, _ = meta["given_name"].(string)
-		lastName, _ = meta["family_name"].(string)
+		fullName, _ := meta["full_name"].(string)
+		if fullName == "" {
+			fullName, _ = meta["name"].(string)
+		}
+
+		if fullName != "" {
+			parts := strings.SplitN(fullName, " ", 2)
+			firstName = parts[0]
+			if len(parts) > 1 {
+				lastName = parts[1]
+			}
+		}
 	}
 
 	return userID, email, firstName, lastName, nil
@@ -127,6 +142,7 @@ func (h *Handler) userExists(userID string) (bool, error) {
 
 	return len(existing) > 0, nil
 }
+
 func (h *Handler) createUserProfileSync(userID, email, firstName, lastName string) error {
 	username := strings.Split(email, "@")[0]
 	body, _ := json.Marshal(map[string]string{
@@ -136,7 +152,6 @@ func (h *Handler) createUserProfileSync(userID, email, firstName, lastName strin
 		"username":   username,
 		"email":      email,
 		"role":       "user",
-		"provider":   "google",
 	})
 
 	req, _ := http.NewRequest(http.MethodPost, h.SupabaseURL+"/rest/v1/users", bytes.NewBuffer(body))
@@ -144,18 +159,39 @@ func (h *Handler) createUserProfileSync(userID, email, firstName, lastName strin
 	req.Header.Set("apikey", h.SupabaseKey)
 	req.Header.Set("Authorization", "Bearer "+h.SupabaseKey)
 	req.Header.Set("Prefer", "return=representation")
-
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("error de red: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusCreated {
+	//if resp.StatusCode != http.StatusCreated {
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 		var errBody map[string]any
 		json.NewDecoder(resp.Body).Decode(&errBody)
 		fmt.Printf("Error Supabase: %v\n", errBody)
 		return fmt.Errorf("supabase %d: %v", resp.StatusCode, errBody) // ← ahora ves el motivo
 	}
 	return nil
+	/*
+		// 1. Si el status es 201 (Creado), todo salió perfecto a la primera.
+		if resp.StatusCode == http.StatusCreated {
+			return nil
+		}
+
+		// 2. Si NO es 201, leemos el cuerpo para ver si es un duplicado
+		var errBody map[string]any
+		if err := json.NewDecoder(resp.Body).Decode(&errBody); err != nil {
+			return fmt.Errorf("error al decodificar error de supabase: %w", err)
+		}
+
+		// 3. AQUÍ AÑADES EL IF MÁGICO: <--- NUEVO
+		// Buscamos el código 23505 (que es "Unique Violation" en Postgres)
+		if code, ok := errBody["code"].(string); ok && code == "23505" {
+			fmt.Printf("Usuario duplicado detectado para %s. Ignorando error...\n", email)
+			return nil // Devolvemos nil (éxito) porque el usuario ya está en la BD
+		}
+
+		// 4. Si llegamos aquí, es un error real (ej: 400, 401, 500)
+		return fmt.Errorf("supabase %d: %v", resp.StatusCode, errBody)*/
 }

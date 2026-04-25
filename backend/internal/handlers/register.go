@@ -174,11 +174,11 @@ func (h *Handler) createUserProfile(userID string, req RegisterRequest) error {
 
 // createUserProgress inserta el progreso inicial del usuario en public.user_progress
 func (h *Handler) createUserProgress(userID string) error {
-	fmt.Println(">>> Llamando a createUserProgress con userID:", userID)
 	body, _ := json.Marshal(map[string]any{
 		"user_id": userID,
 		"energy":  500,
 		"level":   1,
+		"xp":      0,
 	})
 
 	progressReq, _ := http.NewRequest(

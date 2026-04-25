@@ -57,6 +57,7 @@ export const registerWithGoogle = async (): Promise<void> => {
   if (error) throw new Error(error.message);
 };
 
+
 // ---- SYNC (Google OAuth callback) ----
 export const syncGoogleUser = async (): Promise<boolean> => {
   const { data: { session } } = await supabase.auth.getSession();
