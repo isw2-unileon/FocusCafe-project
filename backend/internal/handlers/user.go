@@ -34,7 +34,7 @@ func (h *Handler) getUserID(c *gin.Context) (uuid.UUID, error) {
 
 	id, err := uuid.Parse(userID)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("invalid uuid format %v", err)
+		return uuid.Nil, fmt.Errorf("invalid uuid format %w", err)
 	}
 
 	return id, nil
