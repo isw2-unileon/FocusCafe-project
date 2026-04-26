@@ -12,84 +12,46 @@ import (
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
 )
 
-// //GetUserStats retrivies the gamified stats for the authenticated user, such as energy and level.
-// func (h *Handler) GetUserStats(c *gin.Context) {
-// 	claims, exists := c.Get("user")
-// 	if !exists{
-// 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user claims not found"})
-// 		return
-// 	}
-
-// 	userClaims, ok := claims.(*auth.UserClaims)
-// 	if !ok{
-// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid claims format"})
-// 		return
-// 	}
-
-// 	//Parse usr ID
-// 	userId, err := uuid.Parse(userClaims.ID)
-// 	if err != nil{
-// 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id format"})
-// 		return
-// 	}
-
-// 	//Query database for progress of the user
-// 	var progress models.UserProgress
-// 	result := database.DB.Where("user_id = ?", userID).First(&progress)
-
-// 	if result.Error != nil{
-// 		c.JSON(http.StatusNotFound, gin.H{"error": "user stats not found"})
-//     	return
-// 	}
-// 	// 4. Return Stats
-
-//    c.JSON(http.StatusOK, gin.H{
-// 		"id": progress.UserID,
-// 		"energ"
-// }
-
-// GetUserProfile obtains the profile information of the authenticated user, including personal details and gamified stats (energy, level).
-func (h *Handler) GetUserProfile(c *gin.Context) {
-	fmt.Println("GetUserProfile called")
+// getUserID is a helper function to extract and parse the user ID from the JWT claims in the context
+func (h *Handler) getUserID(c *gin.Context) (uuid.UUID, error) {
 	// Obtain user claims from context set by auth middleware
 	claims, exists := c.Get("user")
 
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user claims not found"})
-		return
+		return uuid.Nil, fmt.Errorf("user claims not found in context")
 	}
 	// Cast to UserClaims
 	userClaims, ok := claims.(*auth.UserClaims)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid claims format"})
-		return
+		return uuid.Nil, fmt.Errorf("invalid claims format")
 	}
 
 	userID := userClaims.GetID()
-	fmt.Printf("User ID from token: %s\n", userID)
 
 	if userID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "user id missing from token"})
-		return
+		return uuid.Nil, fmt.Errorf("empty user id")
 	}
 
 	id, err := uuid.Parse(userID)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id format"})
-		return
+		return uuid.Nil, fmt.Errorf("invalid uuid format %v", err)
 	}
 
-	var user models.User
-	result := database.DB.Preload("Progress").First(&user, id)
-	fmt.Println("Database query result:", result)
-	fmt.Printf("Queried user: %+v\n", user)
-	// Manejar errores de la BD
-	if result.Error != nil {
+	return id, nil
+}
+
+// GetUserProfile obtains the profile information of the authenticated user, including personal details and gamified stats (energy, level).
+func (h *Handler) GetUserProfile(c *gin.Context) {
+	// Obtain user ID from JWT claims
+	id, _ := h.getUserID(c)
+
+	// Obtain user profile from the service layer
+	user, err := h.UserService.GetUserProfile(c.Request.Context(), id)
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
 	}
-
-	// Retornar usuario como JSON
+	// Return user profile as JSON response
 	c.JSON(http.StatusOK, user)
 }
 

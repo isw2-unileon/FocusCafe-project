@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Zap, BookOpen, ChevronRight } from 'lucide-react';
+import { Zap, BookOpen, ChevronRight, Award } from 'lucide-react';
 import { StatCard } from "../components/StatCard";
 import { getRemoteUserStats } from "@/services/user_service";
 import { OrderList } from "@/components/OrderList";
@@ -51,7 +51,7 @@ const Home = () => {
                 {/* Header Section */}
                 <div className="flex justify-between items-center mb-8">
                     <h2 className="text-2xl font-black text-stone-800 flex items-center gap-2">
-                        ☕ Welcome back, {`${userStats.name}`}!
+                        ☕ Welcome back, {`${userStats.first_name}`}!
                         <span className="text-sm font-medium bg-white px-3 py-1 rounded-full border">
                             Level {`${userStats.level}`}
                         </span>
@@ -77,9 +77,24 @@ const Home = () => {
                 {/* Stats Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 items-stretch">
                     <StatCard 
-                        icon={<Zap className="text-yellow-500" size={22}/>} 
-                        label="Energy" value={`${userStats.energy} / ${userStats.max_energy}`} 
-                        color="bg-yellow-50" 
+                        title="Player Stats"
+                        stats={[
+                            {
+                            icon: <Zap className="text-yellow-500" size={20}/>,
+                            label: "Energy",
+                            current: userStats.energy,
+                            max: userStats.max_energy,
+                            barColor: "bg-yellow-500"
+                            },
+                            {
+                            icon: <Award className="text-blue-500" size={20}/>,
+                            label: "Experience",
+                            current: userStats.xp,
+                            max: userStats.max_energy, // O el valor que corresponda a XP
+                            barColor: "bg-blue-500"
+                            }
+                        ]}
+                        color = "bg-yellow-50"
                     />
                     <section className="col-span-2 md:col-span-2">
                         <OrderList />

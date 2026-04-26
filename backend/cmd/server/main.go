@@ -15,6 +15,8 @@ import (
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/config"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/database"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/handlers"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/repository"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/services"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/supabase"
 )
 
@@ -28,12 +30,16 @@ func main() {
 
 	gin.SetMode(cfg.GinMode)
 
-	// Create jwt adapter
+	// Create jwt adapter,
 	adapterJWT, err := supabase.NewJWTAdapter(cfg.SupabaseURL)
 	if err != nil {
 		logger.Error("failed to create jwt adapter", "error", err)
 		os.Exit(1)
 	}
+
+	// Initializate repositories and services
+	userRepo := repository.NewUserRepository(database.DB)
+	userService := services.NewUserService(userRepo)
 
 	r := gin.New()
 
@@ -45,11 +51,8 @@ func main() {
 
 	r.Use(gin.Logger(), gin.Recovery())
 
-	h := &handlers.Handler{
-		SupabaseURL: cfg.SupabaseURL,
-		SupabaseKey: cfg.SupabaseKey,
-		Auth:        adapterJWT,
-	}
+	h := handlers.NewHandler(cfg.SupabaseURL, cfg.SupabaseKey, adapterJWT, userService)
+
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})

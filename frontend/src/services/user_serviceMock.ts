@@ -3,9 +3,10 @@ import { UserOrder } from "@/types/user-order";
 
 const mockUserStats: UserStats = {
     id: 1, // Just a mock implementation, using token length as id
-    name: "pepe",
+    first_name: "pepe",
     energy: 100,
     max_energy: 500,
+    xp: 200,
     level: 5
 };
 
