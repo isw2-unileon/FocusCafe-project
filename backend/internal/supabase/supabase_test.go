@@ -22,7 +22,6 @@ func TestValidateToken(t *testing.T) {
 	// 2. Create a test server (JWKS Mock)
 	// It simulates being Supabase delivering the publick key
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Extraemos las coordenadas X e Y de la clave pública para el formato JWK
 		x := base64.RawURLEncoding.EncodeToString(privateKey.X.Bytes())
 		y := base64.RawURLEncoding.EncodeToString(privateKey.Y.Bytes())
 

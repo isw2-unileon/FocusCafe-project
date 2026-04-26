@@ -99,10 +99,10 @@ const Home = () => {
                     
                     <div className="absolute bottom-12 left-0 right-0 flex flex-col items-center">
                         <button 
-                        onClick={() => navigate('/study')}
+                        onClick={handleStudySessionClick}
                         className="bg-white text-stone-900 px-12 py-6 rounded-2xl font-black text-xl shadow-2xl hover:bg-orange-600 hover:text-white transition-all flex items-center gap-3 active:scale-95 group"
                         >
-                        <BookOpen size={28}  onClick={handleStudySessionClick}/> BREW COFFEE (STUDY)
+                        <BookOpen size={28}/> BREW COFFEE (STUDY)
                         <ChevronRight className="group-hover:translate-x-1 transition-transform" />
                         </button>
                     </div>

@@ -62,8 +62,12 @@ func (suite *SessionTestSuite) TestStartStudySessionSuccess() {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	part, _ := writer.CreateFormFile("pdf", "test_material.pdf")
-	part.Write([]byte("fake pdf content"))
-	writer.WriteField("subject_name", "Software Engineering")
+	if _, err := part.Write([]byte("fake pdf content")); err != nil {
+		suite.T().Errorf("failed to write part: %v", err)
+	}
+	if err := writer.WriteField("subject_name", "Software Engineering"); err != nil {
+		suite.T().Errorf("failed to write field: %v", err)
+	}
 	writer.Close()
 
 	// Setup request and router

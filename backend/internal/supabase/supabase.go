@@ -15,7 +15,7 @@ type JWTAdapter struct {
 	jwks keyfunc.Keyfunc
 }
 
-// NewJWTAdapter creates a new instance of JWTAdpater
+// NewJWTAdapter creates a new instance of JWTAdapter
 func NewJWTAdapter(supabaseURL string) (*JWTAdapter, error) {
 	if supabaseURL == "" {
 		return nil, fmt.Errorf("supabase URL is required")
@@ -37,44 +37,24 @@ func NewJWTAdapter(supabaseURL string) (*JWTAdapter, error) {
 
 // ValidateToken checks the validity of a given JWT string
 func (a *JWTAdapter) ValidateToken(tokenString string) (*auth.UserClaims, error) {
-	parser := jwt.NewParser(
-		jwt.WithValidMethods([]string{"ES256", "RS256"}),
+	claims := &auth.UserClaims{}
+	token, err := jwt.ParseWithClaims(
+		tokenString,
+		claims,
+		a.jwks.Keyfunc,
+		jwt.WithValidMethods([]string{"HS256", "ES256", "RS256"}),
 	)
-
-	token, err := parser.Parse(tokenString, a.jwks.Keyfunc)
 	if err != nil {
-		fmt.Printf("DEBUG: Error at parsing: %v\n", err)
-		return nil, err
+		return nil, fmt.Errorf("error parsing token: %w", err)
 	}
 
 	if !token.Valid {
-		fmt.Println("False signature")
 		return nil, fmt.Errorf("token invalid signature")
 	}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return nil, fmt.Errorf("error in claims")
-	}
-	fmt.Printf("Extracted claims: %v\n", claims)
-
-	id, _ := claims["sub"].(string)
-	email, _ := claims["email"].(string)
-	role, _ := claims["role"].(string)
-
-	// // Extract rol frfom appMetadata
-	// var role string
-	// if appMetadata, ok := claims["app_metadata"].(map[string]any); ok {
-	// 	role, _ = appMetadata["role"].(string)
-	// }
-
-	if id == "" {
+	if claims.Subject == "" {
 		return nil, fmt.Errorf("token doesn't contain userId (sub)")
 	}
 
-	return &auth.UserClaims{
-		ID:    id,
-		Email: email,
-		Role:  role,
-	}, nil
+	return claims, nil
 }

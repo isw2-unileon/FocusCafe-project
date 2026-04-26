@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {useNavigate} from "react-router-dom";
 import {BookOpen, Clock, Upload, CheckCircle2, Coffee, Brain} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -31,17 +31,6 @@ const StudySession = () => {
             navigate('/');
         }
     }, [isAuthenticated, navigate]);
-
-    // Timer logic:
-    useEffect(() => {
-        let timer: NodeJS.Timeout;
-        if(state === 'STUDYING' && timeLeft > 0) {
-            timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000); // Decrease time every second
-        } else if(state === 'STUDYING' && timeLeft === 0) {
-            handleStartQuiz();
-        }
-        return () => clearInterval(timer);
-    }, [state, timeLeft, handleStartQuiz]);    
     
     const formatTime = (seconds: number) => {
         const m = Math.floor(seconds / 60);
@@ -52,17 +41,17 @@ const StudySession = () => {
     const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
 
     const handleStartStudy = async () => {
-        // Comprobación de seguridad para TypeScript
+        // Security check
         if(!files || files.length === 0) {
             alert("Please upload at least one file to start studying.");
             return;
         }
 
         const selectedFile = files[0];
-        if (!selectedFile) return; // Esto quita el error de "undefined"
+        if (!selectedFile) return;
 
         const formData = new FormData();
-        formData.append('pdf', selectedFile); // Ahora TypeScript sabe que no es undefined
+        formData.append('pdf', selectedFile);
         formData.append('subject_name', 'General Study');
 
         try {
@@ -70,7 +59,6 @@ const StudySession = () => {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    // Asegúrate de que el nombre de la clave coincida con tu AuthContext
                     'Authorization': `Bearer ${localStorage.getItem('token')}` 
                 }
             });
@@ -88,7 +76,7 @@ const StudySession = () => {
         }
     };
 
-    async function handleStartQuiz() {
+    const handleStartQuiz = useCallback(async () => {
         if (!currentSessionId) return;
 
         setIsGenerating(true);
@@ -105,24 +93,24 @@ const StudySession = () => {
             if (!response.ok) throw new Error("AI failed to generate quiz");
 
             const data = await response.json();
-            // Asumiendo que el backend devuelve un array de preguntas bajo la clave "quiz"
+            //Asuming the backend returns an array of questions under the key "quiz"
             setQuiz(data.quiz); 
         } catch (error) {
             console.error("Quiz generation error:", error);
-            // Mock de emergencia por si falla la IA
+            //Emergency mock in case AI fails
             setQuiz([
                 { question: "Error generating quiz. Please try again.", options: ["Back"], correct: 0 }
             ]);
         } finally {
             setIsGenerating(false);
         }
-    }
+    }, [currentSessionId]);
 
     const handleFinishQuiz = async () => {
         const correctAnswers = userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correct).length;
-        const pointsEarned = correctAnswers * 2; // 2 puntos por acierto
+        const pointsEarned = correctAnswers * 2; // 2 points per correct answe
 
-        // Enviar progreso al backend
+        // Send progress to backend
         try {
             await fetch('http://localhost:8080/api/user/progress', {
                 method: 'POST',
@@ -135,12 +123,24 @@ const StudySession = () => {
                     session_id: currentSessionId
                 })
             });
-        } catch (_e) {
-            console.error("Error saving progress");
+        } catch (e) {
+            console.error("Error saving progress:", e instanceof Error ? e.message : e);
         }
 
         setState('RESULTS');
     };
+
+    
+    // Timer logic:
+    useEffect(() => {
+        let timer: NodeJS.Timeout;
+        if(state === 'STUDYING' && timeLeft > 0) {
+            timer = setInterval(() => setTimeLeft(prev => prev - 1), 1000); // Decrease time every second
+        } else if(state === 'STUDYING' && timeLeft === 0) {
+            handleStartQuiz();
+        }
+        return () => clearInterval(timer);
+    }, [state, timeLeft, handleStartQuiz]);    
 
     if (!userStats) {
         return (
@@ -253,7 +253,7 @@ const StudySession = () => {
                         <div className="bg-orange-50 border border-orange-100 p-6 rounded-2xl mb-8">
                             <p className="text-orange-800 font-bold text-lg">+{userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correct).length * 2} Points Earned!</p>
                             <div className="w-full bg-orange-200 h-2 rounded-full mt-2">
-                                {/* Supongamos que calculamos el % hacia el siguiente nivel */}
+                                {/*Suppose we calculate the % towards the next level*/}
                                 <div 
                                     className="bg-orange-600 h-2 rounded-full transition-all duration-1000" 
                                     style={{ width: `${(userStats!.energy % (userStats!.max_energy * 10)) * 10}%` }}

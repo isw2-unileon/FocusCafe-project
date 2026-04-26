@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/auth"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/handlers"
 	"github.com/stretchr/testify/assert"
@@ -20,10 +21,15 @@ func (m *MockValidator) ValidateToken(token string) (*auth.UserClaims, error) {
 	if m.shouldFail {
 		return nil, assert.AnError
 	}
-	return &auth.UserClaims{Email: "test@focus.com", ID: "uuid-123"}, nil
+	return &auth.UserClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject: "uuid-123",
+		},
+		Email: "test@focus.com",
+	}, nil
 }
 
-func TestAuthMiddleware_TableDriven(t *testing.T) {
+func TestAuth(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	tests := []struct {

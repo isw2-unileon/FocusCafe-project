@@ -7,11 +7,11 @@ dotenv.config({path: resolve(__dirname, "../../.env") });
 
 test("homepage loads", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("h1")).toHaveText("App");
+  await expect(page.locator("h1")).toHaveText("FocusCafe");
 });
 
 test("health endpoint responds", async ({ request }) => {
-  const port = process.env.PORT || 808;
+  const port = process.env.PORT || 8080;
   const response = await request.get(`http://localhost:${port}/health`);
   expect(response.ok()).toBeTruthy();
   expect(await response.json()).toEqual({ status: "ok" });
