@@ -1,12 +1,28 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Coffee, LogIn } from 'lucide-react';
-import { useAuth } from '../context/useAuth';
+import { useAuth } from '@/context/AuthContext';
 
 export default function Login() {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
-  const { login, loginWithGoogle, error } = useAuth();
+  const { login, loginWithGoogle, error, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/home');
+    }
+  }, [isAuthenticated, navigate]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await login(email, password);
+    } catch (_err) {
+      // Error is handled by AuthContext
+    }
+  };
 
   return (
     <div className="min-h-screen bg-orange-50 flex items-center justify-center p-4">
@@ -20,7 +36,7 @@ export default function Login() {
           <p className="text-orange-600 font-medium mt-1">Where studying pays off</p>
         </div>
 
-        <div className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-4">
           {error && (
             <p className="text-red-500 text-sm text-center font-medium">{error}</p>
           )}
@@ -39,8 +55,7 @@ export default function Login() {
             className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-orange-400 outline-none transition-all"
           />
           <button
-            type="button"
-            onClick={() => login(email, password)}
+            type="submit"
             className="w-full bg-orange-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:bg-orange-700 transition-all flex items-center justify-center gap-2"
           >
             <LogIn size={20} />
@@ -73,7 +88,7 @@ export default function Login() {
           >
             New here? Sign up
           </Link>
-        </div>
+        </form>
 
       </div>
     </div>

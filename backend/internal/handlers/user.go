@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -11,41 +12,77 @@ import (
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
 )
 
-// GetUserProfile obtiene el perfil completo del usuario autenticado
-// Incluye información personal y estadísticas de progreso (energy, level)
+// //GetUserStats retrivies the gamified stats for the authenticated user, such as energy and level.
+// func (h *Handler) GetUserStats(c *gin.Context) {
+// 	claims, exists := c.Get("user")
+// 	if !exists{
+// 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user claims not found"})
+// 		return
+// 	}
+
+// 	userClaims, ok := claims.(*auth.UserClaims)
+// 	if !ok{
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid claims format"})
+// 		return
+// 	}
+
+// 	//Parse usr ID
+// 	userId, err := uuid.Parse(userClaims.ID)
+// 	if err != nil{
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id format"})
+// 		return
+// 	}
+
+// 	//Query database for progress of the user
+// 	var progress models.UserProgress
+// 	result := database.DB.Where("user_id = ?", userID).First(&progress)
+
+// 	if result.Error != nil{
+// 		c.JSON(http.StatusNotFound, gin.H{"error": "user stats not found"})
+//     	return
+// 	}
+// 	// 4. Return Stats
+
+//    c.JSON(http.StatusOK, gin.H{
+// 		"id": progress.UserID,
+// 		"energ"
+// }
+
+// GetUserProfile obtains the profile information of the authenticated user, including personal details and gamified stats (energy, level).
 func (h *Handler) GetUserProfile(c *gin.Context) {
-	// Obtener claims del context (establecido por middleware Auth)
+	fmt.Println("GetUserProfile called")
+	// Obtain user claims from context set by auth middleware
 	claims, exists := c.Get("user")
+
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user claims not found"})
 		return
 	}
-
-	// Castear a UserClaims
+	// Cast to UserClaims
 	userClaims, ok := claims.(*auth.UserClaims)
 	if !ok {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "invalid claims format"})
 		return
 	}
 
-	// Obtener userID del JWT (está en userClaims.ID)
-	userID := userClaims.ID
+	userID := userClaims.GetID()
+	fmt.Printf("User ID from token: %s\n", userID)
+
 	if userID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "user id missing from token"})
 		return
 	}
 
-	// Parsear string a UUID
 	id, err := uuid.Parse(userID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id format"})
 		return
 	}
 
-	// Obtener usuario de la BD con relación Progress precargada
 	var user models.User
 	result := database.DB.Preload("Progress").First(&user, id)
-
+	fmt.Println("Database query result:", result)
+	fmt.Printf("Queried user: %+v\n", user)
 	// Manejar errores de la BD
 	if result.Error != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})

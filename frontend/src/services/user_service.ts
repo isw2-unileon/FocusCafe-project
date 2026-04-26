@@ -19,19 +19,27 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 });
 
 export async function getRemoteUserStats(): Promise<UserStats> {
-        // const response = await api.get("/me/stats");
-        // return response.data;
-        return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve({
-                id: 1, // Just a mock implementation, using token length as id
-                name: "pepe",
-                energy: 100,
-                max_energy: 500,
-                level: 5
-            });
-        }, 500);
-        });
+        const response = await api.get("/me");
+        console.log("User stats response:", response.data);
+        return {
+            id: response.data.id,
+            name: response.data.first_name,
+            energy: response.data.progress.energy,
+            max_energy: 500,
+            level: response.data.progress.level
+        }
+
+            // return new Promise((resolve) => {
+        // setTimeout(() => {
+        //     resolve({
+        //         id: 1, // Just a mock implementation, using token length as id
+        //         name: "pepe",
+        //         energy: 100,
+        //         max_energy: 500,
+        //         level: 5
+        //     });
+        // }, 500);
+        // });
     }
 
 export async function getUserOrders(): Promise<UserOrder[]> {
