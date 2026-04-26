@@ -19,8 +19,8 @@ export default function Login() {
     e.preventDefault();
     try {
       await login(email, password);
-    } catch (_err) {
-      // Error is handled by AuthContext
+    } catch (e) {
+      console.error("Error saving progress:", e instanceof Error ? e.message : e);
     }
   };
 

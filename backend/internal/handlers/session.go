@@ -79,6 +79,6 @@ func StartStudySessionHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{
 		"session_id":  session.ID,
 		"material_id": material.ID,
-		"message":     "Let's study! Session has begun succesfully.",
+		"message":     "Let's study! Session has begun successfully.",
 	})
 }
