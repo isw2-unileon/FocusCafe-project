@@ -1,7 +1,8 @@
 export interface UserStats {
     id: number;
-    name: string;
+    first_name: string;
     energy: number;
-    max_energy: 500;
+    max_energy: number;
+    xp: number;
     level: number;
 }

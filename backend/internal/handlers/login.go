@@ -7,20 +7,12 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/isw2-unileon/FocusCafe-project/backend/internal/auth"
 )
 
 // LoginRequest defines the required info for the authentication
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
-}
-
-// Handler defines the required dependencies for managing auth petitions
-type Handler struct {
-	SupabaseURL string
-	SupabaseKey string
-	Auth        auth.TokenValidator
 }
 
 // Login is the principal handler, it only orquests
