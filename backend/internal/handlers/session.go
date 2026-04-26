@@ -14,20 +14,20 @@ import (
 func StartStudySessionHandler(c *gin.Context) {
 	userVal, exists := c.Get("user")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "No se encontraron credenciales de usuario"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "User credentials not found"})
 		return
 	}
 
 	// Hacemos Type Assertion seguro para evitar que el servidor se caiga (panic)
 	userMap, ok := userVal.(map[string]interface{})
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Formato de token inválido"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid token format"})
 		return
 	}
 
 	userIDStr, ok := userMap["sub"].(string)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "El token no contiene el ID de usuario (sub)"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Roken doesn't contain user ID (sub)"})
 		return
 	}
 
@@ -39,14 +39,14 @@ func StartStudySessionHandler(c *gin.Context) {
 
 	file, err := c.FormFile("pdf")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Archivo PDF requerido"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "There is no PDF file!"})
 		return
 	}
 	newFileName := uuid.New().String() + "_" + file.Filename
 	filePath := "backend/uploads/" + newFileName
 
 	if err := c.SaveUploadedFile(file, filePath); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al guardar el archivo en el servidor"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while saving the file"})
 		return
 	}
 
@@ -59,26 +59,26 @@ func StartStudySessionHandler(c *gin.Context) {
 	}
 
 	if err := database.DB.Create(&material).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al registrar el material en la base de datos"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while registering study material."})
 		return
 	}
 
 	session := models.StudySession{
 		UserID:          userID,
-		MaterialID:      material.ID, // Usamos el ID que GORM acaba de generar para el material
+		MaterialID:      material.ID,
 		DurationMinutes: 25,
 		StartTime:       time.Now(),
 		Status:          "STUDYING",
 	}
 
 	if err := database.DB.Create(&session).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al crear la sesión de estudio"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while creatin gstudy session."})
 		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
 		"session_id":  session.ID,
 		"material_id": material.ID,
-		"message":     "¡A estudiar! Sesión iniciada correctamente.",
+		"message":     "Let's study! Session has begun succesfully.",
 	})
 }
