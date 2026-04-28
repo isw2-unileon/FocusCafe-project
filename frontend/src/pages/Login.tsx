@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Coffee, LogIn } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -6,19 +6,14 @@ import { useAuth } from '@/context/AuthContext';
 export default function Login() {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
-  const { login, loginWithGoogle, error, isAuthenticated } = useAuth();
+  const { login, loginWithGoogle, error } = useAuth();
   const navigate = useNavigate();
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/home');
-    }
-  }, [isAuthenticated, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await login(email, password);
+      navigate('/home');
     } catch (e) {
       console.error("Error saving progress:", e instanceof Error ? e.message : e);
     }

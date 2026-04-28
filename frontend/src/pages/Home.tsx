@@ -22,7 +22,8 @@ const Home = () => {
         })
         .catch((err) => {
             console.error("Error loading stats:", err);
-            navigate("/");
+            logout();
+            navigate("/login");
         })
         .finally(() => {
             setLoading(false);
