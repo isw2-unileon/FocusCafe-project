@@ -41,6 +41,9 @@ func main() {
 	userRepo := repository.NewUserRepository(database.DB)
 	userService := services.NewUserService(userRepo)
 
+	user_orderRepo := repository.NewUserOrdersRepository(database.DB)
+	user_orderService := services.NewUserOrdersService(user_orderRepo)
+
 	r := gin.New()
 
 	r.Use(cors.New(cors.Config{
@@ -51,7 +54,7 @@ func main() {
 
 	r.Use(gin.Logger(), gin.Recovery())
 
-	h := handlers.NewHandler(cfg.SupabaseURL, cfg.SupabaseKey, adapterJWT, userService)
+	h := handlers.NewHandler(cfg.SupabaseURL, cfg.SupabaseKey, adapterJWT, userService, user_orderService)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
