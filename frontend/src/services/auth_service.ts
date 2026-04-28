@@ -34,7 +34,7 @@ export interface RegisterData {
 }
 
 export const registerWithEmail = async (data: RegisterData): Promise<void> => {
-  const res = await fetch(`${API_URL}/register`, {
+  const res = await fetch(`api/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -50,10 +50,16 @@ export const registerWithEmail = async (data: RegisterData): Promise<void> => {
 };
 
 export const registerWithGoogle = async (): Promise<void> => {
+  const currentOrigin = window.location.origin; 
+
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: 'http://localhost:5173/auth/callback' },
+    options: { 
+      // El callback siempre será relativo a donde estés ejecutando la app
+      redirectTo: `${currentOrigin}/auth/callback` 
+    },
   });
+
   if (error) throw new Error(error.message);
 };
 
