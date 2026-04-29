@@ -84,7 +84,7 @@ func StartStudySessionHandler(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Sesión creada con éxito. ID: %s", session.ID)
+	log.Printf("Sesión creada con éxito. ID: %d", session.ID)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"session_id":  session.ID,
