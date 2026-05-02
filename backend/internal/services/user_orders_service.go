@@ -10,11 +10,13 @@ import (
 // UserOrdersServiceInterface defines the methods that the UserOrdersService must implement
 type UserOrdersServiceInterface interface {
 	GetUserOrders(ctx context.Context, id uuid.UUID) ([]domain.UserOrder, error)
+	CompleteUserOrder(ctx context.Context, userId uuid.UUID, orderId uint) error
 }
 
 // UserOrdersRepository defines the interface for user-related data operations
 type UserOrdersRepository interface {
 	GetUserOrders(ctx context.Context, id uuid.UUID) ([]domain.UserOrder, error)
+	CompleteUserOrder(ctx context.Context, userId uuid.UUID, orderId uint) error
 }
 
 // UserOrdersService provides methods to handle user-related business logic
@@ -30,4 +32,8 @@ func NewUserOrdersService(repo UserOrdersRepository) *UserOrdersService {
 // GetUserOrdersProfile retrieves the user orders information
 func (s *UserOrdersService) GetUserOrders(ctx context.Context, id uuid.UUID) ([]domain.UserOrder, error) {
 	return s.repo.GetUserOrders(ctx, id)
+}
+
+func (s *UserOrdersService) CompleteUserOrder(ctx context.Context, userId uuid.UUID, orderId uint) error {
+	return s.repo.CompleteUserOrder(ctx, userId, orderId)
 }

@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/domain"
@@ -19,6 +21,7 @@ func NewUserOrdersRepository(db *gorm.DB) *UserOrdersRepository {
 	return &UserOrdersRepository{db: db}
 }
 
+// GetUserOrders retrieves the user orders of a user
 func (r *UserOrdersRepository) GetUserOrders(ctx context.Context, id uuid.UUID) ([]domain.UserOrder, error) {
 	var modelOrders []models.UserOrder
 
@@ -29,6 +32,15 @@ func (r *UserOrdersRepository) GetUserOrders(ctx context.Context, id uuid.UUID) 
 		Find(&modelOrders).Error
 	if err != nil {
 		return nil, err
+	}
+
+	if len(modelOrders) == 0 {
+		fmt.Println("nada")
+		if err := r.addCafeOrdersToUserByLevel(ctx, id); err != nil {
+			return nil, err
+		}
+
+		r.db.WithContext(ctx).Preload("CafeOrder").Where("user_id = ? AND status = ?", id, "pending").Find(&modelOrders)
 	}
 
 	// Convert modelUserOrders to domainUserOrders
@@ -54,4 +66,83 @@ func (r *UserOrdersRepository) GetUserOrders(ctx context.Context, id uuid.UUID) 
 		})
 	}
 	return domainUserOrders, nil
+}
+
+// addCafeOrdersToUserByLevel adds cafe orders to the user passed as an argument
+func (r *UserOrdersRepository) addCafeOrdersToUserByLevel(ctx context.Context, userID uuid.UUID) error {
+	var progress models.UserProgress
+	if err := r.db.WithContext(ctx).Where(models.UserProgress{UserID: userID}).FirstOrCreate(&progress).Error; err != nil {
+		return err
+	}
+
+	var availableCafes []models.CafeOrder
+
+	// Search catalog for available cafe orders within the required level
+	err := r.db.WithContext(ctx).
+		Where("required_level <= ?", progress.Level).
+		Order("RANDOM()").
+		Limit(3).
+		Find(&availableCafes).Error
+	if err != nil {
+		return err
+	}
+	// Create user orders and vinculate to the user
+	for _, cafe := range availableCafes {
+		newOrder := models.UserOrder{
+			UserID:      userID,
+			CafeOrderID: cafe.ID,
+			Status:      "pending",
+		}
+
+		if err := r.db.WithContext(ctx).Create(&newOrder).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *UserOrdersRepository) CompleteUserOrder(ctx context.Context, userId uuid.UUID, orderId uint) error {
+	fmt.Printf("hola")
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 1. Obtain order data and cafe order
+		var userOrder models.UserOrder
+		if err := tx.Preload("CafeOrder").First(&userOrder, orderId).Error; err != nil {
+			return err
+		}
+
+		// 2. User progress
+		var progress models.UserProgress
+		if err := tx.Where("user_id = ?", userId).First(&progress).Error; err != nil {
+			return err
+		}
+
+		// Validate energy
+		if int64(progress.Energy) < int64(userOrder.CafeOrder.EnergyCost) {
+			return errors.New("insufficient energy")
+		}
+
+		// Update user order status
+		if err := tx.Model(&userOrder).Select("status").Updates(map[string]interface{}{"status": "completed"}).Error; err != nil {
+			return err
+		}
+
+		// Update progress
+		newXP := int64(progress.XP) + int64(userOrder.CafeOrder.RewardXP)
+		newEnergy := int64(progress.Energy) - int64(userOrder.CafeOrder.EnergyCost)
+
+		// Level logic
+		newLevel := progress.Level
+		if newXP >= (int64(progress.Level) * 100) {
+			newLevel++
+		}
+
+		updates := map[string]interface{}{
+			"XP":     newXP,
+			"energy": newEnergy,
+			"Level":  newLevel,
+		}
+
+		return tx.Model(&progress).Updates(updates).Error
+	})
 }

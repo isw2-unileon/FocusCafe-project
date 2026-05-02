@@ -29,28 +29,12 @@ api.interceptors.response.use(
     }
 );
 
-export async function getRemoteUserStats(): Promise<UserStats> {
-        const response = await api.get("/me");
-        return response.data;
-    }
-
 export async function getUserOrders(): Promise<UserOrder[]> {
-        const response = await api.get("/me/orders");
-        console.log(response.data)
-        return response.data;
-    }
+    const response = await api.get("/me/orders");
+    return response.data;
+}
 
 export async function completeOrder(orderId: number): Promise<UserStats> {
-        const response = await api.post(`/orders/${orderId}/complete`);
-        return response.data;
-    }
-
-export async function getCurrentProfile(): Promise<UserProfile> {
-        const response = await api.get('/me');
-        return response.data;
-    }
-
-export async function updateUserProfile(data: { first_name: string; last_name: string }): Promise<UserProfile> {
-        const response = await api.put('/me', data);
-        return response.data;
-    }
+    const response = await api.post(`me/orders/${orderId}/complete`);
+    return response.data;
+}

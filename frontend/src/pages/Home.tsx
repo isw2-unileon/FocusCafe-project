@@ -9,8 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { UserStats } from "@/types/user";
 
 const Home = () => {
-    const {logout, setUserStats } = useAuth();
-    const [userStats, setUserStatsHome] = useState<UserStats | null>(null);
+    const { logout, userStats, setUserStats } = useAuth();
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     
@@ -18,7 +17,6 @@ const Home = () => {
         getRemoteUserStats()
         .then((data) => {
             setUserStats(data);
-            setUserStatsHome(data);
         })
         .catch((err) => {
             console.error("Error loading stats:", err);
@@ -28,7 +26,7 @@ const Home = () => {
         .finally(() => {
             setLoading(false);
         });
-    }, [navigate, setUserStats]);
+    }, [navigate, setUserStats, logout]);
 
 
     const handleLogout = () => {
@@ -88,11 +86,10 @@ const Home = () => {
                             barColor: "bg-yellow-500"
                             },
                             {
-                            icon: <Award className="text-blue-500" size={20}/>,
-                            label: "Experience",
-                            current: userStats.xp,
-                            max: userStats.max_energy, // O el valor que corresponda a XP
-                            barColor: "bg-blue-500"
+                                icon: <Award className="text-blue-500" size={20} />,
+                                label: "Experience",
+                                current: userStats.xp,
+                                barColor: "bg-blue-500",
                             }
                         ]}
                         color = "bg-yellow-50"
