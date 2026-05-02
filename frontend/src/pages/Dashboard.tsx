@@ -25,7 +25,7 @@ const Dashboard = () => {
       <div className="min-h-screen bg-stone-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
-          <p className="text-stone-600 font-semibold">Cargando perfil...</p>
+          <p className="text-stone-600 font-semibold">Loading profile...</p>
         </div>
       </div>
     );
@@ -36,12 +36,12 @@ const Dashboard = () => {
       <div className="min-h-screen bg-stone-100 flex items-center justify-center p-6">
         <div className="bg-white rounded-2xl p-8 shadow-lg text-center max-w-md">
           <h2 className="text-2xl font-black text-stone-800 mb-4">Oops!</h2>
-          <p className="text-stone-600 mb-6">{error || 'No se encontró el perfil'}</p>
+          <p className="text-stone-600 mb-6">{error || 'Profile not found'}</p>
           <button
             onClick={() => navigate('/home')}
             className="bg-orange-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-orange-700 transition-colors"
           >
-            Volver al inicio
+            Back to Home
           </button>
         </div>
       </div>
@@ -68,7 +68,7 @@ const Dashboard = () => {
           >
             <ArrowLeft className="text-stone-600" size={24} />
           </button>
-          <h1 className="text-3xl font-black text-stone-800">Mi Perfil</h1>
+          <h1 className="text-3xl font-black text-stone-800">My Profile</h1>
         </div>
 
          {/* Profile Card */}
@@ -103,7 +103,7 @@ const Dashboard = () => {
                       <Zap className="text-yellow-600" size={24} />
                     </div>
                   </div>
-                  <p className="text-xs font-bold uppercase text-gray-500 tracking-tight mb-1">Energía</p>
+                  <p className="text-xs font-bold uppercase text-gray-500 tracking-tight mb-1">Energy</p>
                   <p className="text-2xl font-black text-yellow-600">
                     {profile.progress.energy}
                   </p>
@@ -118,7 +118,7 @@ const Dashboard = () => {
                       <Flame className="text-red-600" size={24} />
                     </div>
                   </div>
-                  <p className="text-xs font-bold uppercase text-gray-500 tracking-tight mb-1">Nivel</p>
+                  <p className="text-xs font-bold uppercase text-gray-500 tracking-tight mb-1">Level</p>
                   <p className="text-2xl font-black text-red-600">{profile.progress.level}</p>
                 </div>
               )}
@@ -130,7 +130,7 @@ const Dashboard = () => {
                     <User className="text-blue-600" size={24} />
                   </div>
                 </div>
-                <p className="text-xs font-bold uppercase text-gray-500 tracking-tight mb-1">Rol</p>
+                <p className="text-xs font-bold uppercase text-gray-500 tracking-tight mb-1">Role</p>
                 <p className="text-xl font-black text-blue-600 capitalize">{profile.role}</p>
               </div>
 
@@ -141,7 +141,7 @@ const Dashboard = () => {
                     <Calendar className="text-green-600" size={24} />
                   </div>
                 </div>
-                <p className="text-xs font-bold uppercase text-gray-500 tracking-tight mb-1">Miembro desde</p>
+                <p className="text-xs font-bold uppercase text-gray-500 tracking-tight mb-1">Member Since</p>
                 <p className="text-sm font-black text-green-600">{formatDate(profile.created_at)}</p>
               </div>
             </div>
@@ -151,13 +151,13 @@ const Dashboard = () => {
 
             {/* Progress Section */}
             <div className="mb-8">
-              <h3 className="text-xl font-black text-stone-800 mb-4">📊 Tu Progreso</h3>
+              <h3 className="text-xl font-black text-stone-800 mb-4">📊 Your Progress</h3>
               
                {profile.progress ? (
                  <div className="bg-orange-50 rounded-2xl p-6 border border-orange-100 shadow-sm">
                   {/* Energy Bar */}
                   <div className="mb-6">
-                    <p className="text-sm font-semibold text-stone-600 mb-3">Energía</p>
+                    <p className="text-sm font-semibold text-stone-600 mb-3">Energy</p>
                     <div className="w-full bg-stone-200 rounded-full h-4 overflow-hidden">
                       <div 
                         className="bg-gradient-to-r from-orange-500 to-orange-600 h-4 rounded-full transition-all duration-500"
@@ -171,14 +171,14 @@ const Dashboard = () => {
 
                   {/* Level */}
                   <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-xl p-4 border border-red-100">
-                    <p className="text-sm font-semibold text-stone-600 mb-2">Nivel Actual</p>
+                    <p className="text-sm font-semibold text-stone-600 mb-2">Current Level</p>
                     <p className="text-3xl font-black text-red-600">{profile.progress.level}</p>
                   </div>
                 </div>
               ) : (
                 <div className="bg-orange-50 rounded-2xl p-6 border border-orange-100 shadow-sm">
-                  <p className="text-lg font-semibold text-orange-900 mb-2">¡Todavía no has empezado!</p>
-                  <p className="text-stone-600">Empieza a estudiar para aumentar tu progreso</p>
+                  <p className="text-lg font-semibold text-orange-900 mb-2">You haven't started yet!</p>
+                  <p className="text-stone-600">Start studying to increase your progress</p>
                 </div>
               )}
             </div>
@@ -186,7 +186,7 @@ const Dashboard = () => {
             {/* Divider */}
             <div className="border-t border-stone-200 my-8"></div>
             <div className="space-y-4">
-              <h3 className="text-xl font-black text-stone-800 mb-4">Información de Contacto</h3>
+              <h3 className="text-xl font-black text-stone-800 mb-4">Contact Information</h3>
 
               {/* Email */}
               <div className="flex items-center gap-4 p-4 bg-stone-50 rounded-2xl border border-stone-200">
@@ -205,22 +205,11 @@ const Dashboard = () => {
                   <User className="text-stone-600" size={24} />
                 </div>
                 <div>
-                  <p className="text-xs font-bold uppercase text-gray-500 tracking-tight">Usuario</p>
+                  <p className="text-xs font-bold uppercase text-gray-500 tracking-tight">Username</p>
                   <p className="text-lg font-semibold text-stone-800">@{profile.username}</p>
                 </div>
               </div>
             </div>
-
-            {/* Divider */}
-            <div className="border-t border-stone-200 my-8"></div>
-
-             {/* Metadata */}
-             <div className="grid grid-cols-1 gap-4 p-4 bg-stone-50 rounded-2xl">
-               <div>
-                 <p className="text-xs font-bold uppercase text-gray-500 tracking-tight mb-1">Último actualizado</p>
-                 <p className="text-sm font-semibold text-stone-700">{formatDate(profile.updated_at)}</p>
-               </div>
-             </div>
           </div>
         </div>
 
@@ -230,17 +219,17 @@ const Dashboard = () => {
             onClick={() => navigate('/home')}
             className="flex-1 bg-white text-stone-800 px-6 py-4 rounded-2xl font-bold border-2 border-stone-200 hover:bg-stone-50 transition-colors"
           >
-            Volver al Inicio
+            Back to Home
           </button>
            <button
              onClick={() => navigate('/edit-profile')}
              className="flex-1 bg-orange-600 text-white px-6 py-4 rounded-2xl font-bold hover:bg-orange-700 transition-colors"
            >
-             Editar Perfil
+             Edit Profile
            </button>
         </div>
       </div>
-    </div>
+      </div>
   );
 };
 

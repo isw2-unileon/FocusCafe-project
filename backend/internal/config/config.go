@@ -17,6 +17,7 @@ type Config struct {
 	SupabaseKey       string
 	SupabaseJWTSecret string
 	DatabaseURL       string
+	GeminiKey         string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -31,6 +32,7 @@ func Load() *Config {
 		SupabaseKey:       getEnv("SUPABASE_KEY", ""),
 		SupabaseJWTSecret: getEnv("SUPABASE_JWT_SECRET", ""),
 		DatabaseURL:       getEnv("DATABASE_URL", ""),
+		GeminiKey:         getEnv("GEMINI_API_KEY", ""),
 	}
 
 	log.Printf("Configuración cargada (Puerto: %s, Modo: %s)", cfg.Port, cfg.GinMode)

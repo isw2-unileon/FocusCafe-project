@@ -18,6 +18,17 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     return config;
 });
 
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
+);
+
 export async function getRemoteUserStats(): Promise<UserStats> {
         const response = await api.get("/me");
         return response.data;
