@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/domain"
@@ -35,7 +34,6 @@ func (r *UserOrdersRepository) GetUserOrders(ctx context.Context, id uuid.UUID) 
 	}
 
 	if len(modelOrders) == 0 {
-		fmt.Println("nada")
 		if err := r.addCafeOrdersToUserByLevel(ctx, id); err != nil {
 			return nil, err
 		}
@@ -104,7 +102,6 @@ func (r *UserOrdersRepository) addCafeOrdersToUserByLevel(ctx context.Context, u
 
 // CompleteUserOrder completes the user order for the given user and cafe order
 func (r *UserOrdersRepository) CompleteUserOrder(ctx context.Context, userID uuid.UUID, orderID uint) error {
-	fmt.Printf("hola")
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 1. Obtain order data and cafe order
 		var userOrder models.UserOrder

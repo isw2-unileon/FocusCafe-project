@@ -13,7 +13,7 @@ import (
 )
 
 func setupOrdersTestDB(t *testing.T) *gorm.DB {
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open("file::memory:?mode=memory&cache=private"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("failed to connect to test database: %v", err)
 	}
@@ -115,6 +115,129 @@ func TestUserOrdersRepository_GetUserOrders(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := repo.GetUserOrders(context.Background(), tt.userID)
 			validateResults(t, got, err, tt.wantCount, tt.expectedFirst, tt.wantErr)
+		})
+	}
+}
+
+func TestUserOrdersRepository_CompleteUserOrder(t *testing.T) {
+	db := setupOrdersTestDB(t)
+	repo := repository.NewUserOrdersRepository(db)
+	seedCafeOrders(t, db)
+
+	u1 := uuid.New()
+	// Setup initial progress for u1
+	db.Create(&models.UserProgress{UserID: u1, Level: 1, XP: 0, Energy: 50})
+
+	// Create a pending order for u1
+	order := models.UserOrder{UserID: u1, CafeOrderID: 1, Status: "pending"} // Espresso: Energy 10, XP 5
+	db.Create(&order)
+
+	// Create an expensive order
+	expensiveOrder := models.UserOrder{UserID: u1, CafeOrderID: 2, Status: "pending"} // Latte: Energy 20, XP 15
+	db.Create(&expensiveOrder)
+
+	tests := []struct {
+		name          string
+		userID        uuid.UUID
+		orderID       uint
+		initialXP     int
+		initialEnergy int
+		initialLevel  int
+		wantErr       bool
+		expectedErr   string
+		checkLevelUp  bool
+	}{
+		{
+			name:          "Success: Complete order",
+			userID:        u1,
+			orderID:       uint(order.ID),
+			initialXP:     0,
+			initialEnergy: 50,
+			initialLevel:  1,
+			wantErr:       false,
+		},
+		{
+			name:          "Error: Insufficient energy",
+			userID:        u1,
+			orderID:       uint(expensiveOrder.ID),
+			initialXP:     0,
+			initialEnergy: 5, // Less than 20
+			initialLevel:  1,
+			wantErr:       true,
+			expectedErr:   "insufficient energy",
+		},
+		{
+			name:          "Success: Level up",
+			userID:        u1,
+			orderID:       uint(order.ID),
+			initialXP:     95, // 95 + 5 = 100 (Threshold for level 1 is 1 * 100)
+			initialEnergy: 50,
+			initialLevel:  1,
+			wantErr:       false,
+			checkLevelUp:  true,
+		},
+		{
+			name:          "Error: Order not found",
+			userID:        u1,
+			orderID:       999,
+			wantErr:       true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Reset progress for each test case
+			if tt.userID == u1 {
+				db.Model(&models.UserProgress{}).Where("user_id = ?", u1).Updates(map[string]interface{}{
+					"XP":     tt.initialXP,
+					"energy": tt.initialEnergy,
+					"Level":  tt.initialLevel,
+				})
+				// Reset order status if it was completed by a previous test
+				if tt.orderID != 999 {
+					db.Model(&models.UserOrder{}).Where("id = ?", tt.orderID).Update("status", "pending")
+				}
+			}
+
+			err := repo.CompleteUserOrder(context.Background(), tt.userID, tt.orderID)
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("CompleteUserOrder() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if tt.wantErr && tt.expectedErr != "" && err.Error() != tt.expectedErr {
+				t.Errorf("CompleteUserOrder() error = %v, want %v", err, tt.expectedErr)
+			}
+
+			if !tt.wantErr {
+				// Verify DB updates
+				var updatedOrder models.UserOrder
+				db.First(&updatedOrder, tt.orderID)
+				if updatedOrder.Status != "completed" {
+					t.Errorf("Expected status completed, got %v", updatedOrder.Status)
+				}
+
+				var progress models.UserProgress
+				db.Where("user_id = ?", tt.userID).First(&progress)
+
+				var cafe models.CafeOrder
+				db.First(&cafe, updatedOrder.CafeOrderID)
+
+				expectedXP := tt.initialXP + int(cafe.RewardXP)
+				expectedEnergy := tt.initialEnergy - int(cafe.EnergyCost)
+
+				if progress.XP != expectedXP {
+					t.Errorf("Expected XP %v, got %v", expectedXP, progress.XP)
+				}
+				if progress.Energy != expectedEnergy {
+					t.Errorf("Expected energy %v, got %v", expectedEnergy, progress.Energy)
+				}
+
+				if tt.checkLevelUp && progress.Level != (tt.initialLevel+1) {
+					t.Errorf("Expected level up to %v, got %v", tt.initialLevel+1, progress.Level)
+				}
+			}
 		})
 	}
 }

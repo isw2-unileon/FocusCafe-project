@@ -1,6 +1,5 @@
 import { UserStats } from "@/types/user";
 import { UserOrder } from "@/types/user-order";
-import { UserProfile } from "@/types/user-profile";
 import axios , {InternalAxiosRequestConfig} from 'axios';
 
 const api = axios.create({
