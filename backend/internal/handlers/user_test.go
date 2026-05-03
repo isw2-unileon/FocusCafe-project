@@ -9,7 +9,9 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/auth"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/domain"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/handlers"
 )
@@ -37,6 +39,9 @@ func TestHandler_GetUserProfile(t *testing.T) {
 			name:            "Success: Returns 200 and Profile",
 			userIDInContext: uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
 			mockBehavior: func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error) {
+				if id != uuid.MustParse("550e8400-e29b-41d4-a716-446655440000") {
+					return nil, errors.New("wrong id passed")
+				}
 				return &domain.UserProfile{
 					ID:     id,
 					Energy: 500,
@@ -67,9 +72,13 @@ func TestHandler_GetUserProfile(t *testing.T) {
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
 
-			// Simulate Middleware: inject the ID into the context
-			// Ensure this key matches what h.getUserID(c) looks for
-			c.Set("user_id", tt.userIDInContext)
+			// Simulate Middleware: inject the UserClaims into the context
+			claims := &auth.UserClaims{
+				RegisteredClaims: jwt.RegisteredClaims{
+					Subject: tt.userIDInContext.String(),
+				},
+			}
+			c.Set("user", claims)
 
 			// Create a dummy request to avoid nil pointer panics
 			c.Request = httptest.NewRequest("GET", "/api/v1/profile", nil)

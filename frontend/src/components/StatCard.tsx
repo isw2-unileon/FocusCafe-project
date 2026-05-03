@@ -5,7 +5,7 @@ interface StatItem {
   icon: ReactNode;
   label: string;
   current: number;
-  max: number;
+  max?: number;
   barColor: string; // Color de la barra de progreso
 }
 
@@ -46,7 +46,7 @@ export const StatCard = ({ title, stats, color = "bg-white" }: StatCardProps) =>
               <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
                 <div 
                   className={`h-full ${stat.barColor} transition-all duration-500`} 
-                  style={{ width: `${Math.min((stat.current / stat.max) * 100, 100)}%` }}
+                  style={{ width: `${Math.min((stat.current) * 100, 100)}%` }}
                 />
               </div>
             </div>
