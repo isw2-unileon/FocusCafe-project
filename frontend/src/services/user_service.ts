@@ -1,56 +1,24 @@
 import { UserStats } from "@/types/user";
-import { UserOrder } from "@/types/user-order";
 import { UserProfile } from "@/types/user-profile";
-import axios , {InternalAxiosRequestConfig} from 'axios';
+import { apiFetch } from "@/services/api_client";
 
-const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL+"/users",
-    headers: {
-        "Content-Type": "application/json"
-    }
-})
+//Prefix for all the routes
+const PATH = "/users";
 
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-});
-
-api.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        if (error.response?.status === 401) {
-            localStorage.removeItem('token');
-            window.location.href = '/login';
-        }
-        return Promise.reject(error);
-    }
-);
-
+//Fetch remote user statistics
 export async function getRemoteUserStats(): Promise<UserStats> {
-        const response = await api.get("/me");
-        return response.data;
-    }
+    return apiFetch(`${PATH}/me`);
+}
 
-export async function getUserOrders(): Promise<UserOrder[]> {
-        const response = await api.get("/me/orders");
-        console.log(response.data)
-        return response.data;
-    }
-
-export async function completeOrder(orderId: number): Promise<UserStats> {
-        const response = await api.post(`/orders/${orderId}/complete`);
-        return response.data;
-    }
-
+//Get the current user's profile details
 export async function getCurrentProfile(): Promise<UserProfile> {
-        const response = await api.get('/me');
-        return response.data;
-    }
+    return apiFetch(`${PATH}/me`);
+}
 
+//Update the user's profile information
 export async function updateUserProfile(data: { first_name: string; last_name: string }): Promise<UserProfile> {
-        const response = await api.put('/me', data);
-        return response.data;
-    }
+    return apiFetch('/me', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    });
+}
