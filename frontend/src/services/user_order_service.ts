@@ -1,39 +1,17 @@
 import { UserStats } from "@/types/user";
 import { UserOrder } from "@/types/user-order";
-import axios , {InternalAxiosRequestConfig} from 'axios';
+import { apiFetch } from "@/services/api_client";
 
-const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL+"/users",
-    headers: {
-        "Content-Type": "application/json"
-    }
-})
+//Prefix for all the routes
+const PATH = "/users/me/orders";
 
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-});
-
-api.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        if (error.response?.status === 401) {
-            localStorage.removeItem('token');
-            window.location.href = '/login';
-        }
-        return Promise.reject(error);
-    }
-);
 
 export async function getUserOrders(): Promise<UserOrder[]> {
-    const response = await api.get("/me/orders");
-    return response.data;
+    return apiFetch(`${PATH}`);
 }
 
 export async function completeOrder(orderId: number): Promise<UserStats> {
-    const response = await api.post(`me/orders/${orderId}/complete`);
-    return response.data;
+    return apiFetch(`${PATH}/${orderId}/complete`,{
+         method: 'POST',
+    })
 }

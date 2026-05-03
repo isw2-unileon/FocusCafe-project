@@ -1,5 +1,4 @@
 import { UserStats } from "@/types/user";
-import { UserOrder } from "@/types/user-order";
 import { UserProfile } from "@/types/user-profile";
 import { apiFetch } from "@/services/api_client";
 
@@ -9,18 +8,6 @@ const PATH = "/users";
 //Fetch remote user statistics
 export async function getRemoteUserStats(): Promise<UserStats> {
     return apiFetch(`${PATH}/me`);
-}
-
-//Retrieve the list of user orders
-export async function getUserOrders(): Promise<UserOrder[]> {
-    return apiFetch(`${PATH}/me/orders`);
-}
-
-//Mark a specific order as complete
-export async function completeOrder(orderId: number): Promise<UserStats> {
-    return apiFetch(`/orders/${orderId}/complete`, {
-        method: 'POST',
-    });
 }
 
 //Get the current user's profile details
