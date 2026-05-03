@@ -7,14 +7,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/isw2-unileon/FocusCafe-project/backend/internal/auth" // Asegúrate de que esta ruta es correcta
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/auth"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/database"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/services"
 )
 
-// StartStudySessionHandler initializes a new study session with a PDF
+// StartStudySessionHandler initializes a new study session, handles PDF upload, extracts text, and persists session data.
 func StartStudySessionHandler(c *gin.Context) {
-	log.Printf("--> Intento de inicio de sesión de estudio recibido")
+	log.Printf("--> Incoming study session start request")
 
 	userVal, exists := c.Get("user")
 	if !exists {
@@ -22,47 +23,55 @@ func StartStudySessionHandler(c *gin.Context) {
 		return
 	}
 
-	// CAMBIO CRÍTICO: El middleware guarda un puntero a auth.UserClaims
 	claims, ok := userVal.(*auth.UserClaims)
 	if !ok {
-		log.Printf("ERROR: El tipo de usuario en el contexto no es *auth.UserClaims. Es: %T", userVal)
+		log.Printf("ERROR: User object in context is not of type *auth.UserClaims")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid token format in context"})
 		return
 	}
 
-	// Extraemos el ID usando la estructura de Claims
 	userIDStr := claims.Subject
 	userID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		log.Printf("ERROR: ID de usuario no válido (%s): %v", userIDStr, err)
+		log.Printf("ERROR: Invalid user ID format: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID in token"})
 		return
 	}
 
 	file, err := c.FormFile("pdf")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "There is no PDF file!"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No PDF file provided"})
 		return
 	}
 
-	// Generamos el nombre y la ruta
+	// Generate a unique filename and set the storage path.
 	newFileName := uuid.New().String() + "_" + file.Filename
 	filePath := "backend/uploads/" + newFileName
 
-	// Guardamos el archivo (Solo una vez)
+	// Save the physical file to the local storage.
 	if err := c.SaveUploadedFile(file, filePath); err != nil {
-		log.Printf("ERROR AL GUARDAR ARCHIVO: %v | Ruta intentada: %s", err, filePath)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while saving the file"})
+		log.Printf("ERROR SAVING FILE: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save the uploaded file"})
 		return
 	}
 
-	log.Printf("Archivo guardado con éxito en: %s", filePath)
+	log.Printf("File successfully saved to: %s", filePath)
 
+	// --- PDF TEXT EXTRACTION INTEGRATION ---
+	// Extracting text content using the PDF service.
+	content, err := services.ReadPdf(filePath)
+	if err != nil {
+		log.Printf("Error extracting text from PDF: %v", err)
+		content = "" // Fallback to empty string to allow session creation to proceed.
+	}
+
+	// Create the study material record with the extracted content.
 	material := models.StudyMaterial{
 		UserID:      userID,
 		Title:       file.Filename,
 		SubjectName: c.PostForm("subject_name"),
 		FilePath:    filePath,
+		Content:     content,
 		UploadDate:  time.Now(),
 	}
 
@@ -71,6 +80,7 @@ func StartStudySessionHandler(c *gin.Context) {
 		return
 	}
 
+	// Initialize the study session linked to the newly created material.
 	session := models.StudySession{
 		UserID:          userID,
 		MaterialID:      material.ID,
@@ -84,7 +94,8 @@ func StartStudySessionHandler(c *gin.Context) {
 		return
 	}
 
-	log.Printf("Sesión creada con éxito. ID: %d", session.ID)
+	// Logging session creation with proper type formatting.
+	log.Printf("Session successfully created. ID: %d", session.ID)
 
 	c.JSON(http.StatusCreated, gin.H{
 		"session_id":  session.ID,

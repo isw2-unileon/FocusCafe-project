@@ -8,7 +8,7 @@ type SessionState = 'SETUP' | 'STUDYING' | 'QUIZ' | 'RESULTS';
 interface QuizQuestion {
     question: string;
     options: string[];
-    correct: number;
+    correctAnswer: number;
 }
 
 const StudySession = () => {
@@ -90,19 +90,32 @@ const StudySession = () => {
 
             const data = await response.json();
             
-            // --- Lógica de Parseo Robusta ---
+            // Parsing logic to handle both array and string formats from the backend
             let parsedQuiz: QuizQuestion[] = [];
             
             if (Array.isArray(data.quiz)) {
                 parsedQuiz = data.quiz;
             } else if (typeof data.quiz === 'string') {
                 try {
-                    // Intenta extraer el JSON del string (por si la IA añade texto extra)
-                    const jsonMatch = data.quiz.match(/\[[\s\S]*\]/);
-                    parsedQuiz = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(data.quiz);
+                    // 1. Clean the string from potential markdown code block formatting
+                    const cleanString = data.quiz.replace(/```json|```/g, "").trim();
+                    
+                    // 2. Attempt to parse the cleaned string as JSON
+                    const rawData = JSON.parse(cleanString);
+                    
+                    // 3. Handle different possible structures (array directly, or nested under 'quiz' or 'questions')
+                    if (Array.isArray(rawData)) {
+                        parsedQuiz = rawData;
+                    } else if (rawData.quiz && Array.isArray(rawData.quiz)) {
+                        parsedQuiz = rawData.quiz;
+                    } else if (rawData.questions && Array.isArray(rawData.questions)) {
+                        parsedQuiz = rawData.questions;
+                    }
                 } catch (e) {
                     console.error("Failed to parse quiz string:", e);
-                    throw new Error("Invalid quiz format");
+                    // Fallback: Try to extract JSON array from the string using regex
+                    const jsonMatch = data.quiz.match(/\[[\s\S]*\]/);
+                    if (jsonMatch) parsedQuiz = JSON.parse(jsonMatch[0]);
                 }
             }
 
@@ -115,7 +128,7 @@ const StudySession = () => {
                 { 
                     question: "Hubo un problema al generar el cuestionario. ¿Deseas intentarlo de nuevo?", 
                     options: ["Reintentar"], 
-                    correct: 0 
+                    correctAnswer: 0 
                 }
             ]);
         } finally {
@@ -124,7 +137,7 @@ const StudySession = () => {
     }, [currentSessionId]);
 
     const handleFinishQuiz = async () => {
-        const correctAnswers = userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correct).length;
+        const correctAnswers = userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correctAnswer).length;
         const pointsEarned = correctAnswers * 2;
 
         try {
@@ -250,7 +263,7 @@ const StudySession = () => {
                             <CheckCircle2 size={48} />
                         </div>
                         <h2 className="text-4xl font-black mb-2">Session Complete!</h2>
-                        <p className="text-stone-500 mb-8 font-medium">You scored {userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correct).length} / {quiz.length}</p>
+                        <p className="text-stone-500 mb-8 font-medium">You scored {userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correctAnswer).length} / {quiz.length}</p>
                         <button onClick={() => navigate('/home')} className="bg-stone-900 text-white px-8 py-4 rounded-xl font-bold hover:bg-stone-800 transition-all">RETURN TO CAFETERIA</button>
                     </div>
                 )}
