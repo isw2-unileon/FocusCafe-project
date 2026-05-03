@@ -1,5 +1,6 @@
 package domain
 
+// CafeOrder represents the information of cafe orders
 type CafeOrder struct {
 	ID            uint64 `json:"id"`
 	Name          string `json:"name"`

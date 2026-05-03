@@ -25,8 +25,8 @@ func (m *mockUserOrdersService) GetUserOrders(ctx context.Context, id uuid.UUID)
 	return m.getUserOrdersFunc(ctx, id)
 }
 
-func (m *mockUserOrdersService) CompleteUserOrder(ctx context.Context, userId uuid.UUID, orderId uint) error {
-	return m.completeUserOrder(ctx, userId, orderId)
+func (m *mockUserOrdersService) CompleteUserOrder(ctx context.Context, userID uuid.UUID, orderID uint) error {
+	return m.completeUserOrder(ctx, userID, orderID)
 }
 
 func TestHandler_GetUserOrders(t *testing.T) {
@@ -119,7 +119,7 @@ func TestHandler_CompleteUserOrder(t *testing.T) {
 				return nil
 			},
 			wantStatusCode: http.StatusOK,
-			expectedBody:   `"message":"Order succesfully completed!"`,
+			expectedBody:   `"message":"Order successfully completed!"`,
 		},
 		{
 			name:            "Error: Invalid order ID returns 400",
@@ -137,7 +137,7 @@ func TestHandler_CompleteUserOrder(t *testing.T) {
 				return errors.New("insufficient energy")
 			},
 			wantStatusCode: http.StatusBadRequest,
-			expectedBody:    `{"error":"Not enough energy"}`,
+			expectedBody:   `{"error":"Not enough energy"}`,
 		},
 		{
 			name:            "Error: Service failure returns 500",
@@ -147,7 +147,7 @@ func TestHandler_CompleteUserOrder(t *testing.T) {
 				return errors.New("database error")
 			},
 			wantStatusCode: http.StatusInternalServerError,
-			expectedBody:    `{"error":"Error at completing the order: database error"}`,
+			expectedBody:   `{"error":"Error at completing the order: database error"}`,
 		},
 		{
 			name:            "Error: No user in context returns 401",

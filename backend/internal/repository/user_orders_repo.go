@@ -11,12 +11,12 @@ import (
 	"gorm.io/gorm"
 )
 
-// UserRepository provides methods to interact with the database for user-related operations
+// UserOrdersRepository provides methods to interact with the database for user-related operations
 type UserOrdersRepository struct {
 	db *gorm.DB
 }
 
-// NewUserRepository creates a new instance of UserRepository with the given database connection
+// NewUserOrdersRepository creates a new instance of UserRepository with the given database connection
 func NewUserOrdersRepository(db *gorm.DB) *UserOrdersRepository {
 	return &UserOrdersRepository{db: db}
 }
@@ -102,23 +102,24 @@ func (r *UserOrdersRepository) addCafeOrdersToUserByLevel(ctx context.Context, u
 	return nil
 }
 
-func (r *UserOrdersRepository) CompleteUserOrder(ctx context.Context, userId uuid.UUID, orderId uint) error {
+// CompleteUserOrder completes the user order for the given user and cafe order
+func (r *UserOrdersRepository) CompleteUserOrder(ctx context.Context, userID uuid.UUID, orderID uint) error {
 	fmt.Printf("hola")
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 1. Obtain order data and cafe order
 		var userOrder models.UserOrder
-		if err := tx.Preload("CafeOrder").First(&userOrder, orderId).Error; err != nil {
+		if err := tx.Preload("CafeOrder").First(&userOrder, orderID).Error; err != nil {
 			return err
 		}
 
 		// 2. User progress
 		var progress models.UserProgress
-		if err := tx.Where("user_id = ?", userId).First(&progress).Error; err != nil {
+		if err := tx.Where("user_id = ?", userID).First(&progress).Error; err != nil {
 			return err
 		}
 
 		// Validate energy
-		if int64(progress.Energy) < int64(userOrder.CafeOrder.EnergyCost) {
+		if int64(progress.Energy) < userOrder.CafeOrder.EnergyCost {
 			return errors.New("insufficient energy")
 		}
 
@@ -128,8 +129,8 @@ func (r *UserOrdersRepository) CompleteUserOrder(ctx context.Context, userId uui
 		}
 
 		// Update progress
-		newXP := int64(progress.XP) + int64(userOrder.CafeOrder.RewardXP)
-		newEnergy := int64(progress.Energy) - int64(userOrder.CafeOrder.EnergyCost)
+		newXP := int64(progress.XP) + userOrder.CafeOrder.RewardXP
+		newEnergy := int64(progress.Energy) - userOrder.CafeOrder.EnergyCost
 
 		// Level logic
 		newLevel := progress.Level

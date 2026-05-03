@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -28,8 +27,8 @@ func (h *Handler) GetUserOrders(c *gin.Context) {
 	c.JSON(http.StatusOK, orders)
 }
 
+// CompleteUserOrder handles completing an order
 func (h *Handler) CompleteUserOrder(c *gin.Context) {
-	fmt.Printf("buenas")
 	// 1. Extract id from url
 	idParam := c.Param("id")
 	orderID, err := strconv.ParseUint(idParam, 10, 32)
@@ -57,7 +56,7 @@ func (h *Handler) CompleteUserOrder(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Order succesfully completed!",
+		"message": "Order successfully completed!",
 		"status":  "completed",
 	})
 }

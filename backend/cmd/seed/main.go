@@ -151,7 +151,7 @@ func fillInitialOrdersForAllUsers(db *gorm.DB) {
 			var randomCafes []models.CafeOrder
 			db.Where("required_level <= ?", progress.Level).Order("RANDOM()").Limit(needed).Find(&randomCafes)
 
-			// 4. Asign these cafe orders to the user
+			// 4. Assign these cafe orders to the user
 			for _, cafe := range randomCafes {
 				newOrder := models.UserOrder{
 					UserID:      user.ID,

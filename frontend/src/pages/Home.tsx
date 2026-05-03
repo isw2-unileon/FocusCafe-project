@@ -6,7 +6,6 @@ import { getRemoteUserStats } from "@/services/user_service";
 import { OrderList } from "@/components/OrderList";
 import { AvatarDashboard } from "@/components/AvatarDashboard";
 import { useAuth } from "@/context/AuthContext";
-import { UserStats } from "@/types/user";
 
 const Home = () => {
     const { logout, userStats, setUserStats } = useAuth();
