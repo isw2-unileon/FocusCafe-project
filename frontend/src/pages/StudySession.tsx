@@ -127,11 +127,12 @@ const StudySession = () => {
 
             setQuiz(parsedQuiz);
             
-        } catch (error: any) {
+        } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : "Error generating the quiz";
             console.error("Quiz generation error:", error);
-            // Display the error as a clickable retry card
+            
             setQuiz([{ 
-                question: error.message || "Error generating the quiz. Try again?", 
+                question: errorMessage, 
                 options: ["Click to Retry"], 
                 correctAnswer: 0 
             }]);
