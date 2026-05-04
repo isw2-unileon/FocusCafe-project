@@ -14,17 +14,16 @@ import (
 )
 
 // GenerateQuizSystemPrompt defines the AI's persona and the required strict JSON output format.
-const GenerateQuizSystemPrompt = `Eres un experto docente. Genera un cuestionario JSON.
-Responde ÚNICAMENTE el JSON puro, sin markdown.
-Formato: {"quiz_name": "...", "questions": [{"question_text": "...", "option_a": "...", "option_b": "...", "option_c": "...", "option_d": "...", "correct_answer": "A", "explanation": "..."}]}
-Genera 3 preguntas.`
+const GenerateQuizSystemPrompt = `You are an expert teacher. Generate a study quiz JSON based on the provided text.
+Return ONLY pure JSON, no markdown formatting.
+Format: {"quiz_name": "...", "questions": [{"question_text": "...", "option_a": "...", "option_b": "...", "option_c": "...", "option_d": "...", "correct_answer": "...", "explanation": "..."}]}
+CRITICAL: "correct_answer" must be exactly one uppercase letter: "A", "B", "C", or "D".
+Generate exactly 3 questions.`
 
 // GenerateQuiz processes the provided text via Google Gemini API to produce a study quiz in JSON format.
 func GenerateQuiz(pdfText string) (string, error) {
 	apiKey := os.Getenv("GEMINI_API_KEY")
-	// Using gemini-2.0-flash-lite-001 as it is the most stable version for the 2026 free tier catalog.
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-lite-001:generateContent?key=%s", apiKey)
-
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=%s", apiKey)
 	// 1. Prepare the request payload.
 	payload := map[string]interface{}{
 		"contents": []map[string]interface{}{
