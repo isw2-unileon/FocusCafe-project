@@ -11,6 +11,17 @@ interface QuizQuestion {
     correctAnswer: number;
 }
 
+// Interface to represent the raw question from Gemini
+interface RawAIQuestion {
+    question_text?: string;
+    question?: string;
+    option_a: string;
+    option_b: string;
+    option_c: string;
+    option_d: string;
+    correct_answer: string;
+}
+
 const StudySession = () => {
     const { userStats, isAuthenticated } = useAuth();
     const navigate = useNavigate();
@@ -98,7 +109,7 @@ const StudySession = () => {
             let parsedQuiz: QuizQuestion[] = [];
 
             if (data.questions && Array.isArray(data.questions)) {
-                parsedQuiz = data.questions.map((q: any) => {
+                parsedQuiz = data.questions.map((q: RawAIQuestion) => {
                     // Collect options and filter out any empties
                     const options = [q.option_a, q.option_b, q.option_c, q.option_d].filter(Boolean);
                     
