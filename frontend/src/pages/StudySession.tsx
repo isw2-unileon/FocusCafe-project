@@ -77,6 +77,7 @@ const StudySession = () => {
 
         setIsGenerating(true);
         setState('QUIZ');
+        setQuiz([]); // Clear previous state
 
         try {
             const response = await fetch(`http://localhost:8081/api/study/generate-quiz/${currentSessionId}`, {
@@ -86,51 +87,43 @@ const StudySession = () => {
                 }
             });
 
-            if (!response.ok) throw new Error("AI failed to generate quiz");
-
-            const data = await response.json();
-            
-            // Parsing logic to handle both array and string formats from the backend
-            let parsedQuiz: QuizQuestion[] = [];
-            
-            if (Array.isArray(data.quiz)) {
-                parsedQuiz = data.quiz;
-            } else if (typeof data.quiz === 'string') {
-                try {
-                    // 1. Clean the string from potential markdown code block formatting
-                    const cleanString = data.quiz.replace(/```json|```/g, "").trim();
-                    
-                    // 2. Attempt to parse the cleaned string as JSON
-                    const rawData = JSON.parse(cleanString);
-                    
-                    // 3. Handle different possible structures (array directly, or nested under 'quiz' or 'questions')
-                    if (Array.isArray(rawData)) {
-                        parsedQuiz = rawData;
-                    } else if (rawData.quiz && Array.isArray(rawData.quiz)) {
-                        parsedQuiz = rawData.quiz;
-                    } else if (rawData.questions && Array.isArray(rawData.questions)) {
-                        parsedQuiz = rawData.questions;
-                    }
-                } catch (e) {
-                    console.error("Failed to parse quiz string:", e);
-                    // Fallback: Try to extract JSON array from the string using regex
-                    const jsonMatch = data.quiz.match(/\[[\s\S]*\]/);
-                    if (jsonMatch) parsedQuiz = JSON.parse(jsonMatch[0]);
-                }
+            if (!response.ok) {
+                // Check if it's the high demand error (500 from your backend currently)
+                throw new Error("AI service is currently busy. Please try again in a few seconds.");
             }
 
-            // Validar que realmente sea un array antes de setear
-            setQuiz(Array.isArray(parsedQuiz) ? parsedQuiz : []);
+            const data = await response.json();
+            console.log("Raw AI Response:", data);
+
+            let parsedQuiz: QuizQuestion[] = [];
+
+            if (data.questions && Array.isArray(data.questions)) {
+                parsedQuiz = data.questions.map((q: any) => {
+                    // Collect options and filter out any empties
+                    const options = [q.option_a, q.option_b, q.option_c, q.option_d].filter(Boolean);
+                    
+                    // Map letter (A-D) to index (0-3)
+                    const letter = String(q.correct_answer || 'A').trim().toUpperCase();
+                    const mapping: Record<string, number> = { 'A': 0, 'B': 1, 'C': 2, 'D': 3 };
+                    
+                    return {
+                        question: q.question_text || q.question || "Untitled Question",
+                        options: options,
+                        correctAnswer: mapping[letter] ?? 0
+                    };
+                });
+            }
+
+            setQuiz(parsedQuiz);
             
-        } catch (error) {
+        } catch (error: any) {
             console.error("Quiz generation error:", error);
-            setQuiz([
-                { 
-                    question: "Hubo un problema al generar el cuestionario. ¿Deseas intentarlo de nuevo?", 
-                    options: ["Reintentar"], 
-                    correctAnswer: 0 
-                }
-            ]);
+            // Display the error as a clickable retry card
+            setQuiz([{ 
+                question: error.message || "Error generating the quiz. Try again?", 
+                options: ["Click to Retry"], 
+                correctAnswer: 0 
+            }]);
         } finally {
             setIsGenerating(false);
         }
@@ -228,30 +221,55 @@ const StudySession = () => {
                     <div className="bg-white rounded-3xl p-8 shadow-sm">
                         {isGenerating ? (
                             <div className="text-center py-12">
-                                <Brain className="mx-auto text-orange-50 animate-bounce mb-4" size={48} />
+                                <Brain className="mx-auto text-orange-600 animate-bounce mb-4" size={48} />
                                 <h2 className="text-2xl font-black">AI is crafting your test...</h2>
                                 <p className="text-stone-500">Analyzing your PDFs to check your knowledge.</p>
                             </div>
                         ) : (
                             <div className="space-y-8">
                                 <h2 className="text-2xl font-black flex items-center gap-2"><BookOpen /> Evaluation Time</h2>
-                                {quiz && quiz.length > 0 ? quiz.map((q, idx) => (
-                                    <div key={idx} className="p-6 bg-stone-50 rounded-2xl border border-stone-100">
-                                        <p className="font-bold text-lg mb-4">{idx + 1}. {q.question}</p>
-                                        <div className="grid grid-cols-1 gap-3">
-                                            {q.options.map((opt, i) => (
-                                                <button key={i} onClick={() => {
-                                                    const newAns = [...userAnswers];
-                                                    newAns[idx] = i;
-                                                    setUserAnswers(newAns);
-                                                }} className={`p-4 rounded-xl text-left font-medium transition-all ${userAnswers[idx] === i ? 'bg-orange-600 text-white shadow-md' : 'bg-white hover:bg-stone-100'}`}>
-                                                    {opt}
-                                                </button>
-                                            ))}
-                                        </div>
+                                
+                                {/* VALIDACIÓN CRÍTICA: Añadimos comprobación de Array.isArray */}
+                                {Array.isArray(quiz) && quiz.length > 0 ? (
+                                    quiz.map((q, idx) => {
+                                        // Si por alguna razón una pregunta individual es nula, la saltamos
+                                        if (!q || !q.options) return null;
+
+                                        return (
+                                            <div key={idx} className="p-6 bg-stone-50 rounded-2xl border border-stone-100">
+                                                <p className="font-bold text-lg mb-4">{idx + 1}. {q.question}</p>
+                                                <div className="grid grid-cols-1 gap-3">
+                                                    {q.options.map((opt, i) => (
+                                                        <button 
+                                                            key={i} 
+                                                            onClick={() => {
+                                                                const newAns = [...userAnswers];
+                                                                newAns[idx] = i;
+                                                                setUserAnswers(newAns);
+                                                            }} 
+                                                            className={`p-4 rounded-xl text-left font-medium transition-all ${userAnswers[idx] === i ? 'bg-orange-600 text-white shadow-md' : 'bg-white hover:bg-stone-100'}`}
+                                                        >
+                                                            {opt}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                ) : (
+                                    <div className="text-center py-10">
+                                        <p className="text-stone-500 mb-4">No pudimos procesar las preguntas del cuestionario.</p>
+                                        <button onClick={handleStartQuiz} className="text-orange-600 font-bold underline">
+                                            Intentar generar de nuevo
+                                        </button>
                                     </div>
-                                )) : <p className="text-center py-4">No questions available.</p>}
-                                <button onClick={handleFinishQuiz} className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold">SUBMIT ANSWERS</button>
+                                )}
+
+                                {Array.isArray(quiz) && quiz.length > 0 && (
+                                    <button onClick={handleFinishQuiz} className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold">
+                                        SUBMIT ANSWERS
+                                    </button>
+                                )}
                             </div>
                         )}
                     </div>
