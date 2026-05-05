@@ -34,7 +34,7 @@ export interface RegisterData {
 }
 
 export const registerWithEmail = async (data: RegisterData): Promise<void> => {
-  const res = await fetch(`api/register`, {
+  const res = await fetch(`${API_URL}/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
