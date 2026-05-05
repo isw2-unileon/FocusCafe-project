@@ -6,6 +6,7 @@ import "github.com/google/uuid"
 type UserProfile struct {
 	ID        uuid.UUID `json:"id"`
 	FirstName string    `json:"first_name"`
+	LastName  string    `json:"last_name"`
 	Username  string    `json:"username"`
 	Energy    int       `json:"energy"`
 	MaxEnergy int       `json:"max_energy"`

@@ -17,7 +17,7 @@ export async function getCurrentProfile(): Promise<UserProfile> {
 
 //Update the user's profile information
 export async function updateUserProfile(data: { first_name: string; last_name: string }): Promise<UserProfile> {
-    return apiFetch('/me', {
+    return apiFetch(`${PATH}/me`, {
         method: 'PUT',
         body: JSON.stringify(data),
     });
