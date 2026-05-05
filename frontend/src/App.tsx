@@ -12,7 +12,7 @@ import Dashboard from '@/pages/Dashboard';
 import EditProfile from '@/pages/EditProfile';
 import StudySession from '@/pages/StudySession';
 import { AuthProvider } from "./context/AuthContext";
-import AdminDashboard from "./pages/AdminDashboard";
+//import AdminDashboard from "./pages/AdminDashboard";
 //import AdminDashboard from '@/pages/AdminDashboard';
 
 export default function App() {
