@@ -12,6 +12,7 @@ import Dashboard from '@/pages/Dashboard';
 import EditProfile from '@/pages/EditProfile';
 import StudySession from '@/pages/StudySession';
 import { AuthProvider } from "./context/AuthContext";
+import AdminDashboard from "./pages/AdminDashboard";
 //import AdminDashboard from '@/pages/AdminDashboard';
 
 export default function App() {
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/adminDashboard" element={<AdminDashboard />}/>
           
            {/*Private routes*/}
              <Route element={<ProtectedRoute />}>
@@ -33,7 +35,7 @@ export default function App() {
                <Route path="/dashboard" element={<Dashboard />} />
                <Route path="/edit-profile" element={<EditProfile />} />
                
-               {/*<Route path="/adminDashboard" element={<AdminDashboard />} />*/}
+               
              </Route>
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
