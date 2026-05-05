@@ -33,6 +33,7 @@ func (r *UserRepository) GetUserProfile(ctx context.Context, id uuid.UUID) (*dom
 	profile := &domain.UserProfile{
 		ID:        m.ID,
 		FirstName: m.FirstName,
+		LastName:  m.LastName,
 		Username:  m.Username,
 		Energy:    0,
 		MaxEnergy: 500,
@@ -47,4 +48,12 @@ func (r *UserRepository) GetUserProfile(ctx context.Context, id uuid.UUID) (*dom
 	}
 
 	return profile, nil
+}
+
+// UpdateUserProfile updates the user's first and last name in the database
+func (r *UserRepository) UpdateUserProfile(ctx context.Context, id uuid.UUID, firstName, lastName string) error {
+	return r.db.WithContext(ctx).Model(&models.User{}).Where("id = ?", id).Updates(models.User{
+		FirstName: firstName,
+		LastName:  lastName,
+	}).Error
 }
