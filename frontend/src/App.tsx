@@ -15,6 +15,7 @@ import { AuthProvider } from "./context/AuthContext";
 //import AdminDashboard from "./pages/AdminDashboard";
 //import AdminDashboard from '@/pages/AdminDashboard';
 
+//Add this to return: <Route path="/adminDashboard" element={<AdminDashboard />}/>
 export default function App() {
   return (
     <AuthProvider>
@@ -26,7 +27,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route path="/adminDashboard" element={<AdminDashboard />}/>
+          
           
            {/*Private routes*/}
              <Route element={<ProtectedRoute />}>
