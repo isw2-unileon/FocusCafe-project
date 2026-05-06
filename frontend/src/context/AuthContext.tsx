@@ -8,7 +8,7 @@ interface AuthContextType{
     isAuthenticated: boolean;
     isAdmin: boolean;
     userStats: UserStats | null;
-    login: (email: string, password: string) => Promise<void>;
+    login: (email: string, password: string) => Promise<boolean>;
     loginWithGoogle: () => void;
     logout: () => void;
     setUserStats : (user: UserStats | null) => void;
@@ -25,7 +25,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode })=>{
     const [error, setError] = useState<string | null>(null);
 
     //Login
-    const login = useCallback(async (email: string, password: string) =>{
+    const login = useCallback(async (email: string, password: string): Promise<boolean> => {
         try {
             setError(null);
             const token = await loginWithEmail(email, password);
@@ -34,12 +34,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode })=>{
 
             // Fetch real user profile to get the role from the database
             const profile = await getCurrentProfile();
-            setIsAdmin(profile.role === 'admin');
-            if (profile.role === 'admin') {
+            const isAdminUser = profile.role === 'admin';
+            setIsAdmin(isAdminUser);
+            if (isAdminUser) {
                 localStorage.setItem('userRole', 'admin');
             } else {
                 localStorage.removeItem('userRole');
             }
+            return isAdminUser;
         } catch (err) {
             setError((err as Error).message);
             throw err;

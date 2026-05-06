@@ -49,6 +49,7 @@ const AdminDashboard = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [role, setRole] = useState('');
     const [formError, setFormError] = useState<string | null>(null);
     const [formLoading, setFormLoading] = useState(false);
 
@@ -81,6 +82,7 @@ const AdminDashboard = () => {
         setEmail('');
         setPassword('');
         setConfirmPassword('');
+        setRole('');
         setFormError(null);
     };
 
@@ -138,6 +140,7 @@ const AdminDashboard = () => {
                 email: email.trim(),
                 password,
                 confirm_password: confirmPassword,
+                role,
             });
 
             // Refresh user list
@@ -396,6 +399,16 @@ const AdminDashboard = () => {
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-orange-400 outline-none transition-all"
                             />
+
+                            <select
+                                value={role}
+                                onChange={(e) => setRole(e.target.value)}
+                                className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-orange-400 outline-none transition-all font-bold text-stone-700 appearance-none cursor-pointer"
+                            >
+                                <option value="" disabled>User type</option>
+                                <option value="user">User</option>
+                                <option value="admin">Administrator</option>
+                            </select>
 
                             {formError && (
                                 <p className="text-red-500 text-sm text-center font-medium">{formError}</p>

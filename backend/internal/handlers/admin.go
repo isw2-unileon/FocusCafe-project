@@ -14,6 +14,7 @@ type AdminCreateUserRequest struct {
 	LastName  string `json:"last_name"`
 	Email     string `json:"email"`
 	Password  string `json:"password"`
+	Role      string `json:"role"`
 }
 
 // GetAllUsers returns a list of all registered users
@@ -56,6 +57,7 @@ func (h *Handler) AdminCreateUser(c *gin.Context) {
 	req.LastName = strings.TrimSpace(req.LastName)
 	req.Email = strings.TrimSpace(req.Email)
 	req.Password = strings.TrimSpace(req.Password)
+	req.Role = strings.TrimSpace(req.Role)
 
 	if req.FirstName == "" || req.LastName == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "first name and last name are required"})
@@ -68,6 +70,9 @@ func (h *Handler) AdminCreateUser(c *gin.Context) {
 	if len(req.Password) < 6 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "password must be at least 6 characters long"})
 		return
+	}
+	if req.Role != "user" && req.Role != "admin" {
+		req.Role = "user"
 	}
 
 	// 1. Create user in Supabase Auth
@@ -82,7 +87,7 @@ func (h *Handler) AdminCreateUser(c *gin.Context) {
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Email:     req.Email,
-	}); err != nil {
+	}, req.Role); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

@@ -35,6 +35,7 @@ export async function createUser(data: {
     email: string;
     password: string;
     confirm_password: string;
+    role: string;
 }): Promise<void> {
     return apiFetch('/admin/users', {
         method: 'POST',

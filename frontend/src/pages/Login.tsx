@@ -12,8 +12,8 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await login(email, password);
-      navigate('/home');
+      const isAdminUser = await login(email, password);
+      navigate(isAdminUser ? '/adminDashboard' : '/home');
     } catch (e) {
       console.error("Error saving progress:", e instanceof Error ? e.message : e);
     }
