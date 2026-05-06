@@ -41,3 +41,10 @@ export async function createUser(data: {
         body: JSON.stringify(data),
     });
 }
+
+// Delete a user by ID (admin only)
+export async function deleteUser(id: string): Promise<void> {
+    return apiFetch(`/admin/users/${id}`, {
+        method: 'DELETE',
+    });
+}

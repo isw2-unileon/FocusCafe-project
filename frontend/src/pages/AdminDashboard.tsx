@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from "react-router-dom";
-import { UserPlus, Trash2, Shield, Search, Mail, ChevronRight, ArrowLeft, X } from 'lucide-react';
+import { UserPlus, Trash2, Shield, Search, Mail, ChevronRight, ArrowLeft, X, AlertTriangle } from 'lucide-react';
 import { useAuth } from "@/context/AuthContext";
-import { getAllUsers, createUser } from "@/services/user_service";
+import { getAllUsers, createUser, deleteUser } from "@/services/user_service";
 import { UserProfile } from "@/types/user-profile";
 
 const AVATAR_COLORS = [
@@ -52,6 +52,11 @@ const AdminDashboard = () => {
     const [formError, setFormError] = useState<string | null>(null);
     const [formLoading, setFormLoading] = useState(false);
 
+    // Delete modal state
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+
     useEffect(() => {
         getAllUsers()
             .then((data) => {
@@ -77,6 +82,27 @@ const AdminDashboard = () => {
         setPassword('');
         setConfirmPassword('');
         setFormError(null);
+    };
+
+    const handleDelete = async () => {
+        if (!userToDelete) return;
+        setDeleteLoading(true);
+        try {
+            await deleteUser(userToDelete.id);
+            const updatedUsers = await getAllUsers();
+            setUsers(updatedUsers);
+            setShowDeleteModal(false);
+            setUserToDelete(null);
+        } catch (err) {
+            console.error("Error deleting user:", err);
+        } finally {
+            setDeleteLoading(false);
+        }
+    };
+
+    const openDeleteModal = (user: UserProfile) => {
+        setUserToDelete(user);
+        setShowDeleteModal(true);
     };
 
     const handleCreateUser = async () => {
@@ -237,7 +263,10 @@ const AdminDashboard = () => {
                                         <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest text-center">Level</p>
                                         <p className="text-2xl font-black text-stone-700">{user.level ?? 1}</p>
                                     </div>
-                                    <button className="bg-white p-4 rounded-2xl text-stone-200 hover:text-red-500 border border-stone-100 shadow-sm transition-all active:scale-90">
+                                    <button 
+                                        onClick={() => openDeleteModal(user)}
+                                        className="bg-white p-4 rounded-2xl text-stone-200 hover:text-red-500 border border-stone-100 shadow-sm transition-all active:scale-90"
+                                    >
                                         <Trash2 size={24} />
                                     </button>
                                 </div>
@@ -260,6 +289,56 @@ const AdminDashboard = () => {
                 </div>
 
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteModal && userToDelete && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDeleteModal(false)}>
+                    <div 
+                        className="bg-white rounded-[2.5rem] shadow-2xl p-10 max-w-md w-full border-b-8 border-red-200"
+                        style={{ animation: 'dropIn 0.3s ease-out' }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex justify-between items-center mb-8">
+                            <h2 className="text-2xl font-black text-stone-800 flex items-center gap-2">
+                                <AlertTriangle className="text-red-500" size={28} /> Remove Staff
+                            </h2>
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                className="p-2 hover:bg-stone-100 rounded-xl transition-colors"
+                            >
+                                <X size={20} className="text-stone-400" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <p className="text-stone-600 font-medium text-center">
+                                Are you sure you want to delete <span className="font-black text-stone-800">{userToDelete.first_name} {userToDelete.last_name}</span>?
+                            </p>
+                            <p className="text-stone-400 text-sm text-center">
+                                This action cannot be undone.
+                            </p>
+
+                            <div className="flex gap-3 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowDeleteModal(false)}
+                                    className="flex-1 bg-white text-stone-800 px-6 py-4 rounded-2xl font-bold border-2 border-stone-200 hover:bg-stone-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleDelete}
+                                    disabled={deleteLoading}
+                                    className="flex-1 bg-red-500 text-white px-6 py-4 rounded-2xl font-bold hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {deleteLoading ? 'Deleting...' : 'Delete'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Create User Modal */}
             {showModal && (
