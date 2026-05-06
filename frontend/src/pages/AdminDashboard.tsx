@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from "react-router-dom";
 import { UserPlus, Trash2, Shield, Search, Mail, ChevronRight, ArrowLeft, X } from 'lucide-react';
 import { useAuth } from "@/context/AuthContext";
@@ -26,6 +26,21 @@ const AdminDashboard = () => {
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+
+    const filteredUsers = useMemo(() => {
+        if (!searchQuery.trim()) return users;
+        const q = searchQuery.toLowerCase();
+        return users.filter(u => {
+            const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim().toLowerCase();
+            return (
+                u.first_name?.toLowerCase().includes(q) ||
+                u.last_name?.toLowerCase().includes(q) ||
+                u.email?.toLowerCase().includes(q) ||
+                fullName.includes(q)
+            );
+        });
+    }, [users, searchQuery]);
 
     // Modal state
     const [showModal, setShowModal] = useState(false);
@@ -172,13 +187,20 @@ const AdminDashboard = () => {
                     <input 
                         type="text" 
                         placeholder="Search by name or email..." 
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                         className="bg-transparent w-full outline-none font-bold text-lg text-stone-700"
                     />
                 </div>
 
                 {/* User List */}
                 <div className="grid gap-4 mb-12">
-                    {users.map((user) => {
+                    {filteredUsers.length === 0 && searchQuery.trim() && (
+                        <div className="bg-white rounded-2xl p-8 shadow-lg text-center">
+                            <p className="text-stone-400 font-bold">No users found matching "{searchQuery}"</p>
+                        </div>
+                    )}
+                    {filteredUsers.map((user) => {
                         const color = getAvatarColor(user.first_name);
                         const displayName = `${user.first_name} ${user.last_name || ''}`.trim();
                         return (
