@@ -48,7 +48,7 @@ func main() {
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{cfg.CORSAllowOrigin},
-		AllowMethods: []string{"POST", "GET", "PUT", "OPTIONS"},
+		AllowMethods: []string{"POST", "GET", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders: []string{"Content-Type", "Authorization"},
 	}))
 
@@ -81,6 +81,14 @@ func main() {
 
 	protected.POST("/study/start", handlers.StartStudySessionHandler)
 	protected.POST("/study/generate-quiz/:session_id", handlers.CreateQuizFromSession)
+
+	// Admin routes
+	admin := api.Group("/admin")
+	admin.Use(handlers.Auth(adapterJWT), h.AdminOnly())
+	admin.GET("/users", h.GetAllUsers)
+	admin.GET("/users/search", h.GetUserByEmail)
+	admin.POST("/users", h.AdminCreateUser)
+	admin.DELETE("/users/:id", h.DeleteUser)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

@@ -35,6 +35,8 @@ func (r *UserRepository) GetUserProfile(ctx context.Context, id uuid.UUID) (*dom
 		FirstName: m.FirstName,
 		LastName:  m.LastName,
 		Username:  m.Username,
+		Email:     m.Email,
+		Role:      m.Role,
 		Energy:    0,
 		MaxEnergy: 500,
 		XP:        0,
@@ -56,4 +58,31 @@ func (r *UserRepository) UpdateUserProfile(ctx context.Context, id uuid.UUID, fi
 		FirstName: firstName,
 		LastName:  lastName,
 	}).Error
+}
+
+// GetAllUsers retrieves all users from the database with their progress
+func (r *UserRepository) GetAllUsers(ctx context.Context) ([]models.User, error) {
+	var users []models.User
+	err := r.db.WithContext(ctx).Preload("Progress").Find(&users).Error
+	return users, err
+}
+
+// GetUserByEmail retrieves a user by their email address
+func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+	var user models.User
+	err := r.db.WithContext(ctx).Preload("Progress").Where("email = ?", email).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+// DeleteUser performs a soft delete of the user by ID
+func (r *UserRepository) DeleteUser(ctx context.Context, id uuid.UUID) error {
+	return r.db.WithContext(ctx).Delete(&models.User{}, id).Error
+}
+
+// CreateUser inserts a new user into the database
+func (r *UserRepository) CreateUser(ctx context.Context, user *models.User) error {
+	return r.db.WithContext(ctx).Create(user).Error
 }
