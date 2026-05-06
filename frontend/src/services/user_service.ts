@@ -22,3 +22,22 @@ export async function updateUserProfile(data: { first_name: string; last_name: s
         body: JSON.stringify(data),
     });
 }
+
+// Fetch all users (admin only)
+export async function getAllUsers(): Promise<UserProfile[]> {
+    return apiFetch('/admin/users');
+}
+
+// Create a new user (admin only)
+export async function createUser(data: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    password: string;
+    confirm_password: string;
+}): Promise<void> {
+    return apiFetch('/admin/users', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}

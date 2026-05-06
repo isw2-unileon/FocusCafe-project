@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Zap, BookOpen, ChevronRight, Award } from 'lucide-react';
+import { Zap, BookOpen, ChevronRight, Award, Shield } from 'lucide-react';
 import { StatCard } from "../components/StatCard";
 import { getRemoteUserStats } from "@/services/user_service";
 import { OrderList } from "@/components/OrderList";
@@ -8,7 +8,7 @@ import { AvatarDashboard } from "@/components/AvatarDashboard";
 import { useAuth } from "@/context/AuthContext";
 
 const Home = () => {
-    const { logout, userStats, setUserStats } = useAuth();
+    const { logout, userStats, setUserStats, isAdmin } = useAuth();
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
     
@@ -55,6 +55,15 @@ const Home = () => {
                         </span>
                     </h2>
                     <div className="flex items-center gap-4">
+                        {isAdmin && (
+                            <Link 
+                                to="/adminDashboard"
+                                className="p-2 bg-white rounded-xl shadow-sm hover:bg-orange-50 transition-all hover:scale-105 active:scale-95 text-orange-600"
+                                title="Admin Panel"
+                            >
+                                <Shield size={20} />
+                            </Link>
+                        )}
                         <Link 
                             to="/dashboard"
                             className="transition-transform hover:scale-105 active:scale-95"
