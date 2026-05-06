@@ -37,6 +37,7 @@ func (r *UserRepository) GetUserProfile(ctx context.Context, id uuid.UUID) (*dom
 		Username:  m.Username,
 		Email:     m.Email,
 		Role:      m.Role,
+		CreatedAt: m.CreatedAt.Format("2006-01-02"),
 		Energy:    0,
 		MaxEnergy: 500,
 		XP:        0,

@@ -10,6 +10,7 @@ type UserProfile struct {
 	Username  string    `json:"username"`
 	Email     string    `json:"email"`
 	Role      string    `json:"role"`
+	CreatedAt string    `json:"created_at"`
 	Energy    int       `json:"energy"`
 	MaxEnergy int       `json:"max_energy"`
 	XP        int       `json:"xp"`

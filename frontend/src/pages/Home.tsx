@@ -58,10 +58,10 @@ const Home = () => {
                         {isAdmin && (
                             <Link 
                                 to="/adminDashboard"
-                                className="p-2 bg-white rounded-xl shadow-sm hover:bg-orange-50 transition-all hover:scale-105 active:scale-95 text-orange-600"
+                                className="transition-transform hover:scale-105 active:scale-95 text-stone-400 hover:text-orange-600"
                                 title="Admin Panel"
                             >
-                                <Shield size={20} />
+                                <Shield size={28} />
                             </Link>
                         )}
                         <Link 
