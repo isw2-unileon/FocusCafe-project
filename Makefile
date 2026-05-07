@@ -1,9 +1,5 @@
-<<<<<<< Updated upstream
-.PHONY: install run-backend run-frontend build-backend build-frontend test lint e2e db-up db-down db-seed
-=======
 .PHONY: install run-backend run-frontend build-backend build-frontend test lint e2e \
        local-up local-down local-seed local-reset local-status
->>>>>>> Stashed changes
 
 ifeq ($(OS),Windows_NT)
     AIR_CONFIG := backend/.air.windows.toml
@@ -82,12 +78,6 @@ e2e: db-up db-seed
 	@echo "Running Playwright tests..."
 	cd e2e && npx playwright test
 
-<<<<<<< Updated upstream
-	@echo "Cleaning up processes..."
-	@powershell -ExecutionPolicy Bypass -Command "if (Test-Path 'backend.pid') { $$pid = Get-Content 'backend.pid'; Stop-Process -Id $$pid -Force -ErrorAction SilentlyContinue; Remove-Item 'backend.pid' }"
-	@powershell -ExecutionPolicy Bypass -Command "if (Test-Path 'frontend.pid') { $$pid = Get-Content 'frontend.pid'; Stop-Process -Id $$pid -Force -ErrorAction SilentlyContinue; Remove-Item 'frontend.pid' }"
-	$(MAKE) db-down
-=======
 # ========================================
 # Local development environment (Supabase)
 # ========================================
@@ -120,4 +110,3 @@ local-seed:
 ## Show Supabase local status and credentials
 local-status:
 	supabase status
->>>>>>> Stashed changes

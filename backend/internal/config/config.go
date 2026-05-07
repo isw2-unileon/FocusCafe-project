@@ -21,10 +21,17 @@ type Config struct {
 }
 
 // Load reads configuration from environment variables with sensible defaults.
-// Loads .env.local first (for local development), then falls back to .env.
+// Loads .env first, then .env.local (local overrides remote).
 func Load() *Config {
-	if err := godotenv.Load(".env.local"); err != nil {
-		_ = godotenv.Load() // fallback to .env
+	// Load .env first (remote/production config)
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Warning: .env not found or error: %v", err)
+	}
+	// Load .env.local second with Overload to override existing values
+	if err := godotenv.Overload(".env.local"); err != nil {
+		log.Printf("Warning: .env.local not found or error: %v", err)
+	} else {
+		log.Println("Loaded .env.local successfully (overrides applied)")
 	}
 
 	cfg := &Config{
@@ -39,6 +46,8 @@ func Load() *Config {
 	}
 
 	log.Printf("Configuración cargada (Puerto: %s, Modo: %s)", cfg.Port, cfg.GinMode)
+	log.Printf("Supabase URL: %s", cfg.SupabaseURL)
+	log.Printf("Database URL: %s", cfg.DatabaseURL)
 
 	return cfg
 }
