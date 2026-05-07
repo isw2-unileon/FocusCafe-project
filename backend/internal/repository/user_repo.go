@@ -78,9 +78,9 @@ func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*mod
 	return &user, nil
 }
 
-// DeleteUser performs a soft delete of the user by ID
+// DeleteUser performs a hard delete of the user by ID (removes from database permanently)
 func (r *UserRepository) DeleteUser(ctx context.Context, id uuid.UUID) error {
-	return r.db.WithContext(ctx).Delete(&models.User{}, id).Error
+	return r.db.WithContext(ctx).Unscoped().Delete(&models.User{}, id).Error
 }
 
 // CreateUser inserts a new user into the database

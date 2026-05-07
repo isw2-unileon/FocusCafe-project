@@ -1,6 +1,9 @@
 package handlers
 
 import (
+	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -106,7 +109,8 @@ func (h *Handler) AdminCreateUser(c *gin.Context) {
 	})
 }
 
-// DeleteUser performs a soft delete of a user by ID
+// DeleteUser performs a hard delete of a user by ID.
+// It first deletes from Supabase Auth (to free the email), then from the local database.
 func (h *Handler) DeleteUser(c *gin.Context) {
 	idStr := c.Param("id")
 	id, err := uuid.Parse(idStr)
@@ -115,10 +119,55 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 		return
 	}
 
+	// 1. Delete from Supabase Auth (requires service_role key)
+	if err := h.deleteAuthUser(id.String()); err != nil {
+		slog.Error("failed to delete user from Supabase Auth, aborting", "id", id, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "failed to delete user from authentication provider: " + err.Error(),
+		})
+		return
+	}
+
+	// 2. Delete from local database (hard delete)
 	if err := h.UserService.DeleteUser(c.Request.Context(), id); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete user"})
+		slog.Error("Auth user deleted but local DB delete failed", "id", id, "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete user from database"})
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "user deleted successfully"})
+}
+
+// deleteAuthUser removes a user from Supabase Auth using the service_role key.
+// This frees the email address for reuse.
+func (h *Handler) deleteAuthUser(userID string) error {
+	if h.SupabaseServiceRoleKey == "" {
+		return fmt.Errorf("SUPABASE_SERVICE_ROLE_KEY not configured")
+	}
+
+	req, err := http.NewRequest(http.MethodDelete,
+		fmt.Sprintf("%s/auth/v1/admin/users/%s", h.SupabaseURL, userID),
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("creating request: %w", err)
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", h.SupabaseServiceRoleKey))
+	req.Header.Set("apikey", h.SupabaseServiceRoleKey)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("making request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		slog.Error("Supabase Auth delete failed", "status", resp.StatusCode, "body", string(body))
+		return fmt.Errorf("supabase auth returned status %d: %s", resp.StatusCode, string(body))
+	}
+
+	slog.Info("user deleted from Supabase Auth", "id", userID)
+	return nil
 }
