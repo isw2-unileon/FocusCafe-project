@@ -188,7 +188,7 @@ function Insert-UserOrder {
 
 $testUsers = @(
     @{
-        Email     = "admin@focuscafe.local"
+        Email     = "admin@admin.com"
         Password  = "admin123"
         FirstName = "Admin"
         LastName  = "User"
@@ -200,7 +200,7 @@ $testUsers = @(
         Orders    = @(50, 46, 36)  # Focus Cafe Special, Eggs Benedict, Club Sandwich
     },
     @{
-        Email     = "user@focuscafe.local"
+        Email     = "user@user.com"
         Password  = "user123"
         FirstName = "Test"
         LastName  = "User"
@@ -308,8 +308,8 @@ Write-Host "  Seed completed!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Test accounts:" -ForegroundColor White
-Write-Host "  Admin:  admin@focuscafe.local / admin123" -ForegroundColor Yellow
-Write-Host "  User:   user@focuscafe.local  / user123" -ForegroundColor Yellow
+Write-Host "  Admin:  admin@admin.com / admin123" -ForegroundColor Yellow
+Write-Host "  User:   user@user.com  / user123" -ForegroundColor Yellow
 Write-Host "  Others: *_@focuscafe.local    / test123" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Open Studio at: http://127.0.0.1:54323" -ForegroundColor Cyan
