@@ -21,8 +21,11 @@ type Config struct {
 }
 
 // Load reads configuration from environment variables with sensible defaults.
+// Loads .env.local first (for local development), then falls back to .env.
 func Load() *Config {
-	_ = godotenv.Load() // Busca en el directorio de ejecución
+	if err := godotenv.Load(".env.local"); err != nil {
+		_ = godotenv.Load() // fallback to .env
+	}
 
 	cfg := &Config{
 		Port:              getEnv("PORT", "8080"),

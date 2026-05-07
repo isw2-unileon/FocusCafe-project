@@ -1,4 +1,9 @@
+<<<<<<< Updated upstream
 .PHONY: install run-backend run-frontend build-backend build-frontend test lint e2e db-up db-down db-seed
+=======
+.PHONY: install run-backend run-frontend build-backend build-frontend test lint e2e \
+       local-up local-down local-seed local-reset local-status
+>>>>>>> Stashed changes
 
 ifeq ($(OS),Windows_NT)
     AIR_CONFIG := backend/.air.windows.toml
@@ -77,7 +82,42 @@ e2e: db-up db-seed
 	@echo "Running Playwright tests..."
 	cd e2e && npx playwright test
 
+<<<<<<< Updated upstream
 	@echo "Cleaning up processes..."
 	@powershell -ExecutionPolicy Bypass -Command "if (Test-Path 'backend.pid') { $$pid = Get-Content 'backend.pid'; Stop-Process -Id $$pid -Force -ErrorAction SilentlyContinue; Remove-Item 'backend.pid' }"
 	@powershell -ExecutionPolicy Bypass -Command "if (Test-Path 'frontend.pid') { $$pid = Get-Content 'frontend.pid'; Stop-Process -Id $$pid -Force -ErrorAction SilentlyContinue; Remove-Item 'frontend.pid' }"
 	$(MAKE) db-down
+=======
+# ========================================
+# Local development environment (Supabase)
+# ========================================
+
+## Start local Supabase stack
+local-up:
+	supabase start
+	@echo ""
+	@echo "Local Supabase is running!" 
+	@echo "  Studio:    http://127.0.0.1:54323"
+	@echo "  API:       http://127.0.0.1:54321"
+	@echo "  Database:  postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+	@echo ""
+	@echo "Run 'make local-seed' to create test users."
+
+## Stop local Supabase stack
+local-down:
+	supabase stop
+
+## Reset local database (re-apply migrations + seed.sql) and create test users
+local-reset:
+	supabase db reset
+	@echo "Applying test users..."
+	powershell -ExecutionPolicy Bypass -File scripts/seed-local.ps1
+
+## Create test users (requires backend NOT running, only Supabase)
+local-seed:
+	powershell -ExecutionPolicy Bypass -File scripts/seed-local.ps1
+
+## Show Supabase local status and credentials
+local-status:
+	supabase status
+>>>>>>> Stashed changes
