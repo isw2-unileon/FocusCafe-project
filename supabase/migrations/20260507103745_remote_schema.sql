@@ -266,62 +266,27 @@ ALTER TABLE ONLY "public"."users"
 
 
 ALTER TABLE ONLY "public"."questions"
-    ADD CONSTRAINT "fk_quizzes_questions" FOREIGN KEY ("quiz_id") REFERENCES "public"."quizzes"("id");
-
-
-
-ALTER TABLE ONLY "public"."study_sessions"
-    ADD CONSTRAINT "fk_study_materials_sessions" FOREIGN KEY ("material_id") REFERENCES "public"."study_materials"("id");
-
-
-
-ALTER TABLE ONLY "public"."study_materials"
-    ADD CONSTRAINT "fk_study_materials_user" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id");
+    ADD CONSTRAINT "questions_quiz_id_fkey" FOREIGN KEY ("quiz_id") REFERENCES "public"."quizzes"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY "public"."quizzes"
-    ADD CONSTRAINT "fk_study_sessions_quizzes" FOREIGN KEY ("session_id") REFERENCES "public"."study_sessions"("id");
-
-
-
-ALTER TABLE ONLY "public"."study_sessions"
-    ADD CONSTRAINT "fk_study_sessions_user" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id");
-
-
-
-ALTER TABLE ONLY "public"."user_orders"
-    ADD CONSTRAINT "fk_user_orders_cafe_order" FOREIGN KEY ("cafe_order_id") REFERENCES "public"."cafe_orders"("id");
-
-
-
-ALTER TABLE ONLY "public"."user_orders"
-    ADD CONSTRAINT "fk_users_orders" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id");
-
-
-
-ALTER TABLE ONLY "public"."questions"
-    ADD CONSTRAINT "questions_quiz_id_fkey" FOREIGN KEY ("quiz_id") REFERENCES "public"."quizzes"("id") ON DELETE CASCADE;
-
-
-
-ALTER TABLE ONLY "public"."quizzes"
-    ADD CONSTRAINT "quizzes_session_id_fkey" FOREIGN KEY ("session_id") REFERENCES "public"."study_sessions"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "quizzes_session_id_fkey" FOREIGN KEY ("session_id") REFERENCES "public"."study_sessions"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY "public"."study_materials"
-    ADD CONSTRAINT "study_materials_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id");
+    ADD CONSTRAINT "study_materials_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY "public"."study_sessions"
-    ADD CONSTRAINT "study_sessions_material_id_fkey" FOREIGN KEY ("material_id") REFERENCES "public"."study_materials"("id") ON DELETE CASCADE;
+    ADD CONSTRAINT "study_sessions_material_id_fkey" FOREIGN KEY ("material_id") REFERENCES "public"."study_materials"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 
 ALTER TABLE ONLY "public"."study_sessions"
-    ADD CONSTRAINT "study_sessions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id");
+    ADD CONSTRAINT "study_sessions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON UPDATE CASCADE ON DELETE CASCADE;
 
 
 
