@@ -28,33 +28,54 @@ func main() {
 
 	database.InitDB(cfg)
 
-	gin.SetMode(cfg.GinMode)
-
-	// Create jwt adapter,
-	adapterJWT, err := supabase.NewJWTAdapter(cfg.SupabaseURL)
+	adapterJWT, err := initJWTAdapter(cfg.SupabaseURL)
 	if err != nil {
-		logger.Error("failed to create jwt adapter", "error", err)
+		logger.Error("failed to initialize", "error", err)
 		os.Exit(1)
 	}
 
-	// Initializate repositories and services
+	userService, userOrderService := initServices()
+
+	r := setupRouter(cfg, adapterJWT, userService, userOrderService)
+
+	srv := createServer(cfg, r)
+
+	if err := runServer(ctx, srv); err != nil {
+		logger.Error("server error", "error", err)
+		os.Exit(1)
+	}
+}
+
+func initJWTAdapter(supabaseURL string) (*supabase.JWTAdapter, error) {
+	adapterJWT, err := supabase.NewJWTAdapter(supabaseURL)
+	if err != nil {
+		return nil, err
+	}
+	return adapterJWT, nil
+}
+
+func initServices() (*services.UserService, *services.UserOrdersService) {
 	userRepo := repository.NewUserRepository(database.DB)
 	userService := services.NewUserService(userRepo)
 
 	userOrderRepo := repository.NewUserOrdersRepository(database.DB)
 	userOrderService := services.NewUserOrdersService(userOrderRepo)
 
-	r := gin.New()
+	return userService, userOrderService
+}
 
+func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userService *services.UserService, userOrderService *services.UserOrdersService) *gin.Engine {
+	gin.SetMode(cfg.GinMode)
+
+	r := gin.New()
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{cfg.CORSAllowOrigin},
-		AllowMethods: []string{"POST", "GET", "PUT", "OPTIONS"},
+		AllowMethods: []string{"POST", "GET", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders: []string{"Content-Type", "Authorization"},
 	}))
-
 	r.Use(gin.Logger(), gin.Recovery())
 
-	h := handlers.NewHandler(cfg.SupabaseURL, cfg.SupabaseKey, adapterJWT, userService, userOrderService)
+	h := handlers.NewHandler(cfg.SupabaseURL, cfg.SupabaseKey, cfg.SupabaseServiceRoleKey, adapterJWT, userService, userOrderService)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -74,21 +95,33 @@ func main() {
 	protected.PUT("/users/me", h.UpdateUserProfile)
 	protected.GET("/users/me/orders", h.GetUserOrders)
 	protected.POST("/users/me/orders/:id/complete", h.CompleteUserOrder)
-
 	protected.GET("/hello", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
 	})
-
 	protected.POST("/study/start", handlers.StartStudySessionHandler)
 	protected.POST("/study/generate-quiz/:session_id", handlers.CreateQuizFromSession)
 
-	srv := &http.Server{
+	// Admin routes
+	admin := api.Group("/admin")
+	admin.Use(handlers.Auth(adapterJWT), h.AdminOnly())
+	admin.GET("/users", h.GetAllUsers)
+	admin.GET("/users/search", h.GetUserByEmail)
+	admin.POST("/users", h.AdminCreateUser)
+	admin.DELETE("/users/:id", h.DeleteUser)
+
+	return r
+}
+
+func createServer(cfg *config.Config, router *gin.Engine) *http.Server {
+	return &http.Server{
 		Addr:         ":" + cfg.Port,
-		Handler:      r,
+		Handler:      router,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
+}
 
+func runServer(ctx context.Context, srv *http.Server) error {
 	ctx, stop := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -115,4 +148,6 @@ func main() {
 	if _, err := os.Stat("uploads"); os.IsNotExist(err) {
 		_ = os.Mkdir("uploads", 0o750)
 	}
+
+	return nil
 }

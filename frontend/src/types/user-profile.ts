@@ -13,5 +13,8 @@ export interface UserProfile {
   role: string;
   created_at: string;
   updated_at: string;
+  level: number;
+  energy: number;
+  xp: number;
   progress?: UserProgress;
 }

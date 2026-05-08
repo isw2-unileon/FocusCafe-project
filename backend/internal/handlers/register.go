@@ -38,7 +38,7 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	if err := h.createUserProfile(userID, req); err != nil {
+	if err := h.createUserProfile(userID, req, "user"); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -130,7 +130,10 @@ func extractUserID(data map[string]any) (string, error) {
 }
 
 // createUserProfile inserta el perfil del usuario en la tabla public.users
-func (h *Handler) createUserProfile(userID string, req RegisterRequest) error {
+func (h *Handler) createUserProfile(userID string, req RegisterRequest, role string) error {
+	if role == "" {
+		role = "user"
+	}
 	username := strings.Split(req.Email, "@")[0]
 
 	body, _ := json.Marshal(map[string]string{
@@ -139,7 +142,7 @@ func (h *Handler) createUserProfile(userID string, req RegisterRequest) error {
 		"last_name":  req.LastName,
 		"username":   username,
 		"email":      req.Email,
-		"role":       "user",
+		"role":       role,
 	})
 
 	profileReq, _ := http.NewRequest(
