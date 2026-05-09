@@ -21,18 +21,11 @@ type Config struct {
 	GeminiKey             string
 }
 
-// Load reads configuration from environment variables with sensible defaults.
-// Loads .env first, then .env.local (local overrides remote).
+// Load reads configuration from environment variables.
+// Loads .env only.
 func Load() *Config {
-	// Load .env first (remote/production config)
 	if err := godotenv.Load(); err != nil {
 		log.Printf("Warning: .env not found or error: %v", err)
-	}
-	// Load .env.local second with Overload to override existing values
-	if err := godotenv.Overload(".env.local"); err != nil {
-		log.Printf("Warning: .env.local not found or error: %v", err)
-	} else {
-		log.Println("Loaded .env.local successfully (overrides applied)")
 	}
 
 	cfg := &Config{

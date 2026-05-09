@@ -1,5 +1,5 @@
 .PHONY: install run-backend run-frontend build-backend build-frontend test lint e2e \
-       local-up local-down local-seed local-reset local-status
+       db-up db-reset db-down
 
 ifeq ($(OS),Windows_NT)
     AIR_CONFIG := backend/.air.windows.toml
@@ -45,68 +45,37 @@ lint:
 	$(shell go env GOPATH)/bin/golangci-lint run
 	cd frontend && npm run lint
 
-## --- Docker & Database ---
-db-up:
-	@echo "Starting database container..."
-	docker compose up -d db
-
-db-down:
-	@echo "Stopping database container..."
-	docker compose down -v
-
-db-seed:
-	@echo "Waiting for database to be ready..."
-	@powershell -ExecutionPolicy Bypass -Command "$$ready = $$false; while (-not $$ready) { Write-Host -NoNewline '.'; Start-Sleep -Seconds 1; $$result = (docker exec focuscafe-project-db-1 pg_isready -U testuser -d e2e_test_db); if ($$result -match 'accepting connections') { $$ready = $$true } }"
-	@echo.
-	@echo "Database ready. Running migrations and seeding..."
-	@set DATABASE_URL=$(E2E_DATABASE_URL)&& go run ./backend/cmd/seed/main.go
-
-## --- E2E Orchestration ---
-e2e: db-up db-seed
-	@echo "Starting backend for E2E tests..."
-	@powershell -ExecutionPolicy Bypass -Command "$$proc = Start-Process -FilePath 'go' -ArgumentList 'run', './backend/cmd/server/main.go' -NoNewWindow -PassThru -WorkingDirectory '.' -Environment @{ DATABASE_URL = '$(E2E_DATABASE_URL)'; PORT = '8080'; GIN_MODE = 'release' }; $$proc.Id | Out-File -FilePath 'backend.pid' -Encoding utf8"
-	
-	@echo "Starting frontend for E2E tests..."
-	@powershell -ExecutionPolicy Bypass -Command "$$proc = Start-Process -FilePath 'npm' -ArgumentList 'run', 'dev' -NoNewWindow -PassThru -WorkingDirectory 'frontend'; $$proc.Id | Out-File -FilePath 'frontend.pid' -Encoding utf8"
-
-	@echo "Waiting for backend (port 8081)..."
-	@powershell -ExecutionPolicy Bypass -Command "$$ready = $$false; while (-not $$ready) { Write-Host -NoNewline '.'; Start-Sleep -Seconds 1; try { $$resp = Invoke-WebRequest -Uri http://localhost:8080/health -UseBasicParsing -ErrorAction SilentlyContinue; if ($$resp.StatusCode -eq 200) { $$ready = $$true } } catch {} }"
-	
-	@echo "Waiting for frontend (port 5173)..."
-	@powershell -ExecutionPolicy Bypass -Command "$$ready = $$false; while (-not $$ready) { Write-Host -NoNewline '.'; Start-Sleep -Seconds 1; try { $$resp = Invoke-WebRequest -Uri http://localhost:5173 -UseBasicParsing -ErrorAction SilentlyContinue; if ($$resp.StatusCode -eq 200) { $$ready = $$true } } catch {} }"
-
-	@echo "Running Playwright tests..."
+## Run E2E tests (requires backend + frontend running)
+e2e:
 	cd e2e && npx playwright test
 
-# ========================================
-# Local development environment (Supabase)
-# ========================================
-
-## Start local Supabase stack
-local-up:
+## --- Database (Supabase Local) ---
+## Start Supabase local, apply migrations + seed + test users (ready to use)
+db-up:
+	@echo "Starting Supabase local..."
 	supabase start
+	@echo "Resetting database with migrations and seed..."
+	supabase db reset
+	@echo "Applying test users..."
+	powershell -ExecutionPolicy Bypass -File scripts/seed-local.ps1
 	@echo ""
-	@echo "Local Supabase is running!" 
+	@echo "Database is ready!"
 	@echo "  Studio:    http://127.0.0.1:54323"
 	@echo "  API:       http://127.0.0.1:54321"
 	@echo "  Database:  postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 	@echo ""
-	@echo "Run 'make local-seed' to create test users."
+	@echo "Now run: make run-backend && make run-frontend"
 
-## Stop local Supabase stack
-local-down:
-	supabase stop
-
-## Reset local database (re-apply migrations + seed.sql) and create test users
-local-reset:
+## Reset database (migrations + seed + test users)
+db-reset:
+	@echo "Resetting database..."
 	supabase db reset
 	@echo "Applying test users..."
 	powershell -ExecutionPolicy Bypass -File scripts/seed-local.ps1
+	@echo "Database reset complete!"
 
-## Create test users (requires backend NOT running, only Supabase)
-local-seed:
-	powershell -ExecutionPolicy Bypass -File scripts/seed-local.ps1
-
-## Show Supabase local status and credentials
-local-status:
-	supabase status
+## Stop Supabase local
+db-down:
+	@echo "Stopping Supabase local..."
+	supabase stop
+	@echo "Supabase stopped."
