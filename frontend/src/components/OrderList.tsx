@@ -1,7 +1,7 @@
 import { completeOrder, getUserOrders } from '@/services/user_order_service';
 import { getRemoteUserStats } from '@/services/user_service';
 import {UserOrder} from '@/types/user-order';
-import { Coffee, Zap } from 'lucide-react';
+import { Coffee, Users, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -11,22 +11,24 @@ import { showLevelUpModal, showOrderServedToast, showXpToast } from '@/lib/notif
 
 
 
-export const OrderList = () => {
+export const OrderList = ({ inGroup = false }: { inGroup?: boolean }) => {
     const { userStats, setUserStats } = useAuth();
     const [orders, setOrders] = useState<UserOrder[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const fetchOrders = async () => {
+        setLoading(true);
+        try {
+            const fetchedOrders = await getUserOrders();
+            setOrders(fetchedOrders);
+        } catch (error) {
+            console.error('Failed to fetch orders:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchOrders = async () => {
-            try {
-                const fetchedOrders = await getUserOrders();
-                setOrders(fetchedOrders);
-            } catch (error) {
-                console.error('Failed to fetch orders:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchOrders();
     }, []);
 
@@ -40,12 +42,17 @@ export const OrderList = () => {
 
             const stats = await getRemoteUserStats();
             setUserStats(stats);
-            setOrders(prev => prev.filter(o=> o.id !== orderId));
+            
+            const remainingOrders = orders.filter(o => o.id !== orderId);
+            if (remainingOrders.length === 0) {
+                await fetchOrders();
+            } else {
+                setOrders(remainingOrders);
+            }
 
             if (stats.level > levelBefore) {
                 showLevelUpModal(stats.level);
             } else {
-                // Si no subió de nivel, solo mostramos el brindis (toast) de XP
                 showXpToast(order.cafe_order?.reward_xp ?? 0);
             }
             
@@ -60,6 +67,21 @@ export const OrderList = () => {
 
     const userEnergy = userStats?.energy ?? 0;
 
+    const filteredOrders = orders.filter(order =>
+        inGroup
+            ? !!order.group_id
+            : !order.group_id
+    );
+
+    /**
+     * UI configuration depending on mode
+     */
+    const isGroup = inGroup;
+
+    const title = isGroup ? "Group orders" : "Pending orders";
+    const Icon = isGroup ? Users : Coffee;
+    const iconColor = isGroup ? "text-blue-500" : "text-orange-500";
+
     return (
         <Card className="w-full bg-orange-50 h-full overflow-y-auto">
             <Accordion type="single" collapsible defaultValue="orders-section">
@@ -68,20 +90,20 @@ export const OrderList = () => {
                     {/* Header */}
                     <AccordionTrigger className="hover:no-underline px-6 py-4 flex items-center">
                         <div className="flex items-center gap-3 w-full pr-4">
-                            <div className="p-4 bg-white rounded-xl shadow-inner">
-                                <Coffee className="text-orange-500" size={22} />
+                            <div className={"p-4 rounded-xl shadow-inner bg-white"}>
+                                <Icon className={iconColor} size={22} />
                             </div>
-                            <h2 className="text-lg font-bold text-stone-800 uppercase tracking-tight">Pending orders</h2>
+                            <h2 className="text-lg font-bold text-stone-800 uppercase tracking-tight">{title}</h2>
                         </div>
                     </AccordionTrigger>
 
                     {/* Order list */}
                     <AccordionContent className="px-6 pb-6 pt-2">
                         <div className="space-y-3 pt-4 border-t border-stone-100">
-                            {orders.length === 0 ? (
+                            {filteredOrders.length === 0 ? (
                                 <p className="text-stone-400 italic text-center py-4 text-sm">No orders yet!</p>
                             ) : (
-                                orders.slice(0,3).map((order) => {
+                                filteredOrders.slice(0,3).map((order) => {
                                     const canAfford = userEnergy >= (order.cafe_order?.energy_cost ?? 0);
                                     return (
                                         <div 
