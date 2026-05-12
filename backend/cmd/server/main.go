@@ -100,6 +100,7 @@ func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userServic
 	})
 	protected.POST("/study/start", handlers.StartStudySessionHandler)
 	protected.POST("/study/generate-quiz/:session_id", handlers.CreateQuizFromSession)
+	protected.POST("/user/progress", handlers.UpdateProgressHandler(database.DB))
 
 	// Admin routes
 	admin := api.Group("/admin")
