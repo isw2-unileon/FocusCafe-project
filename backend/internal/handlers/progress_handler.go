@@ -1,12 +1,12 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
-
-	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
 	"gorm.io/gorm"
 )
 
@@ -16,19 +16,12 @@ type ProgressUpdateRequest struct {
 	Score     int    `json:"score" binding:"min=0"`
 }
 
-// UpdateProgressHandler updates user energy and experience based on quiz results
+// UpdateProgressHandler updates user energy based on quiz results
 func UpdateProgressHandler(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Get UserID from context
-		contextUserID, exists := c.Get("userID")
-		if !exists {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "User identity not found"})
-			return
-		}
-
-		userID, ok := contextUserID.(uuid.UUID)
-		if !ok {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Invalid user ID format"})
+		userID, err := getUserIDFromContext(c)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			return
 		}
 
@@ -38,58 +31,64 @@ func UpdateProgressHandler(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		// 1. Fetch the study session to get DurationMinutes
-		var session models.StudySession
-		if err := db.Where("id = ? AND user_id = ?", input.SessionID, userID).First(&session).Error; err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Study session not found"})
-			return
-		}
+		// 1. Calculate rewards: 20 energy per correct answer
+		energyEarned := input.Score * 20
 
-		// 2. Calculate rewards
-		// 20 per correct answer
-		energyEarned := (input.Score * 10)
-
-		// 3. Update or Create UserProgress
-		var progress models.UserProgress
-		err := db.Transaction(func(tx *gorm.DB) error {
-			if err := tx.Where("user_id = ?", userID).First(&progress).Error; err != nil {
-				if err == gorm.ErrRecordNotFound {
-					progress = models.UserProgress{
-						UserID: userID,
-						Energy: 0,
-						Level:  1,
-						XP:     0,
-					}
-					if err := tx.Create(&progress).Error; err != nil {
-						return err
-					}
-				} else {
-					return err
-				}
-			}
-
-			// Apply earned rewards
-			progress.Energy += energyEarned
-
-			// Level up logic: 100 XP per level
-			if progress.XP >= 100 {
-				levelsGained := progress.XP / 100
-				progress.Level += levelsGained
-				progress.XP = progress.XP % 100
-			}
-
-			return tx.Save(&progress).Error
-		})
+		// 2. Perform database updates
+		newTotal, err := applyProgressUpdate(db, userID, input.SessionID, energyEarned)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update progress"})
+			status := http.StatusInternalServerError
+			if err.Error() == "study session not found" {
+				status = http.StatusNotFound
+			}
+			c.JSON(status, gin.H{"error": err.Error()})
 			return
 		}
 
-		// 4. Return the results
 		c.JSON(http.StatusOK, gin.H{
 			"message":       "Energy updated successfully",
 			"energy_earned": energyEarned,
-			"new_total":     progress.Energy,
+			"new_total":     newTotal,
 		})
 	}
+}
+
+// getUserIDFromContext extracts and validates the UUID from Gin context
+func getUserIDFromContext(c *gin.Context) (uuid.UUID, error) {
+	val, exists := c.Get("userID")
+	if !exists {
+		return uuid.Nil, errors.New("user identity not found")
+	}
+	userID, ok := val.(uuid.UUID)
+	if !ok {
+		return uuid.Nil, errors.New("invalid user ID format")
+	}
+	return userID, nil
+}
+
+// applyProgressUpdate encapsulates the DB logic to reduce cognitive complexity
+func applyProgressUpdate(db *gorm.DB, userID uuid.UUID, sessionID uint64, energy int) (int, error) {
+	var session models.StudySession
+	if err := db.Where("id = ? AND user_id = ?", sessionID, userID).First(&session).Error; err != nil {
+		return 0, errors.New("study session not found")
+	}
+
+	var progress models.UserProgress
+	err := db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("user_id = ?", userID).First(&progress).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				progress = models.UserProgress{UserID: userID, Energy: 0, Level: 1, XP: 0}
+				if err := tx.Create(&progress).Error; err != nil {
+					return err
+				}
+			} else {
+				return err
+			}
+		}
+
+		progress.Energy += energy
+		return tx.Save(&progress).Error
+	})
+
+	return progress.Energy, err
 }
