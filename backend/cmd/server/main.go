@@ -81,6 +81,7 @@ func main() {
 
 	protected.POST("/study/start", handlers.StartStudySessionHandler)
 	protected.POST("/study/generate-quiz/:session_id", handlers.CreateQuizFromSession)
+	protected.POST("/user/progress", handlers.UpdateProgressHandler(database.DB))
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

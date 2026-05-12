@@ -23,7 +23,7 @@ interface RawAIQuestion {
 }
 
 const StudySession = () => {
-    const { userStats, isAuthenticated } = useAuth();
+    const { userStats, setUserStats, isAuthenticated } = useAuth();
     const navigate = useNavigate();
 
     // Form states:
@@ -143,20 +143,29 @@ const StudySession = () => {
 
     const handleFinishQuiz = async () => {
         const correctAnswers = userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correctAnswer).length;
-        const pointsEarned = correctAnswers * 2;
 
         try {
-            await fetch('http://localhost:8081/api/user/progress', {
+            const response = await fetch('http://localhost:8081/api/user/progress', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
                 body: JSON.stringify({ 
-                    points: pointsEarned,
+                    score: correctAnswers,
                     session_id: currentSessionId
                 })
             });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (userStats && data.new_total !== undefined) {
+                    setUserStats({
+                        ...userStats,
+                        energy: data.new_total
+                    });
+                }
+            }
         } catch (e) {
             console.error("Error saving progress:", e);
         }

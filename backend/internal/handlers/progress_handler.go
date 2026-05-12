@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/auth"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
 	"gorm.io/gorm"
 )
@@ -13,7 +14,7 @@ import (
 // ProgressUpdateRequest defines the expected input from the frontend
 type ProgressUpdateRequest struct {
 	SessionID uint64 `json:"session_id" binding:"required"`
-	Score     int    `json:"score" binding:"min=0"`
+	Score     int    `json:"score" binding:"required,min=0"`
 }
 
 // UpdateProgressHandler updates user energy based on quiz results
@@ -55,12 +56,17 @@ func UpdateProgressHandler(db *gorm.DB) gin.HandlerFunc {
 
 // getUserIDFromContext extracts and validates the UUID from Gin context
 func getUserIDFromContext(c *gin.Context) (uuid.UUID, error) {
-	val, exists := c.Get("userID")
+	val, exists := c.Get("user")
 	if !exists {
 		return uuid.Nil, errors.New("user identity not found")
 	}
-	userID, ok := val.(uuid.UUID)
+	claims, ok := val.(*auth.UserClaims)
 	if !ok {
+		return uuid.Nil, errors.New("invalid user ID format")
+	}
+
+	userID, err := uuid.Parse(claims.Subject)
+	if err != nil {
 		return uuid.Nil, errors.New("invalid user ID format")
 	}
 	return userID, nil
