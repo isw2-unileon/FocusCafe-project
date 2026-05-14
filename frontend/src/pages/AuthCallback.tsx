@@ -26,7 +26,7 @@ export default function AuthCallback() {
       <div className="flex flex-col items-center gap-4">
         <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin"></div>
         <p className="text-orange-900 font-bold text-xl animate-pulse">
-          Authenticating your Café...
+          Preparing your Café...
         </p>
       </div>                                             
     </div>
