@@ -18,11 +18,25 @@ export const loginWithEmail = async (email: string, password: string): Promise<s
   if (!res.ok) throw new Error(data.error || 'Error logging in');
   return data.token;
 };
-
+/*
 export const loginWithGoogle = (): void => {
   window.location.href = `${API_URL}/auth/google`;
 };
+*/
+export const loginWithGoogle = async (): Promise<void> => {
+  // Detecta si estás en localhost:5173 o en focuscafe-front.onrender.com
+  const currentOrigin = window.location.origin; 
 
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { 
+      // Al usar currentOrigin, si estás en local, volverá a local.
+      redirectTo: `${currentOrigin}/auth/callback` 
+    },
+  });
+
+  if (error) throw new Error(error.message);
+};
 
 // ---- REGISTER ----
 export interface RegisterData {
@@ -65,9 +79,9 @@ export const registerWithGoogle = async (): Promise<void> => {
 
 
 // ---- SYNC (Google OAuth callback) ----
-export const syncGoogleUser = async (): Promise<boolean> => {
+export const syncGoogleUser = async (): Promise<string | null> => {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return false;
+  if (!session) return null;
 
   const res = await fetch(`${API_URL}/auth/sync`, {
     method: 'POST',
@@ -76,5 +90,7 @@ export const syncGoogleUser = async (): Promise<boolean> => {
     }
   });
 
-  return res.ok;
+  if (!res.ok) return null;
+  
+  return session.access_token;
 };

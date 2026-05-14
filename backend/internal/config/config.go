@@ -10,15 +10,16 @@ import (
 
 // Config holds the application configuration loaded from environment variables.
 type Config struct {
-	Port                  string
-	GinMode               string
-	CORSAllowOrigin       string
-	SupabaseURL           string
-	SupabaseKey           string
+	Port                   string
+	GinMode                string
+	CORSAllowOrigin        string
+	ClientURL              string
+	SupabaseURL            string
+	SupabaseKey            string
 	SupabaseServiceRoleKey string
-	SupabaseJWTSecret     string
-	DatabaseURL           string
-	GeminiKey             string
+	SupabaseJWTSecret      string
+	DatabaseURL            string
+	GeminiKey              string
 }
 
 // Load reads configuration from environment variables.
@@ -32,6 +33,7 @@ func Load() *Config {
 		Port:                   getEnv("PORT", "8080"),
 		GinMode:                getEnv("GIN_MODE", "release"),
 		CORSAllowOrigin:        getEnv("CORS_ALLOW_ORIGIN", "*"),
+		ClientURL:              getEnv("CLIENT_URL", "http://localhost:5173"),
 		SupabaseURL:            getEnv("SUPABASE_URL", ""),
 		SupabaseKey:            getEnv("SUPABASE_KEY", ""),
 		SupabaseServiceRoleKey: getEnv("SUPABASE_SERVICE_ROLE_KEY", ""),

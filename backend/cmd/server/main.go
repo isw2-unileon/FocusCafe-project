@@ -75,7 +75,7 @@ func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userServic
 	}))
 	r.Use(gin.Logger(), gin.Recovery())
 
-	h := handlers.NewHandler(cfg.SupabaseURL, cfg.SupabaseKey, cfg.SupabaseServiceRoleKey, adapterJWT, userService, userOrderService)
+	h := handlers.NewHandler(cfg.SupabaseURL, cfg.SupabaseKey, cfg.SupabaseServiceRoleKey, cfg.ClientURL, adapterJWT, userService, userOrderService)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -100,6 +100,7 @@ func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userServic
 	})
 	protected.POST("/study/start", handlers.StartStudySessionHandler)
 	protected.POST("/study/generate-quiz/:session_id", handlers.CreateQuizFromSession)
+	protected.POST("/user/progress", handlers.UpdateProgressHandler(database.DB))
 
 	// Admin routes
 	admin := api.Group("/admin")
