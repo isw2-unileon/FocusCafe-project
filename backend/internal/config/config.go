@@ -13,6 +13,7 @@ type Config struct {
 	Port                   string
 	GinMode                string
 	CORSAllowOrigin        string
+	ClientURL              string
 	SupabaseURL            string
 	SupabaseKey            string
 	SupabaseServiceRoleKey string
