@@ -9,6 +9,7 @@ interface QuizQuestion {
     question: string;
     options: string[];
     correctAnswer: number;
+    explanation?: string;
 }
 
 // Interface to represent the raw question from Gemini
@@ -20,10 +21,11 @@ interface RawAIQuestion {
     option_c: string;
     option_d: string;
     correct_answer: string;
+    explanation?: string;
 }
 
 const StudySession = () => {
-    const { userStats, isAuthenticated } = useAuth();
+    const { userStats, setUserStats, isAuthenticated } = useAuth();
     const navigate = useNavigate();
 
     // Form states:
@@ -120,7 +122,8 @@ const StudySession = () => {
                     return {
                         question: q.question_text || q.question || "Untitled Question",
                         options: options,
-                        correctAnswer: mapping[letter] ?? 0
+                        correctAnswer: mapping[letter] ?? 0,
+                        explanation: q.explanation
                     };
                 });
             }
@@ -143,20 +146,29 @@ const StudySession = () => {
 
     const handleFinishQuiz = async () => {
         const correctAnswers = userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correctAnswer).length;
-        const pointsEarned = correctAnswers * 2;
 
         try {
-            await fetch('http://localhost:8081/api/user/progress', {
+            const response = await fetch('http://localhost:8081/api/user/progress', {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
                 body: JSON.stringify({ 
-                    points: pointsEarned,
+                    score: correctAnswers,
                     session_id: currentSessionId
                 })
             });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (userStats && data.new_total !== undefined) {
+                    setUserStats({
+                        ...userStats,
+                        energy: data.new_total
+                    });
+                }
+            }
         } catch (e) {
             console.error("Error saving progress:", e);
         }
@@ -288,13 +300,46 @@ const StudySession = () => {
                 )}
 
                 {state === 'RESULTS' && (
-                    <div className="bg-white rounded-[3rem] p-12 text-center shadow-2xl">
-                        <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <CheckCircle2 size={48} />
+                    <div className="space-y-6">
+                        <div className="bg-white rounded-[3rem] p-12 text-center shadow-2xl">
+                            <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <CheckCircle2 size={48} />
+                            </div>
+                            <h2 className="text-4xl font-black mb-2">Session Complete!</h2>
+                            <p className="text-stone-500 mb-8 font-medium">You scored {userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correctAnswer).length} / {quiz.length}</p>
+                            <button onClick={() => navigate('/home')} className="bg-stone-900 text-white px-8 py-4 rounded-xl font-bold hover:bg-stone-800 transition-all">RETURN TO CAFETERIA</button>
                         </div>
-                        <h2 className="text-4xl font-black mb-2">Session Complete!</h2>
-                        <p className="text-stone-500 mb-8 font-medium">You scored {userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correctAnswer).length} / {quiz.length}</p>
-                        <button onClick={() => navigate('/home')} className="bg-stone-900 text-white px-8 py-4 rounded-xl font-bold hover:bg-stone-800 transition-all">RETURN TO CAFETERIA</button>
+
+                        <div className="bg-white rounded-3xl p-8 shadow-sm space-y-8">
+                            <h3 className="text-2xl font-black border-b pb-4">Quiz Review</h3>
+                            {quiz.map((q, idx) => (
+                                <div key={idx} className="space-y-3">
+                                    <p className="font-bold text-lg">{idx + 1}. {q.question}</p>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {q.options.map((opt, i) => {
+                                            const isCorrect = i === q.correctAnswer;
+                                            const isSelected = i === userAnswers[idx];
+                                            let bgColor = "bg-stone-50";
+                                            if (isSelected) bgColor = isCorrect ? "bg-green-100 border-green-500" : "bg-red-100 border-red-500";
+                                            else if (isCorrect) bgColor = "bg-green-50 border-green-200";
+
+                                            return (
+                                                <div key={i} className={`p-3 rounded-xl border ${bgColor} flex justify-between items-center`}>
+                                                    <span className={isCorrect ? "font-bold text-green-700" : ""}>{opt}</span>
+                                                    {isSelected && (isCorrect ? "✅" : "❌")}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    {q.explanation && (
+                                        <div className="mt-4 p-4 bg-orange-50 rounded-xl border border-orange-100 italic text-stone-700 text-sm">
+                                            <span className="font-bold block mb-1">Explanation:</span>
+                                            {q.explanation}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>

@@ -17,7 +17,8 @@ import (
 const GenerateQuizSystemPrompt = `You are an expert teacher. Generate a study quiz JSON based on the provided text.
 Return ONLY pure JSON, no markdown formatting.
 Format: {"quiz_name": "...", "questions": [{"question_text": "...", "option_a": "...", "option_b": "...", "option_c": "...", "option_d": "...", "correct_answer": "...", "explanation": "..."}]}
-CRITICAL: "correct_answer" must be exactly one uppercase letter: "A", "B", "C", or "D".
+CRITICAL: "correct_answer" must be exactly one uppercase letter: "A", "B", "C", or "D" and has to be the correct option.
+CRITICAL: "explanation" must be a concise justification for the correct answer, ideally 1-2 sentences.
 Generate exactly 3 questions.`
 
 // GenerateQuiz processes the provided text via Google Gemini API to produce a study quiz in JSON format.
@@ -114,7 +115,8 @@ func GenerateQuiz(pdfText string) (string, error) {
 }
 
 // init loads environmental variables from the root or the backend directory.
-func init() {
-	_ = godotenv.Load()
+func init() { // looks for .env files in multiple locations to ensure it can find the necessary API keys regardless of the execution context (e.g., running from the project root or from the backend directory).
+	_ = godotenv.Load(".env")
 	_ = godotenv.Load("backend/.env")
+	_ = godotenv.Load("../../.env")
 }
