@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from "react-router-dom";
-import { UserPlus, Trash2, Shield, Search, Mail, ChevronRight, ArrowLeft, X, AlertTriangle } from 'lucide-react';
+import { UserPlus, Trash2, Shield, Search, Mail, ChevronRight, X, AlertTriangle } from 'lucide-react';
 import { useAuth } from "@/context/AuthContext";
 import { getAllUsers, createUser, deleteUser } from "@/services/user_service";
 import { UserProfile } from "@/types/user-profile";
@@ -191,12 +191,6 @@ const AdminDashboard = () => {
                 
                 <div className="flex justify-between items-center mb-8">
                     <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => navigate('/home')}
-                            className="p-3 bg-white rounded-xl shadow-sm hover:bg-stone-50 transition-colors"
-                        >
-                            <ArrowLeft className="text-stone-600" size={24} />
-                        </button>
                         <h2 className="text-2xl font-black text-stone-800 flex items-center gap-2">
                             <Shield className="text-orange-600" size={28}/> Staff Management
                         </h2>
