@@ -34,6 +34,7 @@ func newHandler(supabaseURL string) *handlers.Handler {
 	return &handlers.Handler{
 		SupabaseURL: supabaseURL,
 		SupabaseKey: "test-api-key",
+		ClientURL:   "http://localhost:5173",
 		Auth:        &MockValidator{shouldFail: false},
 	}
 }
