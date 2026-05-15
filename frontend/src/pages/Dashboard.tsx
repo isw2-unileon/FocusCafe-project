@@ -15,7 +15,7 @@ const Dashboard = () => {
       .then(setProfile)
       .catch((err) => {
         console.error('Error loading profile:', err);
-        setError('No se pudo cargar el perfil');
+        setError('Could not load profile');
       })
       .finally(() => setLoading(false));
   }, []);
