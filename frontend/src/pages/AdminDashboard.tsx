@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from "react-router-dom";
-import { UserPlus, Trash2, Shield, Search, Mail, ChevronRight, X, AlertTriangle } from 'lucide-react';
+import { UserPlus, Trash2, Shield, Search, Mail, ChevronRight, X, AlertTriangle, LogOut } from 'lucide-react';
 import { useAuth } from "@/context/AuthContext";
 import { getAllUsers, createUser, deleteUser } from "@/services/user_service";
 import { UserProfile } from "@/types/user-profile";
@@ -196,10 +196,11 @@ const AdminDashboard = () => {
                         </h2>
                     </div>
                     
-                    <button 
-                        onClick={handleLogout} 
-                        className="text-stone-400 hover:text-red-500 font-bold text-sm transition-colors"
+                    <button
+                        onClick={handleLogout}
+                        className="text-stone-400 hover:text-red-500 font-bold text-sm transition-colors flex items-center gap-2"
                     >
+                        <LogOut size={18} />
                         Logout
                     </button>
                 </div>
@@ -221,6 +222,12 @@ const AdminDashboard = () => {
                     {filteredUsers.length === 0 && searchQuery.trim() && (
                         <div className="bg-white rounded-2xl p-8 shadow-lg text-center">
                             <p className="text-stone-400 font-bold">No users found matching "{searchQuery}"</p>
+                        </div>
+                    )}
+                    {filteredUsers.length === 0 && !searchQuery.trim() && (
+                        <div className="bg-white rounded-2xl p-10 shadow-lg text-center">
+                            <p className="text-stone-800 font-black text-xl mb-2">No staff yet</p>
+                            <p className="text-stone-400 font-medium">Hire your first team member to get started.</p>
                         </div>
                     )}
                     {filteredUsers.map((user) => {

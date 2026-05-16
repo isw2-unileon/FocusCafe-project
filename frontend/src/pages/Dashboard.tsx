@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, User, Calendar, Zap, Award } from 'lucide-react';
+import { ArrowLeft, Mail, User, Calendar, Zap, Award, LogOut } from 'lucide-react';
 import { getCurrentProfile } from '@/services/user_service';
 import { UserProfile } from '@/types/user-profile';
 import { AvatarDashboard } from '@/components/AvatarDashboard';
@@ -92,14 +92,15 @@ const Dashboard = () => {
             <h1 className="text-3xl font-black text-stone-800 flex items-center gap-3">
               ☕ My Profile
               <span className="text-sm font-medium bg-white px-3 py-1 rounded-full border">
-                Level {profile.progress?.level}
+                Level {profile.level}
               </span>
             </h1>
           </div>
           <button
             onClick={handleLogout}
-            className="text-stone-400 hover:text-red-500 font-bold text-sm transition-colors"
+            className="text-stone-400 hover:text-red-500 font-bold text-sm transition-colors flex items-center gap-2"
           >
+            <LogOut size={18} />
             Logout
           </button>
         </div>

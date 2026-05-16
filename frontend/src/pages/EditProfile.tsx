@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, LogOut } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getCurrentProfile, updateUserProfile } from '../services/user_service';
+import { getCurrentProfile, updateUserProfile } from '@/services/user_service';
+import { useAuth } from '@/context/AuthContext';
 
 export default function EditProfile() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Load user data on mount
   useEffect(() => {
     const loadProfile = async () => {
       try {
@@ -28,10 +30,14 @@ export default function EditProfile() {
     loadProfile();
   }, []);
 
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Basic validation
     if (!firstName.trim() || !lastName.trim()) {
       toast.error('Please fill in all fields');
       return;
@@ -56,72 +62,95 @@ export default function EditProfile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
-        <div className="text-stone-600">Loading...</div>
+      <div className="min-h-screen bg-stone-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+          <p className="text-stone-600 font-semibold">Loading profile...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 py-12 px-4">
-      <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-stone-900 mb-2">Edit Profile</h1>
-          <p className="text-stone-600">Update your personal information</p>
+    <div className="min-h-screen bg-stone-100 p-6">
+      <div className="max-w-md mx-auto">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="p-3 bg-white rounded-xl shadow-sm hover:bg-stone-50 transition-colors"
+            >
+              <ArrowLeft className="text-stone-600" size={24} />
+            </button>
+            <h1 className="text-3xl font-black text-stone-800">Edit Profile</h1>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="text-stone-400 hover:text-red-500 font-bold text-sm transition-colors flex items-center gap-2"
+          >
+            <LogOut size={18} />
+            Logout
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* First Name */}
-          <div>
-            <label htmlFor="firstName" className="block text-sm font-medium text-stone-700 mb-2">
-              First Name
-            </label>
-            <input
-              id="firstName"
-              type="text"
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              placeholder="Your first name"
-              className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition"
-              disabled={submitting}
-            />
-          </div>
+        {/* Form Card */}
+        <div className="bg-white rounded-[2.5rem] shadow-2xl p-10 border-b-8 border-orange-200">
+          <p className="text-stone-600 font-medium mb-8">Update your personal information</p>
 
-          {/* Last Name */}
-          <div>
-            <label htmlFor="lastName" className="block text-sm font-medium text-stone-700 mb-2">
-              Last Name
-            </label>
-            <input
-              id="lastName"
-              type="text"
-              value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
-              placeholder="Your last name"
-              className="w-full px-4 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition"
-              disabled={submitting}
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* First Name */}
+            <div>
+              <label htmlFor="firstName" className="block text-sm font-bold text-stone-700 mb-2">
+                First Name
+              </label>
+              <input
+                id="firstName"
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Your first name"
+                className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-orange-400 outline-none transition-all font-semibold text-stone-800"
+                disabled={submitting}
+              />
+            </div>
 
-          {/* Buttons */}
-          <div className="flex gap-3 pt-4">
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard')}
-              className="flex-1 px-4 py-2 border border-stone-300 rounded-lg text-stone-700 font-medium hover:bg-stone-50 transition disabled:opacity-50"
-              disabled={submitting}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition disabled:opacity-50"
-              disabled={submitting}
-            >
-              {submitting ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </form>
+            {/* Last Name */}
+            <div>
+              <label htmlFor="lastName" className="block text-sm font-bold text-stone-700 mb-2">
+                Last Name
+              </label>
+              <input
+                id="lastName"
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Your last name"
+                className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-orange-400 outline-none transition-all font-semibold text-stone-800"
+                disabled={submitting}
+              />
+            </div>
+
+            {/* Buttons */}
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard')}
+                className="flex-1 bg-white text-stone-800 px-6 py-4 rounded-2xl font-bold border-2 border-stone-200 hover:bg-stone-50 transition-colors disabled:opacity-50"
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 bg-orange-600 text-white px-6 py-4 rounded-2xl font-bold hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={submitting}
+              >
+                {submitting ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
