@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from "react-router-dom";
+import toast from 'react-hot-toast';
 import { UserPlus, Trash2, Shield, Search, Mail, ChevronRight, X, AlertTriangle, LogOut } from 'lucide-react';
 import { useAuth } from "@/context/AuthContext";
 import { getAllUsers, createUser, deleteUser } from "@/services/user_service";
@@ -97,6 +98,9 @@ const AdminDashboard = () => {
             setUserToDelete(null);
         } catch (err) {
             console.error("Error deleting user:", err);
+            toast.error('Failed to delete user. Please try again.');
+            setShowDeleteModal(false);
+            setUserToDelete(null);
         } finally {
             setDeleteLoading(false);
         }
