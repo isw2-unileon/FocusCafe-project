@@ -6,6 +6,18 @@ import { UserProfile } from '@/types/user-profile';
 import { AvatarDashboard } from '@/components/AvatarDashboard';
 import { useAuth } from '@/context/AuthContext';
 
+function getRankInfo(level: number) {
+  const ranks = [
+    { title: 'Coffee Novice', color: 'bg-stone-400' },
+    { title: 'Focus Apprentice', color: 'bg-emerald-500' },
+    { title: 'Concentration Expert', color: 'bg-amber-500' },
+    { title: 'Flow Master', color: 'bg-fuchsia-600' },
+    { title: 'Zen Grandmaster', color: 'bg-purple-600' },
+  ] as const;
+  const index = Math.min(Math.floor((level - 1) / 3), ranks.length - 1);
+  return ranks[index]!;
+}
+
 const Dashboard = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,15 +123,16 @@ const Dashboard = () => {
                 @{profile.username}
               </p>
 
-              {/* Badges */}
-              <div className="flex gap-2">
-                <span className="px-3 py-1 bg-white/70 backdrop-blur-sm rounded-full text-sm font-bold text-stone-600 border border-white capitalize">
-                  {profile.role}
-                </span>
-                <span className="px-3 py-1 bg-white/70 backdrop-blur-sm rounded-full text-sm font-bold text-orange-600 border border-white">
-                  Active
-                </span>
-              </div>
+              {/* Rank Badge */}
+              {(() => {
+                const rank = getRankInfo(profile.level || 1);
+                return (
+                  <span className={`px-4 py-1.5 ${rank.color} text-white rounded-full text-sm font-bold shadow-sm`}>
+                    {rank.title}
+                  </span>
+                );
+              })()}
+
             </div>
           </div>
 
@@ -169,8 +182,8 @@ const Dashboard = () => {
                       <div className="flex justify-between items-end mb-1">
                         <p className="text-[11px] font-bold uppercase text-gray-500">Experience</p>
                         <p className="text-sm font-black text-gray-800">
-                          {profile.xp ?? 0}{' '}
-                          <span className="text-gray-400 font-medium">/ {(profile.level || 1) * 500}</span>
+                           {profile.xp ?? 0}{' '}
+                          <span className="text-gray-400 font-medium">/ {(profile.level || 1) * 100}</span>
                         </p>
                       </div>
                       <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
@@ -178,7 +191,7 @@ const Dashboard = () => {
                           className="h-full bg-blue-500 transition-all duration-500"
                           style={{
                             width: `${Math.min(
-                              (((profile.xp ?? 0) / ((profile.level || 1) * 500)) * 100),
+                              (((profile.xp ?? 0) / ((profile.level || 1) * 100)) * 100),
                               100
                             )}%`,
                           }}
