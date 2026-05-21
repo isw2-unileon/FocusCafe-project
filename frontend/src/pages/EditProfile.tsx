@@ -11,6 +11,7 @@ export default function EditProfile() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -19,9 +20,9 @@ export default function EditProfile() {
         const data = await getCurrentProfile();
         setFirstName(data.first_name || '');
         setLastName(data.last_name || '');
-      } catch (error) {
-        console.error('Error loading profile:', error);
-        toast.error('Error loading profile');
+      } catch (err) {
+        console.error('Error loading profile:', err);
+        setError('Could not load profile');
       } finally {
         setLoading(false);
       }
@@ -66,6 +67,23 @@ export default function EditProfile() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
           <p className="text-stone-600 font-semibold">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-stone-100 flex items-center justify-center p-6">
+        <div className="bg-white rounded-2xl p-8 shadow-lg text-center max-w-md">
+          <h2 className="text-2xl font-black text-stone-800 mb-4">Oops!</h2>
+          <p className="text-stone-600 mb-6">{error}</p>
+          <button
+            onClick={() => navigate('/home')}
+            className="bg-orange-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-orange-700 transition-colors"
+          >
+            Back to Home
+          </button>
         </div>
       </div>
     );

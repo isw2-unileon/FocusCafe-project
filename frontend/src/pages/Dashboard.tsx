@@ -25,6 +25,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     getCurrentProfile()
       .then(setProfile)
