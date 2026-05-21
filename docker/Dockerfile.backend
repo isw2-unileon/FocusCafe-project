@@ -1,0 +1,33 @@
+# syntax=docker/dockerfile:1
+
+# Stage 1: Build
+FROM golang:1.25-alpine AS builder
+
+WORKDIR /app
+
+# go.mod y go.sum estan en la raiz del build context
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copiar todo el codigo del backend
+COPY backend/ ./backend/
+
+# Compilar el binario
+RUN CGO_ENABLED=0 GOOS=linux go build -o server ./backend/cmd/server/main.go
+
+# Stage 2: Final (imagen ligera)
+FROM alpine:latest
+
+WORKDIR /app
+
+# Certificados CA para HTTPS (necesario para Supabase)
+RUN apk --no-cache add ca-certificates
+
+# Copiar solo el binario compilado
+COPY --from=builder /app/server .
+
+# Puerto que expone el backend
+EXPOSE 8080
+
+# Comando de arranque
+CMD ["./server"]
