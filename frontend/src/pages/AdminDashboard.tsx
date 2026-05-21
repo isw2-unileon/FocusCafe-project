@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from "react-router-dom";
-import { UserPlus, Trash2, Shield, Search, Mail, ChevronRight, ArrowLeft, X, AlertTriangle } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { UserPlus, Trash2, Shield, Search, Mail, ChevronRight, X, AlertTriangle, LogOut, ChevronDown } from 'lucide-react';
 import { useAuth } from "@/context/AuthContext";
 import { getAllUsers, createUser, deleteUser } from "@/services/user_service";
 import { UserProfile } from "@/types/user-profile";
@@ -58,6 +59,7 @@ const AdminDashboard = () => {
     const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         getAllUsers()
             .then((data) => {
@@ -97,6 +99,9 @@ const AdminDashboard = () => {
             setUserToDelete(null);
         } catch (err) {
             console.error("Error deleting user:", err);
+            toast.error('Failed to delete user. Please try again.');
+            setShowDeleteModal(false);
+            setUserToDelete(null);
         } finally {
             setDeleteLoading(false);
         }
@@ -150,6 +155,7 @@ const AdminDashboard = () => {
             // Close modal and reset
             setShowModal(false);
             resetForm();
+            toast.success('User created successfully');
         } catch (err) {
             setFormError((err as Error).message || "Failed to create user.");
         } finally {
@@ -191,21 +197,16 @@ const AdminDashboard = () => {
                 
                 <div className="flex justify-between items-center mb-8">
                     <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => navigate('/home')}
-                            className="p-3 bg-white rounded-xl shadow-sm hover:bg-stone-50 transition-colors"
-                        >
-                            <ArrowLeft className="text-stone-600" size={24} />
-                        </button>
                         <h2 className="text-2xl font-black text-stone-800 flex items-center gap-2">
                             <Shield className="text-orange-600" size={28}/> Staff Management
                         </h2>
                     </div>
                     
-                    <button 
-                        onClick={handleLogout} 
-                        className="text-stone-400 hover:text-red-500 font-bold text-sm transition-colors"
+                    <button
+                        onClick={handleLogout}
+                        className="text-stone-400 hover:text-red-500 font-bold text-sm transition-colors flex items-center gap-2"
                     >
+                        <LogOut size={18} />
                         Logout
                     </button>
                 </div>
@@ -229,6 +230,12 @@ const AdminDashboard = () => {
                             <p className="text-stone-400 font-bold">No users found matching "{searchQuery}"</p>
                         </div>
                     )}
+                    {filteredUsers.length === 0 && !searchQuery.trim() && (
+                        <div className="bg-white rounded-2xl p-10 shadow-lg text-center">
+                            <p className="text-stone-800 font-black text-xl mb-2">No staff yet</p>
+                            <p className="text-stone-400 font-medium">Hire your first team member to get started.</p>
+                        </div>
+                    )}
                     {filteredUsers.map((user) => {
                         const color = getAvatarColor(user.first_name);
                         const displayName = `${user.first_name} ${user.last_name || ''}`.trim();
@@ -236,7 +243,7 @@ const AdminDashboard = () => {
                             <div key={user.id} className="bg-[#fdfaf7] rounded-[2.5rem] p-6 border-4 border-white shadow-lg flex items-center justify-between">
                                 <div className="flex items-center gap-5">
                                     <div className={`w-16 h-16 ${color.bg} rounded-2xl flex items-center justify-center font-black ${color.text} text-2xl border-2 border-white shadow-inner`}>
-                                        {user.first_name[0]}
+                                        {user.first_name?.[0] ?? '?'}
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-2">
@@ -298,7 +305,6 @@ const AdminDashboard = () => {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDeleteModal(false)}>
                     <div 
                         className="bg-white rounded-[2.5rem] shadow-2xl p-10 max-w-md w-full border-b-8 border-red-200"
-                        style={{ animation: 'dropIn 0.3s ease-out' }}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex justify-between items-center mb-8">
@@ -348,7 +354,6 @@ const AdminDashboard = () => {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
                     <div 
                         className="bg-white rounded-[2.5rem] shadow-2xl p-10 max-w-md w-full border-b-8 border-orange-200"
-                        style={{ animation: 'dropIn 0.3s ease-out' }}
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex justify-between items-center mb-8">
@@ -400,15 +405,18 @@ const AdminDashboard = () => {
                                 className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-orange-400 outline-none transition-all"
                             />
 
-                            <select
-                                value={role}
-                                onChange={(e) => setRole(e.target.value)}
-                                className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-orange-400 outline-none transition-all font-bold text-stone-700 appearance-none cursor-pointer"
-                            >
-                                <option value="" disabled>User type</option>
-                                <option value="user">User</option>
-                                <option value="admin">Administrator</option>
-                            </select>
+                            <div className="relative">
+                                <select
+                                    value={role}
+                                    onChange={(e) => setRole(e.target.value)}
+                                    className="w-full p-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-orange-400 outline-none transition-all font-bold text-stone-700 appearance-none cursor-pointer pr-10"
+                                >
+                                    <option value="" disabled>User type</option>
+                                    <option value="user">User</option>
+                                    <option value="admin">Administrator</option>
+                                </select>
+                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" size={20} />
+                            </div>
 
                             {formError && (
                                 <p className="text-red-500 text-sm text-center font-medium">{formError}</p>
