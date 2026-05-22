@@ -15,7 +15,7 @@ export default function Register() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('error') === 'already_exists') {
-      setError('This Google account is already registered. Please sign in.');
+      setError("You're already a member of FocusCafe! This Google account is already registered, so please sign in instead.");
     }
   }, [location, setError]);
 
