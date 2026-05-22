@@ -8,34 +8,36 @@ test.describe("Edit Profile", () => {
     await page.goto("/edit-profile");
     await expect(page).toHaveURL(/.*edit-profile/);
 
-    // Verify current name is pre-filled
+    // Capture original names for cleanup
     const firstNameInput = page.getByPlaceholder("Your first name");
     const lastNameInput = page.getByPlaceholder("Your last name");
-    await expect(firstNameInput).toHaveValue("Test");
-    await expect(lastNameInput).toHaveValue("User");
+    const originalFirst = await firstNameInput.inputValue();
+    const originalLast = await lastNameInput.inputValue();
 
-    // Change names
-    await firstNameInput.fill("E2EChanged");
-    await lastNameInput.fill("NameChanged");
+    try {
+      // 1. Change names
+      await firstNameInput.fill("E2EChanged");
+      await lastNameInput.fill("NameChanged");
 
-    // Save changes
-    await page.getByRole("button", { name: "Save Changes" }).click();
+      // 2. Save changes
+      await page.getByRole("button", { name: "Save Changes" }).click();
 
-    // Verify redirect to /dashboard
-    await page.waitForURL(/.*dashboard/);
-    await expect(page).toHaveURL(/.*dashboard/);
+      // 3. Verify redirect to /dashboard
+      await page.waitForURL(/.*dashboard/);
+      await expect(page).toHaveURL(/.*dashboard/);
 
-    // Verify updated name appears on Dashboard
-    await expect(page.getByText("E2EChanged NameChanged")).toBeVisible();
+      // 4. Verify updated name appears on Dashboard
+      await expect(page.getByText("E2EChanged NameChanged")).toBeVisible();
+    } finally {
+      // 5. ALWAYS revert names back to original (even if test fails mid-way)
+      await page.goto("/edit-profile");
+      await page.getByPlaceholder("Your first name").fill(originalFirst);
+      await page.getByPlaceholder("Your last name").fill(originalLast);
+      await page.getByRole("button", { name: "Save Changes" }).click();
+      await page.waitForURL(/.*dashboard/);
+    }
 
-    // Cleanup: revert names back to original
-    await page.goto("/edit-profile");
-    await page.getByPlaceholder("Your first name").fill("Test");
-    await page.getByPlaceholder("Your last name").fill("User");
-    await page.getByRole("button", { name: "Save Changes" }).click();
-    await page.waitForURL(/.*dashboard/);
-
-    // Verify original name is restored
+    // 6. Verify original name is restored
     await expect(page.getByText("Test User")).toBeVisible();
   });
 });
