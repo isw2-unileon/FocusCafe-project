@@ -78,8 +78,9 @@ func (h *Handler) callSupabaseAuth(body []byte) (*http.Response, error) {
 // GoogleAuth redirects the user to the Google provider via Supabase.
 func (h *Handler) GoogleAuth(c *gin.Context) {
 	redirectURL := fmt.Sprintf(
-		"%s/auth/v1/authorize?provider=google&redirect_to=http://localhost:5173/home",
+		"%s/auth/v1/authorize?provider=google&redirect_to=%s/home",
 		h.SupabaseURL,
+		h.ClientURL,
 	)
 	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 }

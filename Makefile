@@ -1,5 +1,5 @@
 .PHONY: install run-backend run-frontend build-backend build-frontend test lint e2e \
-       db-up db-reset db-down
+       db-up db-reset db-down docker-up docker-up-remote docker-down docker-build
 
 ifeq ($(OS),Windows_NT)
     AIR_CONFIG := backend/.air.windows.toml
@@ -79,3 +79,24 @@ db-down:
 	@echo "Stopping Supabase local..."
 	supabase stop
 	@echo "Supabase stopped."
+
+## --- Docker (Containerized Stack) ---
+## Build and run backend + frontend in Docker (requires db-up first)
+docker-up:
+	@echo "Building and starting Docker containers..."
+	docker-compose --env-file docker/.env.docker up --build
+
+## Stop Docker containers
+docker-down:
+	@echo "Stopping Docker containers..."
+	docker-compose --env-file docker/.env.docker down
+
+## Build Docker images without starting
+docker-build:
+	@echo "Building Docker images..."
+	docker-compose --env-file docker/.env.docker build
+
+## Build and run backend + frontend in Docker (connects to REMOTE Supabase)
+docker-up-remote:
+	@echo "Building and starting Docker containers (REMOTE mode)..."
+	docker-compose --env-file docker/.env.docker.remote up --build

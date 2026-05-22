@@ -1,21 +1,37 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, User, Calendar, Zap, Flame } from 'lucide-react';
+import { ArrowLeft, Mail, User, Calendar, Zap, Award, LogOut } from 'lucide-react';
 import { getCurrentProfile } from '@/services/user_service';
 import { UserProfile } from '@/types/user-profile';
+import { AvatarDashboard } from '@/components/AvatarDashboard';
+import { useAuth } from '@/context/AuthContext';
+
+function getRankInfo(level: number) {
+  const ranks = [
+    { title: 'Coffee Novice', color: 'bg-stone-400' },
+    { title: 'Focus Apprentice', color: 'bg-emerald-500' },
+    { title: 'Concentration Expert', color: 'bg-amber-500' },
+    { title: 'Flow Master', color: 'bg-fuchsia-600' },
+    { title: 'Zen Grandmaster', color: 'bg-purple-600' },
+  ] as const;
+  const index = Math.min(Math.floor((level - 1) / 3), ranks.length - 1);
+  return ranks[index]!;
+}
 
 const Dashboard = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     getCurrentProfile()
       .then(setProfile)
       .catch((err) => {
         console.error('Error loading profile:', err);
-        setError('No se pudo cargar el perfil');
+        setError('Could not load profile');
       })
       .finally(() => setLoading(false));
   }, []);
@@ -48,9 +64,14 @@ const Dashboard = () => {
     );
   }
 
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -59,154 +80,158 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-stone-100 p-6">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex justify-between items-center mb-8">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/home')}
+              className="p-3 bg-white rounded-xl shadow-sm hover:bg-stone-50 transition-colors"
+            >
+              <ArrowLeft className="text-stone-600" size={24} />
+            </button>
+            <h1 className="text-3xl font-black text-stone-800 flex items-center gap-3">
+              ☕ My Profile
+              <span className="text-sm font-medium bg-white px-3 py-1 rounded-full border">
+                Level {profile.level}
+              </span>
+            </h1>
+          </div>
           <button
-            onClick={() => navigate('/home')}
-            className="p-3 bg-white rounded-xl shadow-sm hover:bg-stone-50 transition-colors"
+            onClick={handleLogout}
+            className="text-stone-400 hover:text-red-500 font-bold text-sm transition-colors flex items-center gap-2"
           >
-            <ArrowLeft className="text-stone-600" size={24} />
+            <LogOut size={18} />
+            Logout
           </button>
-          <h1 className="text-3xl font-black text-stone-800">My Profile</h1>
         </div>
 
-         {/* Profile Card */}
-         <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border-8 border-white mb-6">
-           {/* Header Background */}
-           <div className="h-32 bg-gradient-to-r from-orange-400 via-orange-500 to-orange-600"></div>
-
-          {/* Profile Content */}
-          <div className="px-8 pb-8">
-            {/* Avatar Section */}
-            <div className="flex flex-col items-center -mt-16 mb-8">
-              <div className="w-32 h-32 bg-white rounded-2xl shadow-lg border-4 border-stone-100 flex items-center justify-center">
-                <User className="text-orange-600" size={64} strokeWidth={1.5} />
+        {/* Profile Card */}
+        <div className="bg-white rounded-[3rem] shadow-2xl overflow-hidden border-8 border-white mb-6">
+          {/* User Section: same color as Pending Orders card */}
+          <div className="bg-orange-50 p-10">
+            <div className="flex flex-col items-center text-center">
+              {/* Avatar */}
+              <div className="mb-5">
+                <AvatarDashboard />
               </div>
-            </div>
 
-            {/* Name Section */}
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-black text-stone-800 mb-2">
+              {/* Name */}
+              <h2 className="text-3xl font-black text-stone-800 mb-1">
                 {profile.first_name} {profile.last_name}
               </h2>
-              <p className="text-lg text-orange-600 font-semibold">@{profile.username}</p>
-            </div>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-              {/* Energy Card */}
-              {profile.progress && (
-                <div className="bg-yellow-50 rounded-2xl p-4 text-center border border-yellow-100">
-                  <div className="flex justify-center mb-3">
-                    <div className="p-2 bg-yellow-100 rounded-lg">
-                      <Zap className="text-yellow-600" size={24} />
-                    </div>
-                  </div>
-                  <p className="text-xs font-bold uppercase text-gray-500 tracking-tight mb-1">Energy</p>
-                  <p className="text-2xl font-black text-yellow-600">
-                    {profile.progress.energy}
-                  </p>
-                </div>
-              )}
-
-              {/* Level Card */}
-              {profile.progress && (
-                <div className="bg-red-50 rounded-2xl p-4 text-center border border-red-100">
-                  <div className="flex justify-center mb-3">
-                    <div className="p-2 bg-red-100 rounded-lg">
-                      <Flame className="text-red-600" size={24} />
-                    </div>
-                  </div>
-                  <p className="text-xs font-bold uppercase text-gray-500 tracking-tight mb-1">Level</p>
-                  <p className="text-2xl font-black text-red-600">{profile.progress.level}</p>
-                </div>
-              )}
-
-              {/* Role Card */}
-              <div className="bg-blue-50 rounded-2xl p-4 text-center border border-blue-100">
-                <div className="flex justify-center mb-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <User className="text-blue-600" size={24} />
-                  </div>
-                </div>
-                <p className="text-xs font-bold uppercase text-gray-500 tracking-tight mb-1">Role</p>
-                <p className="text-xl font-black text-blue-600 capitalize">{profile.role}</p>
-              </div>
-
-              {/* Join Date Card */}
-              <div className="bg-green-50 rounded-2xl p-4 text-center border border-green-100">
-                <div className="flex justify-center mb-3">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <Calendar className="text-green-600" size={24} />
-                  </div>
-                </div>
-                <p className="text-xs font-bold uppercase text-gray-500 tracking-tight mb-1">Member Since</p>
-                <p className="text-sm font-black text-green-600">{formatDate(profile.created_at)}</p>
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="border-t border-stone-200 my-8"></div>
-
-            {/* Progress Section */}
-            <div className="mb-8">
-              <h3 className="text-xl font-black text-stone-800 mb-4">📊 Your Progress</h3>
-              
-               {profile.progress ? (
-                 <div className="bg-orange-50 rounded-2xl p-6 border border-orange-100 shadow-sm">
-                  {/* Energy Bar */}
-                  <div className="mb-6">
-                    <p className="text-sm font-semibold text-stone-600 mb-3">Energy</p>
-                    <div className="w-full bg-stone-200 rounded-full h-4 overflow-hidden">
-                      <div 
-                        className="bg-gradient-to-r from-orange-500 to-orange-600 h-4 rounded-full transition-all duration-500"
-                        style={{ width: `${(profile.progress.energy / 500) * 100}%` }}
-                      ></div>
-                    </div>
-                    <p className="text-xs text-stone-500 mt-2">
-                      {profile.progress.energy} / 500
-                    </p>
-                  </div>
-
-                  {/* Level */}
-                  <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-xl p-4 border border-red-100">
-                    <p className="text-sm font-semibold text-stone-600 mb-2">Current Level</p>
-                    <p className="text-3xl font-black text-red-600">{profile.progress.level}</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-orange-50 rounded-2xl p-6 border border-orange-100 shadow-sm">
-                  <p className="text-lg font-semibold text-orange-900 mb-2">You haven't started yet!</p>
-                  <p className="text-stone-600">Start studying to increase your progress</p>
-                </div>
-              )}
-            </div>
-
-            {/* Divider */}
-            <div className="border-t border-stone-200 my-8"></div>
-            <div className="space-y-4">
-              <h3 className="text-xl font-black text-stone-800 mb-4">Contact Information</h3>
-
-              {/* Email */}
-              <div className="flex items-center gap-4 p-4 bg-stone-50 rounded-2xl border border-stone-200">
-                <div className="p-3 bg-white rounded-lg">
-                  <Mail className="text-stone-600" size={24} />
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase text-gray-500 tracking-tight">Email</p>
-                  <p className="text-lg font-semibold text-stone-800">{profile.email}</p>
-                </div>
-              </div>
-
               {/* Username */}
-              <div className="flex items-center gap-4 p-4 bg-stone-50 rounded-2xl border border-stone-200">
-                <div className="p-3 bg-white rounded-lg">
-                  <User className="text-stone-600" size={24} />
+              <p className="text-lg text-orange-600/80 font-semibold mb-4">
+                @{profile.username}
+              </p>
+
+              {/* Rank Badge */}
+              {(() => {
+                const rank = getRankInfo(profile.level || 1);
+                return (
+                  <span className={`px-4 py-1.5 ${rank.color} text-white rounded-full text-sm font-bold shadow-sm`}>
+                    {rank.title}
+                  </span>
+                );
+              })()}
+
+            </div>
+          </div>
+
+          {/* Stats & Info Section */}
+          <div className="p-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Player Stats (inline, same style as Home's StatCard) */}
+              <div className="bg-yellow-50 p-7 rounded-2xl flex flex-col">
+                <div className="pt-4">
+                  <h2 className="text-lg font-bold text-stone-800 uppercase tracking-widest mb-10">
+                    Player Stats
+                  </h2>
                 </div>
-                <div>
-                  <p className="text-xs font-bold uppercase text-gray-500 tracking-tight">Username</p>
-                  <p className="text-lg font-semibold text-stone-800">@{profile.username}</p>
+                <div className="flex flex-col gap-6">
+                  {/* Energy */}
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-gray-50 rounded-xl shadow-sm border border-black/5">
+                      <Zap className="text-yellow-500" size={20} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-end mb-1">
+                        <p className="text-[11px] font-bold uppercase text-gray-500">Energy</p>
+                        <p className="text-sm font-black text-gray-800">
+                          {profile.progress?.energy ?? profile.energy ?? 0}{' '}
+                          <span className="text-gray-400 font-medium">/ 500</span>
+                        </p>
+                      </div>
+                      <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-yellow-500 transition-all duration-500"
+                          style={{
+                            width: `${Math.min(
+                              (((profile.progress?.energy ?? profile.energy ?? 0) / 500) * 100),
+                              100
+                            )}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  {/* Experience */}
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-gray-50 rounded-xl shadow-sm border border-black/5">
+                      <Award className="text-blue-500" size={20} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex justify-between items-end mb-1">
+                        <p className="text-[11px] font-bold uppercase text-gray-500">Experience</p>
+                        <p className="text-sm font-black text-gray-800">
+                           {profile.xp ?? 0}{' '}
+                          <span className="text-gray-400 font-medium">/ {(profile.level || 1) * 100}</span>
+                        </p>
+                      </div>
+                      <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 transition-all duration-500"
+                          style={{
+                            width: `${Math.min(
+                              (((profile.xp ?? 0) / ((profile.level || 1) * 100)) * 100),
+                              100
+                            )}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Info Card */}
+              <div className="bg-stone-50 rounded-2xl border border-stone-100 p-7 flex flex-col justify-center gap-4">
+                <div className="flex items-center gap-4 p-3 bg-white rounded-2xl shadow-sm">
+                  <div className="p-3 bg-stone-50 rounded-lg">
+                    <Mail className="text-stone-500" size={22} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase text-gray-400 tracking-tight">Email</p>
+                    <p className="text-base font-semibold text-stone-800">{profile.email}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 p-3 bg-white rounded-2xl shadow-sm">
+                  <div className="p-3 bg-stone-50 rounded-lg">
+                    <User className="text-stone-500" size={22} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase text-gray-400 tracking-tight">Username</p>
+                    <p className="text-base font-semibold text-stone-800">@{profile.username}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 p-3 bg-white rounded-2xl shadow-sm">
+                  <div className="p-3 bg-stone-50 rounded-lg">
+                    <Calendar className="text-stone-500" size={22} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase text-gray-400 tracking-tight">Member Since</p>
+                    <p className="text-base font-semibold text-stone-800">{formatDate(profile.created_at)}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -221,15 +246,15 @@ const Dashboard = () => {
           >
             Back to Home
           </button>
-           <button
-             onClick={() => navigate('/edit-profile')}
-             className="flex-1 bg-orange-600 text-white px-6 py-4 rounded-2xl font-bold hover:bg-orange-700 transition-colors"
-           >
-             Edit Profile
-           </button>
+          <button
+            onClick={() => navigate('/edit-profile')}
+            className="flex-1 bg-orange-600 text-white px-6 py-4 rounded-2xl font-bold hover:bg-orange-700 transition-colors"
+          >
+            Edit Profile
+          </button>
         </div>
       </div>
-      </div>
+    </div>
   );
 };
 
