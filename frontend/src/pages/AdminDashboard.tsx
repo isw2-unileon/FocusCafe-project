@@ -22,7 +22,7 @@ function getAvatarColor(seed: string): { bg: string; text: string } {
 }
 
 const AdminDashboard = () => {
-    const { logout } = useAuth();
+    const { logout, userId } = useAuth();
     const navigate = useNavigate();
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
@@ -30,18 +30,26 @@ const AdminDashboard = () => {
     const [searchQuery, setSearchQuery] = useState("");
 
     const filteredUsers = useMemo(() => {
-        if (!searchQuery.trim()) return users;
-        const q = searchQuery.toLowerCase();
-        return users.filter(u => {
-            const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim().toLowerCase();
-            return (
-                u.first_name?.toLowerCase().includes(q) ||
-                u.last_name?.toLowerCase().includes(q) ||
-                u.email?.toLowerCase().includes(q) ||
-                fullName.includes(q)
-            );
+        let result = users;
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
+            result = users.filter(u => {
+                const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim().toLowerCase();
+                return (
+                    u.first_name?.toLowerCase().includes(q) ||
+                    u.last_name?.toLowerCase().includes(q) ||
+                    u.email?.toLowerCase().includes(q) ||
+                    fullName.includes(q)
+                );
+            });
+        }
+        // Put current admin first in the list
+        return result.sort((a, b) => {
+            if (a.id === userId) return -1;
+            if (b.id === userId) return 1;
+            return 0;
         });
-    }, [users, searchQuery]);
+    }, [users, searchQuery, userId]);
 
     // Modal state
     const [showModal, setShowModal] = useState(false);
@@ -95,6 +103,7 @@ const AdminDashboard = () => {
             await deleteUser(userToDelete.id);
             const updatedUsers = await getAllUsers();
             setUsers(updatedUsers);
+            toast.success('User deleted successfully');
             setShowDeleteModal(false);
             setUserToDelete(null);
         } catch (err) {
@@ -108,6 +117,10 @@ const AdminDashboard = () => {
     };
 
     const openDeleteModal = (user: UserProfile) => {
+        if (user.id === userId) {
+            toast.error('You cannot delete your own account');
+            return;
+        }
         setUserToDelete(user);
         setShowDeleteModal(true);
     };
