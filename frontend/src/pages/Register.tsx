@@ -15,7 +15,7 @@ export default function Register() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('error') === 'already_exists') {
-      setError('Esta cuenta de Google ya está registrada. Por favor, inicia sesión.');
+      setError('This Google account is already registered. Please sign in.');
     }
   }, [location, setError]);
 
