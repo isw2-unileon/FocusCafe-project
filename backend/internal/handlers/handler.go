@@ -15,10 +15,11 @@ type Handler struct {
 
 	UserService       service.UserServiceInterface
 	UserOrdersService service.UserOrdersServiceInterface
+	AIService         service.AIServiceInterface
 }
 
 // NewHandler creates a new instance of Handler with the provided dependencies
-func NewHandler(url string, key string, serviceRoleKey string, clientURL string, auth auth.TokenValidator, userService *service.UserService, userOrdersService *service.UserOrdersService) *Handler {
+func NewHandler(url string, key string, serviceRoleKey string, clientURL string, auth auth.TokenValidator, userService *service.UserService, userOrdersService *service.UserOrdersService, aiService service.AIServiceInterface) *Handler {
 	return &Handler{
 		SupabaseURL:            url,
 		SupabaseKey:            key,
@@ -27,5 +28,6 @@ func NewHandler(url string, key string, serviceRoleKey string, clientURL string,
 		Auth:                   auth,
 		UserService:            userService,
 		UserOrdersService:      userOrdersService,
+		AIService:              aiService,
 	}
 }

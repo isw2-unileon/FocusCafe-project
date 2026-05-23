@@ -34,9 +34,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	userService, userOrderService := initServices()
+	userService, userOrderService, aiService := initServices(cfg)
 
-	r := setupRouter(cfg, adapterJWT, userService, userOrderService)
+	r := setupRouter(cfg, adapterJWT, userService, userOrderService, aiService)
 
 	srv := createServer(cfg, r)
 
@@ -54,17 +54,19 @@ func initJWTAdapter(supabaseURL string) (*supabase.JWTAdapter, error) {
 	return adapterJWT, nil
 }
 
-func initServices() (*services.UserService, *services.UserOrdersService) {
+func initServices(cfg *config.Config) (*services.UserService, *services.UserOrdersService, *services.AIService) {
 	userRepo := repository.NewUserRepository(database.DB)
 	userService := services.NewUserService(userRepo)
 
 	userOrderRepo := repository.NewUserOrdersRepository(database.DB)
 	userOrderService := services.NewUserOrdersService(userOrderRepo)
 
-	return userService, userOrderService
+	aiService := services.NewAIService(cfg.GeminiKey)
+
+	return userService, userOrderService, aiService
 }
 
-func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userService *services.UserService, userOrderService *services.UserOrdersService) *gin.Engine {
+func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userService *services.UserService, userOrderService *services.UserOrdersService, aiService *services.AIService) *gin.Engine {
 	gin.SetMode(cfg.GinMode)
 
 	r := gin.New()
@@ -75,7 +77,7 @@ func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userServic
 	}))
 	r.Use(gin.Logger(), gin.Recovery())
 
-	h := handlers.NewHandler(cfg.SupabaseURL, cfg.SupabaseKey, cfg.SupabaseServiceRoleKey, cfg.ClientURL, adapterJWT, userService, userOrderService)
+	h := handlers.NewHandler(cfg.SupabaseURL, cfg.SupabaseKey, cfg.SupabaseServiceRoleKey, cfg.ClientURL, adapterJWT, userService, userOrderService, aiService)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -99,7 +101,7 @@ func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userServic
 		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
 	})
 	protected.POST("/study/start", handlers.StartStudySessionHandler)
-	protected.POST("/study/generate-quiz/:session_id", handlers.CreateQuizFromSession)
+	protected.POST("/study/generate-quiz/:session_id", h.CreateQuizFromSession)
 	protected.POST("/user/progress", handlers.UpdateProgressHandler(database.DB))
 
 	// Admin routes
