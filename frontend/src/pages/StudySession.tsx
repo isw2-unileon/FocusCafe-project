@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Clock, Upload, CheckCircle2, Coffee, Brain } from 'lucide-react';
+import { Upload, Coffee,} from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { apiFetch } from '@/services/api_client'; 
 import { StudyQuiz } from '@/components/StudyQuiz';
 
-// --- TIPOS ---
+// --- TYPES ---
 type SessionState = 'SETUP' | 'STUDYING' | 'QUIZ' | 'RESULTS';
 
 interface QuizQuestion {
@@ -26,7 +26,7 @@ interface RawAIQuestion {
     explanation?: string;
 }
 
-// --- SERVICIOS (Lógica de API extraída) ---
+// --- SERVICES ---
 const studyService = {
     startSession: (formData: FormData) => 
         apiFetch('/study/start', { method: 'POST', body: formData }),
@@ -42,7 +42,7 @@ const studyService = {
         })
 };
 
-// --- COMPONENTE PRINCIPAL ---
+// --- MAIN COMPONENT ---
 const StudySession = () => {
     const { userStats, setUserStats, isAuthenticated } = useAuth();
     const navigate = useNavigate();
@@ -66,7 +66,7 @@ const StudySession = () => {
         return `${m}:${s < 10 ? '0' : ''}${s}`;
     };
 
-    // --- MANEJADORES DE LÓGICA ---
+    // --- LOGIC HANDLERS  ---
     const handleStartStudy = async () => {
         if (!files || files.length === 0) return alert("Please upload a file.");
 
@@ -75,28 +75,22 @@ const StudySession = () => {
     
     const formData = new FormData();
     
-    // 1. EL NOMBRE DEL CAMPO: 
-    // Si tu backend es el que yo creo, espera 'pdf'. 
-    // Si sigue fallando, cambia 'pdf' por 'file' aquí abajo.
     formData.append('pdf', selectedFile);
     
-    // 2. EL NOMBRE DE LA ASIGNATURA:
     formData.append('subject_name', 'General Study');
 
-    // LOG DE CONTROL: Mira esto en la consola (F12) para confirmar que no va vacío
-    console.log("Enviando archivo:", selectedFile.name, "Tamaño:", selectedFile.size);
+    console.log("Sending file:", selectedFile.name, "Size:", selectedFile.size);
 
     try {
         const data = await studyService.startSession(formData) as { session_id: number };
-        console.log("Sesión iniciada con éxito:", data);
+        console.log("Session started successfully:", data);
         setCurrentSessionId(data.session_id);
         setTimeLeft(studyMinutes * 60);
         setState('STUDYING');
-    } catch (error: any) {
-        // 3. LOG DE ERROR DETALLADO:
-        // Esto nos dirá qué dice el servidor exactamente (el mensaje de error 400)
-        console.error("Error 400 detallado:", error.message);
-        alert(`Error: ${error.message}. Revisa la consola.`);
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error("Error 400 detallado:", errorMessage);
+        alert(`Error: ${errorMessage}. Revisa la consola.`);
     }
     };
 
@@ -160,7 +154,7 @@ const StudySession = () => {
                     </h1>
                 </div>
 
-                {/* SECCIÓN 1: CONFIGURACIÓN O ESTUDIO */}
+                {/* STUDY SETUP OR STUDYING */}
                 {(state === 'SETUP' || state === 'STUDYING') && (
                     <div className="space-y-6">
                         {state === 'SETUP' ? (
@@ -189,7 +183,7 @@ const StudySession = () => {
                     </div>
                 )}
 
-                {/* SECCIÓN 2: CUESTIONARIO (Componente extraído) */}
+                {/* STUDY QUIZ (Extracted Component) */}
                 {(state === 'QUIZ' || state === 'RESULTS') && (
                     <StudyQuiz 
                         quiz={quiz}
