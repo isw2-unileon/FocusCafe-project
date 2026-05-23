@@ -14,6 +14,6 @@ export interface UserOrder {
     cafe_order_id: number;
     status: 'pending' | 'completed';
     created_at: string;
-
+    group_id: string | null;
     cafe_order?:CafeOrder
 }
