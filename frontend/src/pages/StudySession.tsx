@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import { BookOpen, Clock, Upload, CheckCircle2, Coffee, Brain } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { apiFetch } from '@/services/api_client'; 
+import { StudyQuiz } from '@/components/StudyQuiz';
 
+// --- TIPOS ---
 type SessionState = 'SETUP' | 'STUDYING' | 'QUIZ' | 'RESULTS';
 
 interface QuizQuestion {
@@ -12,7 +15,6 @@ interface QuizQuestion {
     explanation?: string;
 }
 
-// Interface to represent the raw question from Gemini
 interface RawAIQuestion {
     question_text?: string;
     question?: string;
@@ -24,26 +26,38 @@ interface RawAIQuestion {
     explanation?: string;
 }
 
+// --- SERVICIOS (Lógica de API extraída) ---
+const studyService = {
+    startSession: (formData: FormData) => 
+        apiFetch('/study/start', { method: 'POST', body: formData }),
+    
+    generateQuiz: (sessionId: number) => 
+        apiFetch(`/study/generate-quiz/${sessionId}`, { method: 'POST' }),
+    
+    saveProgress: (sessionId: number, score: number) => 
+        apiFetch('/user/progress', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ score, session_id: sessionId })
+        })
+};
+
+// --- COMPONENTE PRINCIPAL ---
 const StudySession = () => {
     const { userStats, setUserStats, isAuthenticated } = useAuth();
     const navigate = useNavigate();
 
-    // Form states:
     const [state, setState] = useState<SessionState>('SETUP');
     const [files, setFiles] = useState<FileList | null>(null);
     const [studyMinutes, setStudyMinutes] = useState(25);
     const [timeLeft, setTimeLeft] = useState(0);
-
-    // Quiz states:
     const [quiz, setQuiz] = useState<QuizQuestion[]>([]);
     const [userAnswers, setUserAnswers] = useState<number[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
 
     useEffect(() => {
-        if (!isAuthenticated) {
-            navigate('/');
-        }
+        if (!isAuthenticated) navigate('/');
     }, [isAuthenticated, navigate]);
 
     const formatTime = (seconds: number) => {
@@ -52,127 +66,75 @@ const StudySession = () => {
         return `${m}:${s < 10 ? '0' : ''}${s}`;
     };
 
+    // --- MANEJADORES DE LÓGICA ---
     const handleStartStudy = async () => {
-        if (!files || files.length === 0) {
-            alert("Please upload at least one file to start studying.");
-            return;
-        }
+        if (!files || files.length === 0) return alert("Please upload a file.");
 
-        const selectedFile = files[0];
-        if (!selectedFile) return;
-        const formData = new FormData();
-        formData.append('pdf', selectedFile);
-        formData.append('subject_name', 'General Study');
+    const selectedFile = files[0];
+    if (!selectedFile) return alert("Please upload a file.");
+    
+    const formData = new FormData();
+    
+    // 1. EL NOMBRE DEL CAMPO: 
+    // Si tu backend es el que yo creo, espera 'pdf'. 
+    // Si sigue fallando, cambia 'pdf' por 'file' aquí abajo.
+    formData.append('pdf', selectedFile);
+    
+    // 2. EL NOMBRE DE LA ASIGNATURA:
+    formData.append('subject_name', 'General Study');
 
-        try {
-            const response = await fetch('http://localhost:8081/api/study/start', {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
+    // LOG DE CONTROL: Mira esto en la consola (F12) para confirmar que no va vacío
+    console.log("Enviando archivo:", selectedFile.name, "Tamaño:", selectedFile.size);
 
-            if (!response.ok) throw new Error("Failed to start session");
-
-            const data = await response.json();
-            setCurrentSessionId(data.session_id);
-            setTimeLeft(studyMinutes * 60);
-            setState('STUDYING');
-        } catch (error) {
-            console.error("Error starting session:", error);
-            alert("Server connection failed. Check if the backend is running.");
-        }
+    try {
+        const data = await studyService.startSession(formData) as { session_id: number };
+        console.log("Sesión iniciada con éxito:", data);
+        setCurrentSessionId(data.session_id);
+        setTimeLeft(studyMinutes * 60);
+        setState('STUDYING');
+    } catch (error: any) {
+        // 3. LOG DE ERROR DETALLADO:
+        // Esto nos dirá qué dice el servidor exactamente (el mensaje de error 400)
+        console.error("Error 400 detallado:", error.message);
+        alert(`Error: ${error.message}. Revisa la consola.`);
+    }
     };
 
     const handleStartQuiz = useCallback(async () => {
         if (!currentSessionId) return;
-
         setIsGenerating(true);
         setState('QUIZ');
-        setQuiz([]); // Clear previous state
 
         try {
-            const response = await fetch(`http://localhost:8081/api/study/generate-quiz/${currentSessionId}`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
+            const data = await studyService.generateQuiz(currentSessionId) as { questions: RawAIQuestion[] };
+            const parsedQuiz = (data.questions || []).map((q: RawAIQuestion) => {
+                const mapping: Record<string, number> = { 'A': 0, 'B': 1, 'C': 2, 'D': 3 };
+                return {
+                    question: q.question_text || q.question || "Untitled Question",
+                    options: [q.option_a, q.option_b, q.option_c, q.option_d].filter(Boolean),
+                    correctAnswer: mapping[String(q.correct_answer).trim().toUpperCase()] ?? 0,
+                    explanation: q.explanation
+                };
             });
-
-            if (!response.ok) {
-                // Check if it's the high demand error (500 from your backend currently)
-                throw new Error("AI service is currently busy. Please try again in a few seconds.");
-            }
-
-            const data = await response.json();
-            console.log("Raw AI Response:", data);
-
-            let parsedQuiz: QuizQuestion[] = [];
-
-            if (data.questions && Array.isArray(data.questions)) {
-                parsedQuiz = data.questions.map((q: RawAIQuestion) => {
-                    // Collect options and filter out any empties
-                    const options = [q.option_a, q.option_b, q.option_c, q.option_d].filter(Boolean);
-                    
-                    // Map letter (A-D) to index (0-3)
-                    const letter = String(q.correct_answer || 'A').trim().toUpperCase();
-                    const mapping: Record<string, number> = { 'A': 0, 'B': 1, 'C': 2, 'D': 3 };
-                    
-                    return {
-                        question: q.question_text || q.question || "Untitled Question",
-                        options: options,
-                        correctAnswer: mapping[letter] ?? 0,
-                        explanation: q.explanation
-                    };
-                });
-            }
-
             setQuiz(parsedQuiz);
-            
-        } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : "Error generating the quiz";
-            console.error("Quiz generation error:", error);
-            
-            setQuiz([{ 
-                question: errorMessage, 
-                options: ["Click to Retry"], 
-                correctAnswer: 0 
-            }]);
+        } catch (error) {
+            console.error("Quiz error:", error);
+            setQuiz([{ question: "AI busy, try again.", options: ["Retry"], correctAnswer: 0 }]);
         } finally {
             setIsGenerating(false);
         }
     }, [currentSessionId]);
 
     const handleFinishQuiz = async () => {
-        const correctAnswers = userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correctAnswer).length;
-
+        const score = userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correctAnswer).length;
         try {
-            const response = await fetch('http://localhost:8081/api/user/progress', {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({ 
-                    score: correctAnswers,
-                    session_id: currentSessionId
-                })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                if (userStats && data.new_total !== undefined) {
-                    setUserStats({
-                        ...userStats,
-                        energy: data.new_total
-                    });
-                }
+            const data = await studyService.saveProgress(currentSessionId!, score) as { new_total?: number };
+            if (userStats && data.new_total !== undefined) {
+                setUserStats({ ...userStats, energy: data.new_total });
             }
         } catch (e) {
-            console.error("Error saving progress:", e);
+            console.error("Error saving score:", e);
         }
-
         setState('RESULTS');
     };
 
@@ -186,16 +148,7 @@ const StudySession = () => {
         return () => clearInterval(timer);
     }, [state, timeLeft, handleStartQuiz]);
 
-    if (!userStats) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-stone-100">
-                <div className="text-center">
-                    <Coffee className="animate-bounce mx-auto text-orange-600 mb-4" size={40} />
-                    <p className="font-bold text-stone-600">Loading your profile...</p>
-                </div>
-            </div>
-        );
-    }
+    if (!userStats) return null;
 
     return (
         <div className="min-h-screen bg-stone-100 p-6">
@@ -207,140 +160,46 @@ const StudySession = () => {
                     </h1>
                 </div>
 
-                {state === 'SETUP' && (
-                    <div className="bg-white rounded-3xl p-8 shadow-sm border border-stone-200">
-                        <h2 className="text-xl font-bold mb-6">Prepare your Session</h2>
-                        <div className="space-y-6">
-                            <div>
-                                <label className="block text-sm font-black text-stone-500 uppercase mb-2">1. Upload Material (PDF)</label>
-                                <div className="border-2 border-dashed border-stone-200 rounded-2xl p-8 text-center hover:border-orange-400 transition-colors cursor-pointer relative">
-                                    <input type="file" multiple accept=".pdf" onChange={(e) => setFiles(e.target.files)} className="absolute inset-0 opacity-0 cursor-pointer" />
-                                    <Upload className="mx-auto text-stone-400 mb-2" />
-                                    <p className="text-stone-600 font-medium">{files ? `${files.length} files selected` : "Drag and drop your study PDFs here"}</p>
+                {/* SECCIÓN 1: CONFIGURACIÓN O ESTUDIO */}
+                {(state === 'SETUP' || state === 'STUDYING') && (
+                    <div className="space-y-6">
+                        {state === 'SETUP' ? (
+                            <div className="bg-white rounded-3xl p-8 shadow-sm border border-stone-200">
+                                <h2 className="text-xl font-bold mb-6">Prepare your Session</h2>
+                                <div className="space-y-6">
+                                    <div className="border-2 border-dashed border-stone-200 rounded-2xl p-8 text-center relative hover:bg-stone-50 transition-colors">
+                                        <input type="file" accept=".pdf" onChange={(e) => setFiles(e.target.files)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                        <Upload className="mx-auto text-stone-400 mb-2" />
+                                        <p className="text-stone-600">{files && files.length > 0 ? files[0]?.name : "Upload your PDF"}</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-stone-500 uppercase">Study Time (min)</label>
+                                        <input type="number" value={studyMinutes} onChange={(e) => setStudyMinutes(Number(e.target.value))} className="w-full bg-stone-50 border rounded-xl p-4 font-bold focus:ring-2 ring-orange-500 outline-none" />
+                                    </div>
+                                    <button onClick={handleStartStudy} className="w-full bg-stone-900 text-white py-6 rounded-2xl font-black hover:bg-orange-600 transition-all shadow-lg shadow-stone-200">START BREWING</button>
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-black text-stone-500 uppercase mb-2">2. Focus Time (Minutes)</label>
-                                <input type="number" value={studyMinutes} onChange={(e) => setStudyMinutes(Number(e.target.value))} className="w-full bg-stone-50 border border-stone-200 rounded-xl p-4 text-xl font-bold focus:ring-2 focus:ring-orange-500 outline-none" />
-                            </div>
-                            <button onClick={handleStartStudy} className="w-full bg-stone-900 text-white py-6 rounded-2xl font-black text-xl hover:bg-orange-600 transition-all shadow-lg active:scale-95">
-                                START BREWING
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {state === 'STUDYING' && (
-                    <div className="text-center py-20 bg-white rounded-[3rem] shadow-xl border-8 border-orange-50">
-                        <div className="relative inline-block">
-                            <Clock size={120} className="text-stone-100 absolute -inset-4 animate-pulse" />
-                            <h2 className="text-7xl font-black text-stone-800 relative">{formatTime(timeLeft)}</h2>
-                        </div>
-                        <p className="text-stone-500 mt-8 font-medium italic">"Focus on the material. The quiz starts when the timer ends."</p>
-                        <button onClick={() => setTimeLeft(0)} className="mt-12 text-stone-400 hover:text-orange-600 text-sm font-bold uppercase tracking-widest">Skip to Quiz (Debug)</button>
-                    </div>
-                )}
-
-                {state === 'QUIZ' && (
-                    <div className="bg-white rounded-3xl p-8 shadow-sm">
-                        {isGenerating ? (
-                            <div className="text-center py-12">
-                                <Brain className="mx-auto text-orange-600 animate-bounce mb-4" size={48} />
-                                <h2 className="text-2xl font-black">AI is crafting your test...</h2>
-                                <p className="text-stone-500">Analyzing your PDFs to check your knowledge.</p>
-                            </div>
                         ) : (
-                            <div className="space-y-8">
-                                <h2 className="text-2xl font-black flex items-center gap-2"><BookOpen /> Evaluation Time</h2>
-                                
-                                {/* VALIDACIÓN CRÍTICA: Añadimos comprobación de Array.isArray */}
-                                {Array.isArray(quiz) && quiz.length > 0 ? (
-                                    quiz.map((q, idx) => {
-                                        // Si por alguna razón una pregunta individual es nula, la saltamos
-                                        if (!q || !q.options) return null;
-
-                                        return (
-                                            <div key={idx} className="p-6 bg-stone-50 rounded-2xl border border-stone-100">
-                                                <p className="font-bold text-lg mb-4">{idx + 1}. {q.question}</p>
-                                                <div className="grid grid-cols-1 gap-3">
-                                                    {q.options.map((opt, i) => (
-                                                        <button 
-                                                            key={i} 
-                                                            onClick={() => {
-                                                                const newAns = [...userAnswers];
-                                                                newAns[idx] = i;
-                                                                setUserAnswers(newAns);
-                                                            }} 
-                                                            className={`p-4 rounded-xl text-left font-medium transition-all ${userAnswers[idx] === i ? 'bg-orange-600 text-white shadow-md' : 'bg-white hover:bg-stone-100'}`}
-                                                        >
-                                                            {opt}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        );
-                                    })
-                                ) : (
-                                    <div className="text-center py-10">
-                                        <p className="text-stone-500 mb-4">No pudimos procesar las preguntas del cuestionario.</p>
-                                        <button onClick={handleStartQuiz} className="text-orange-600 font-bold underline">
-                                            Intentar generar de nuevo
-                                        </button>
-                                    </div>
-                                )}
-
-                                {Array.isArray(quiz) && quiz.length > 0 && (
-                                    <button onClick={handleFinishQuiz} className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold">
-                                        SUBMIT ANSWERS
-                                    </button>
-                                )}
+                            <div className="text-center py-20 bg-white rounded-[3rem] shadow-xl border-8 border-orange-50">
+                                <h2 className="text-7xl font-black text-stone-800 tracking-tighter">{formatTime(timeLeft)}</h2>
+                                <p className="text-stone-500 mt-8 italic text-lg">Brewing knowledge... stay focused!</p>
+                                <button onClick={() => setTimeLeft(0)} className="mt-12 text-xs text-stone-300 hover:text-orange-500 uppercase font-bold tracking-widest transition-colors">Skip to Quiz</button>
                             </div>
                         )}
                     </div>
                 )}
 
-                {state === 'RESULTS' && (
-                    <div className="space-y-6">
-                        <div className="bg-white rounded-[3rem] p-12 text-center shadow-2xl">
-                            <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                                <CheckCircle2 size={48} />
-                            </div>
-                            <h2 className="text-4xl font-black mb-2">Session Complete!</h2>
-                            <p className="text-stone-500 mb-8 font-medium">You scored {userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correctAnswer).length} / {quiz.length}</p>
-                            <button onClick={() => navigate('/home')} className="bg-stone-900 text-white px-8 py-4 rounded-xl font-bold hover:bg-stone-800 transition-all">RETURN TO CAFETERIA</button>
-                        </div>
-
-                        <div className="bg-white rounded-3xl p-8 shadow-sm space-y-8">
-                            <h3 className="text-2xl font-black border-b pb-4">Quiz Review</h3>
-                            {quiz.map((q, idx) => (
-                                <div key={idx} className="space-y-3">
-                                    <p className="font-bold text-lg">{idx + 1}. {q.question}</p>
-                                    <div className="grid grid-cols-1 gap-2">
-                                        {q.options.map((opt, i) => {
-                                            const isCorrect = i === q.correctAnswer;
-                                            const isSelected = i === userAnswers[idx];
-                                            let bgColor = "bg-stone-50";
-                                            if (isSelected) bgColor = isCorrect ? "bg-green-100 border-green-500" : "bg-red-100 border-red-500";
-                                            else if (isCorrect) bgColor = "bg-green-50 border-green-200";
-
-                                            return (
-                                                <div key={i} className={`p-3 rounded-xl border ${bgColor} flex justify-between items-center`}>
-                                                    <span className={isCorrect ? "font-bold text-green-700" : ""}>{opt}</span>
-                                                    {isSelected && (isCorrect ? "✅" : "❌")}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                    {q.explanation && (
-                                        <div className="mt-4 p-4 bg-orange-50 rounded-xl border border-orange-100 italic text-stone-700 text-sm">
-                                            <span className="font-bold block mb-1">Explanation:</span>
-                                            {q.explanation}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
+                {/* SECCIÓN 2: CUESTIONARIO (Componente extraído) */}
+                {(state === 'QUIZ' || state === 'RESULTS') && (
+                    <StudyQuiz 
+                        quiz={quiz}
+                        isGenerating={isGenerating}
+                        userAnswers={userAnswers}
+                        setUserAnswers={setUserAnswers}
+                        onFinish={handleFinishQuiz}
+                        state={state}
+                        onReturn={() => navigate('/home')}
+                    />
                 )}
             </div>
         </div>
