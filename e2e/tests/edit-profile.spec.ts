@@ -31,6 +31,7 @@ test.describe("Edit Profile", () => {
     } finally {
       // 5. ALWAYS revert names back to original (even if test fails mid-way)
       await page.goto("/edit-profile");
+      await expect(page).toHaveURL(/.*edit-profile/);
       await page.getByPlaceholder("Your first name").fill(originalFirst);
       await page.getByPlaceholder("Your last name").fill(originalLast);
       await page.getByRole("button", { name: "Save Changes" }).click();
