@@ -7,10 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"strings"
-
-	"github.com/joho/godotenv"
 )
 
 // GenerateQuizSystemPrompt defines the AI's persona and the required strict JSON output format.
@@ -21,10 +18,24 @@ CRITICAL: "correct_answer" must be exactly one uppercase letter: "A", "B", "C", 
 CRITICAL: "explanation" must be a concise justification for the correct answer, ideally 1-2 sentences.
 Generate exactly 5 questions.`
 
+// AIServiceInterface defines the contract for AI-related operations, allowing for flexible implementations and easier testing.
+type AIServiceInterface interface {
+	GenerateQuiz(pdfText string) (string, error)
+}
+
+// AIService implements the AIServiceInterface and provides methods to interact with the Google Gemini API for quiz generation.
+type AIService struct {
+	apiKey string
+}
+
+// NewAIService creates a new instance of AIService with the provided API key for authentication with the Google Gemini API.
+func NewAIService(apiKey string) *AIService {
+	return &AIService{apiKey: apiKey}
+}
+
 // GenerateQuiz processes the provided text via Google Gemini API to produce a study quiz in JSON format.
-func GenerateQuiz(pdfText string) (string, error) {
-	apiKey := os.Getenv("GEMINI_API_KEY")
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=%s", apiKey)
+func (s *AIService) GenerateQuiz(pdfText string) (string, error) {
+	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=%s", s.apiKey)
 	// 1. Prepare the request payload.
 	payload := map[string]interface{}{
 		"contents": []map[string]interface{}{
@@ -112,11 +123,4 @@ func GenerateQuiz(pdfText string) (string, error) {
 	}
 
 	return cleaned, nil
-}
-
-// init loads environmental variables from the root or the backend directory.
-func init() { // looks for .env files in multiple locations to ensure it can find the necessary API keys regardless of the execution context (e.g., running from the project root or from the backend directory).
-	_ = godotenv.Load(".env")
-	_ = godotenv.Load("backend/.env")
-	_ = godotenv.Load("../../.env")
 }

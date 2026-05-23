@@ -21,13 +21,25 @@ func setupTestDB() {
 	database.DB = db
 }
 
+type mockAIService struct{}
+
+func (m *mockAIService) GenerateQuiz(pdfText string) (string, error) {
+	return `{"quiz_name": "Test Quiz", "questions": []}`, nil
+}
+
 // TestCreateQuizFromSession verifies that the handler correctly processes a session and attempts AI generation.
 func TestCreateQuizFromSession(t *testing.T) {
 	// 1. Setup Environment
 	gin.SetMode(gin.TestMode)
 	setupTestDB()
+
+	mockAI := &mockAIService{}
+	h := &Handler{
+		AIService: mockAI,
+	}
+
 	router := gin.Default()
-	router.POST("/api/study/generate-quiz/:session_id", CreateQuizFromSession)
+	router.POST("/api/study/generate-quiz/:session_id", h.CreateQuizFromSession)
 
 	// 2. Seed Mock Data
 	userID := uuid.New()
@@ -55,7 +67,6 @@ func TestCreateQuizFromSession(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	// 4. Assertions
-	// Note: It might return 500 if the GEMINI_API_KEY is missing in the test environment,
-	// but it will no longer return 404 because the database record now exists.
-	assert.NotEqual(t, http.StatusNotFound, w.Code, "the session should be found in the mock database")
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "Test Quiz")
 }
