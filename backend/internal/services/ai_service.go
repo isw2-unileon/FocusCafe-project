@@ -19,7 +19,7 @@ Return ONLY pure JSON, no markdown formatting.
 Format: {"quiz_name": "...", "questions": [{"question_text": "...", "option_a": "...", "option_b": "...", "option_c": "...", "option_d": "...", "correct_answer": "...", "explanation": "..."}]}
 CRITICAL: "correct_answer" must be exactly one uppercase letter: "A", "B", "C", or "D" and has to be the correct option.
 CRITICAL: "explanation" must be a concise justification for the correct answer, ideally 1-2 sentences.
-Generate exactly 3 questions.`
+Generate exactly 5 questions.`
 
 // GenerateQuiz processes the provided text via Google Gemini API to produce a study quiz in JSON format.
 func GenerateQuiz(pdfText string) (string, error) {
