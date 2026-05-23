@@ -7,11 +7,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/database"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
-	"github.com/isw2-unileon/FocusCafe-project/backend/internal/services"
 )
 
 // CreateQuizFromSession handles the HTTP request to generate a quiz based on a specific study session's material.
-func CreateQuizFromSession(c *gin.Context) {
+func (h *Handler) CreateQuizFromSession(c *gin.Context) {
 	sessionID := c.Param("session_id")
 
 	var session models.StudySession
@@ -28,7 +27,7 @@ func CreateQuizFromSession(c *gin.Context) {
 	}
 
 	// AI service call to generate the quiz JSON string.
-	quizJSON, err := services.GenerateQuiz(session.Material.Content)
+	quizJSON, err := h.AIService.GenerateQuiz(session.Material.Content)
 	if err != nil {
 		// Log the detailed error for backend monitoring.
 		log.Printf("❌ CRITICAL GEMINI ERROR: %v", err)
