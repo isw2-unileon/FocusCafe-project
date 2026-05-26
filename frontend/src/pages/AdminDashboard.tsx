@@ -286,7 +286,8 @@ const AdminDashboard = () => {
                                         <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest text-center">Level</p>
                                         <p className="text-2xl font-black text-stone-700">{user.level ?? 1}</p>
                                     </div>
-                                    <button 
+                                    <button
+                                        data-testid={`delete-user-${user.email}`}
                                         onClick={() => openDeleteModal(user)}
                                         className="bg-white p-4 rounded-2xl text-stone-200 hover:text-red-500 border border-stone-100 shadow-sm transition-all active:scale-90"
                                     >
@@ -397,6 +398,7 @@ const AdminDashboard = () => {
                                 />
                             </div>
                             <input
+                                data-testid="create-user-email"
                                 type="email"
                                 placeholder="Email"
                                 value={email}
