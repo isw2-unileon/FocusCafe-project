@@ -54,6 +54,38 @@ func (s *UserService) UpdateUserProfile(ctx context.Context, id uuid.UUID, first
 	return s.repo.UpdateUserProfile(ctx, id, firstName, lastName)
 }
 
+// mapUserToProfile maps a models.User to domain.UserProfile
+func mapUserToProfile(u models.User) domain.UserProfile {
+	profile := domain.UserProfile{
+		ID:        u.ID,
+		FirstName: u.FirstName,
+		LastName:  u.LastName,
+		Username:  u.Username,
+		Email:     u.Email,
+		Role:      u.Role,
+		CreatedAt: u.CreatedAt.Format("2006-01-02"),
+		Energy:    0,
+		MaxEnergy: 500,
+		XP:        0,
+		Level:     1,
+	}
+	if u.Progress != nil {
+		profile.Energy = u.Progress.Energy
+		profile.XP = u.Progress.XP
+		profile.Level = u.Progress.Level
+	}
+	if u.Group != nil {
+		profile.Group = &domain.Group{
+			ID:         u.Group.ID,
+			Name:       u.Group.Name,
+			InviteCode: u.Group.InviteCode,
+			LeaderID:   u.Group.LeaderID,
+			CreatedAt:  u.Group.CreatedAt,
+		}
+	}
+	return profile
+}
+
 // GetAllUsers retrieves all users and maps them to domain profiles
 func (s *UserService) GetAllUsers(ctx context.Context) ([]domain.UserProfile, error) {
 	users, err := s.repo.GetAllUsers(ctx)
@@ -63,25 +95,7 @@ func (s *UserService) GetAllUsers(ctx context.Context) ([]domain.UserProfile, er
 
 	profiles := make([]domain.UserProfile, 0, len(users))
 	for _, u := range users {
-		profile := domain.UserProfile{
-			ID:        u.ID,
-			FirstName: u.FirstName,
-			LastName:  u.LastName,
-			Username:  u.Username,
-			Email:     u.Email,
-			Role:      u.Role,
-			CreatedAt: u.CreatedAt.Format("2006-01-02"),
-			Energy:    0,
-			MaxEnergy: 500,
-			XP:        0,
-			Level:     1,
-		}
-		if u.Progress != nil {
-			profile.Energy = u.Progress.Energy
-			profile.XP = u.Progress.XP
-			profile.Level = u.Progress.Level
-		}
-		profiles = append(profiles, profile)
+		profiles = append(profiles, mapUserToProfile(u))
 	}
 	return profiles, nil
 }
@@ -96,25 +110,8 @@ func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*domain
 		return nil, err
 	}
 
-	profile := &domain.UserProfile{
-		ID:        user.ID,
-		FirstName: user.FirstName,
-		LastName:  user.LastName,
-		Username:  user.Username,
-		Email:     user.Email,
-		Role:      user.Role,
-		CreatedAt: user.CreatedAt.Format("2006-01-02"),
-		Energy:    0,
-		MaxEnergy: 500,
-		XP:        0,
-		Level:     1,
-	}
-	if user.Progress != nil {
-		profile.Energy = user.Progress.Energy
-		profile.XP = user.Progress.XP
-		profile.Level = user.Progress.Level
-	}
-	return profile, nil
+	profile := mapUserToProfile(*user)
+	return &profile, nil
 }
 
 // DeleteUser deletes a user by ID
