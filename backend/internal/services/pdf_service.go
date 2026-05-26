@@ -11,14 +11,14 @@ import (
 func ReadPdf(path string) (string, error) {
 	f, r, err := pdf.Open(path)
 	if err != nil {
-		return "", fmt.Errorf("error al abrir pdf: %w", err)
+		return "", fmt.Errorf("error trying to open pdf: %w", err)
 	}
 	defer f.Close()
 
 	var buf bytes.Buffer
 	b, err := r.GetPlainText()
 	if err != nil {
-		return "", fmt.Errorf("error al leer texto plano: %w", err)
+		return "", fmt.Errorf("error trying to read plain text: %w", err)
 	}
 
 	_, err = buf.ReadFrom(b)
