@@ -22,15 +22,17 @@ type Config struct {
 	GeminiKey              string
 }
 
-// Load reads configuration from environment variables with sensible defaults.
+// Load reads configuration from environment variables.
+// Loads .env only.
 func Load() *Config {
-	_ = godotenv.Load() // Busca en el directorio de ejecución
+	if err := godotenv.Load(); err != nil {
+		log.Printf("Warning: .env not found or error: %v", err)
+	}
 
 	cfg := &Config{
 		Port:                   getEnv("PORT", "8080"),
 		GinMode:                getEnv("GIN_MODE", "release"),
 		CORSAllowOrigin:        getEnv("CORS_ALLOW_ORIGIN", "*"),
-		ClientURL:              getEnv("CLIENT_URL", "http://localhost:5173"),
 		SupabaseURL:            getEnv("SUPABASE_URL", ""),
 		SupabaseKey:            getEnv("SUPABASE_KEY", ""),
 		SupabaseServiceRoleKey: getEnv("SUPABASE_SERVICE_ROLE_KEY", ""),
@@ -39,7 +41,9 @@ func Load() *Config {
 		GeminiKey:              getEnv("GEMINI_API_KEY", ""),
 	}
 
-	log.Printf("Configuración cargada (Puerto: %s, Modo: %s)", cfg.Port, cfg.GinMode)
+	log.Printf("Loaded Settings (Port: %s, Mode: %s)", cfg.Port, cfg.GinMode)
+	log.Printf("Supabase URL: %s", cfg.SupabaseURL)
+	log.Printf("Database URL: %s", cfg.DatabaseURL)
 
 	return cfg
 }

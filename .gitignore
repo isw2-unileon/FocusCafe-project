@@ -41,3 +41,6 @@ test-results/
 # ai
 backend/uploads/*
 !backend/uploads/.gitkeep
+
+# Process IDs
+*.pid

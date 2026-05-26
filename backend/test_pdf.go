@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/joho/godotenv"
 
@@ -21,7 +22,8 @@ func main() {
 
 	// 2. Enviar a la IA
 	fmt.Println("Generando Quiz con Gemini 2.5 Flash...")
-	quizJSON, err := services.GenerateQuiz(texto)
+	aiService := services.NewAIService(os.Getenv("GEMINI_API_KEY"))
+	quizJSON, err := aiService.GenerateQuiz(texto)
 	if err != nil {
 		log.Fatal("Error IA:", err)
 	}
