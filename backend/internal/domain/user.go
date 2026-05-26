@@ -15,4 +15,5 @@ type UserProfile struct {
 	MaxEnergy int       `json:"max_energy"`
 	XP        int       `json:"xp"`
 	Level     int       `json:"level"`
+	Group     *Group    `json:"group,omitempty"`
 }
