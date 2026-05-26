@@ -24,7 +24,7 @@ func (r *UserRepository) GetUserProfile(ctx context.Context, id uuid.UUID) (*dom
 	var m models.User
 
 	// Query the database for the user with the given ID
-	err := r.db.WithContext(ctx).Preload("Progress").First(&m, id).Error
+	err := r.db.WithContext(ctx).Preload("Progress").Preload("Group").First(&m, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -50,6 +50,16 @@ func (r *UserRepository) GetUserProfile(ctx context.Context, id uuid.UUID) (*dom
 		profile.Level = m.Progress.Level
 	}
 
+	if m.Group != nil {
+		profile.Group = &domain.Group{
+			ID:         m.Group.ID,
+			Name:       m.Group.Name,
+			InviteCode: m.Group.InviteCode,
+			LeaderID:   m.Group.LeaderID,
+			CreatedAt:  m.Group.CreatedAt,
+		}
+	}
+
 	return profile, nil
 }
 
@@ -64,14 +74,14 @@ func (r *UserRepository) UpdateUserProfile(ctx context.Context, id uuid.UUID, fi
 // GetAllUsers retrieves all users from the database with their progress
 func (r *UserRepository) GetAllUsers(ctx context.Context) ([]models.User, error) {
 	var users []models.User
-	err := r.db.WithContext(ctx).Preload("Progress").Find(&users).Error
+	err := r.db.WithContext(ctx).Preload("Progress").Preload("Group").Find(&users).Error
 	return users, err
 }
 
 // GetUserByEmail retrieves a user by their email address
 func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	var user models.User
-	err := r.db.WithContext(ctx).Preload("Progress").Where("email = ?", email).First(&user).Error
+	err := r.db.WithContext(ctx).Preload("Progress").Preload("Group").Where("email = ?", email).First(&user).Error
 	if err != nil {
 		return nil, err
 	}
