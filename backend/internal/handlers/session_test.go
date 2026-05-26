@@ -14,6 +14,8 @@ import (
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/auth"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/database"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/repository"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/services"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"gorm.io/driver/sqlite"
@@ -26,7 +28,8 @@ var userID = uuid.NewString()
 // SessionTestSuite defines the suite for session handler testing.
 type SessionTestSuite struct {
 	suite.Suite
-	db *gorm.DB
+	db      *gorm.DB
+	handler *Handler
 }
 
 // SetupSuite initializes the in-memory database and required folders for testing.
@@ -41,6 +44,13 @@ func (suite *SessionTestSuite) SetupSuite() {
 
 	// Inject the mock DB into the global database instance.
 	database.DB = suite.db
+
+	// Setup Handler with dependencies
+	studyRepo := repository.NewStudyRepository(suite.db)
+	studyService := services.NewStudyService(studyRepo)
+	suite.handler = &Handler{
+		StudyService: studyService,
+	}
 
 	// Create temporary uploads folder for tests.
 	_ = os.MkdirAll("backend/uploads", 0o750)
@@ -83,7 +93,7 @@ func (suite *SessionTestSuite) TestStartStudySessionSuccess() {
 	r.POST("/api/study/start", func(c *gin.Context) {
 		// Mocking the user claims in the context as the actual handler expects.
 		c.Set("user", mockClaims)
-		StartStudySessionHandler(c)
+		suite.handler.StartStudySessionHandler(c)
 	})
 
 	r.ServeHTTP(recorder, req)
@@ -107,7 +117,7 @@ func (suite *SessionTestSuite) TestStartStudySessionNoFile() {
 
 	r.POST("/api/study/start", func(c *gin.Context) {
 		c.Set("user", mockClaims)
-		StartStudySessionHandler(c)
+		suite.handler.StartStudySessionHandler(c)
 	})
 
 	// Request without files.

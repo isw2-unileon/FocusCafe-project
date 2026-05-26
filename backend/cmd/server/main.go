@@ -26,6 +26,13 @@ func main() {
 	ctx := context.Background()
 	cfg := config.Load()
 
+	// Ensure the uploads directory exists at startup.
+	if _, err := os.Stat("backend/uploads"); os.IsNotExist(err) {
+		if err := os.MkdirAll("backend/uploads", 0o750); err != nil {
+			logger.Error("failed to create uploads directory", "error", err)
+		}
+	}
+
 	database.InitDB(cfg)
 
 	adapterJWT, err := initJWTAdapter(cfg.SupabaseURL)
@@ -34,9 +41,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	userService, userOrderService, aiService := initServices(cfg)
+	userService, userOrderService, studyService, aiService := initServices(cfg)
 
-	r := setupRouter(cfg, adapterJWT, userService, userOrderService, aiService)
+	r := setupRouter(cfg, adapterJWT, userService, userOrderService, studyService, aiService)
 
 	srv := createServer(cfg, r)
 
@@ -54,19 +61,22 @@ func initJWTAdapter(supabaseURL string) (*supabase.JWTAdapter, error) {
 	return adapterJWT, nil
 }
 
-func initServices(cfg *config.Config) (*services.UserService, *services.UserOrdersService, *services.AIService) {
+func initServices(cfg *config.Config) (*services.UserService, *services.UserOrdersService, *services.StudyService, *services.AIService) {
 	userRepo := repository.NewUserRepository(database.DB)
 	userService := services.NewUserService(userRepo)
 
 	userOrderRepo := repository.NewUserOrdersRepository(database.DB)
 	userOrderService := services.NewUserOrdersService(userOrderRepo)
 
+	studyRepo := repository.NewStudyRepository(database.DB)
+	studyService := services.NewStudyService(studyRepo)
+
 	aiService := services.NewAIService(cfg.GeminiKey)
 
-	return userService, userOrderService, aiService
+	return userService, userOrderService, studyService, aiService
 }
 
-func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userService *services.UserService, userOrderService *services.UserOrdersService, aiService *services.AIService) *gin.Engine {
+func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userService *services.UserService, userOrderService *services.UserOrdersService, studyService *services.StudyService, aiService *services.AIService) *gin.Engine {
 	gin.SetMode(cfg.GinMode)
 
 	r := gin.New()
@@ -77,7 +87,7 @@ func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userServic
 	}))
 	r.Use(gin.Logger(), gin.Recovery())
 
-	h := handlers.NewHandler(cfg.SupabaseURL, cfg.SupabaseKey, cfg.SupabaseServiceRoleKey, cfg.ClientURL, adapterJWT, userService, userOrderService, aiService)
+	h := handlers.NewHandler(cfg.SupabaseURL, cfg.SupabaseKey, cfg.SupabaseServiceRoleKey, cfg.ClientURL, adapterJWT, userService, userOrderService, studyService, aiService)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -100,9 +110,9 @@ func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userServic
 	protected.GET("/hello", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
 	})
-	protected.POST("/study/start", handlers.StartStudySessionHandler)
+	protected.POST("/study/start", h.StartStudySessionHandler)
 	protected.POST("/study/generate-quiz/:session_id", h.CreateQuizFromSession)
-	protected.POST("/user/progress", handlers.UpdateProgressHandler(database.DB))
+	protected.POST("/user/progress", h.UpdateProgressHandler)
 
 	// Admin routes
 	admin := api.Group("/admin")
@@ -147,10 +157,6 @@ func runServer(ctx context.Context, srv *http.Server) error {
 	}
 
 	logger.Info("server stopped")
-
-	if _, err := os.Stat("uploads"); os.IsNotExist(err) {
-		_ = os.Mkdir("uploads", 0o750)
-	}
 
 	return nil
 }

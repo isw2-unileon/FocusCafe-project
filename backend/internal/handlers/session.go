@@ -3,18 +3,15 @@ package handlers
 import (
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/auth"
-	"github.com/isw2-unileon/FocusCafe-project/backend/internal/database"
-	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/services"
 )
 
 // StartStudySessionHandler initializes a new study session, handles PDF upload, extracts text, and persists session data.
-func StartStudySessionHandler(c *gin.Context) {
+func (h *Handler) StartStudySessionHandler(c *gin.Context) {
 	log.Printf("--> Incoming study session start request")
 
 	userVal, exists := c.Get("user")
@@ -65,32 +62,11 @@ func StartStudySessionHandler(c *gin.Context) {
 		content = "" // Fallback to empty string to allow session creation to proceed.
 	}
 
-	// Create the study material record with the extracted content.
-	material := models.StudyMaterial{
-		UserID:      userID,
-		Title:       file.Filename,
-		SubjectName: c.PostForm("subject_name"),
-		FilePath:    filePath,
-		Content:     content,
-		UploadDate:  time.Now(),
-	}
-
-	if err := database.DB.Create(&material).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while registering study material."})
-		return
-	}
-
-	// Initialize the study session linked to the newly created material.
-	session := models.StudySession{
-		UserID:          userID,
-		MaterialID:      material.ID,
-		DurationMinutes: 25,
-		StartTime:       time.Now(),
-		Status:          "STUDYING",
-	}
-
-	if err := database.DB.Create(&session).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while creating study session."})
+	// Use StudyService to handle business logic and persistence
+	session, materialID, err := h.StudyService.StartStudySession(c.Request.Context(), userID, file.Filename, c.PostForm("subject_name"), filePath, content)
+	if err != nil {
+		log.Printf("ERROR STARTING STUDY SESSION: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error while registering study material or session."})
 		return
 	}
 
@@ -99,7 +75,7 @@ func StartStudySessionHandler(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, gin.H{
 		"session_id":  session.ID,
-		"material_id": material.ID,
+		"material_id": materialID,
 		"message":     "Let's study! Session has begun successfully.",
 	})
 }
