@@ -292,3 +292,141 @@ func TestAdminOnly_Middleware(t *testing.T) {
 		})
 	}
 }
+
+// ============================================
+// TestHandler_GetAllGroups (Admin)
+// ============================================
+
+func TestHandler_GetAllGroups(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tests := []struct {
+		name           string
+		mockBehavior   func(ctx context.Context) ([]domain.GroupDetail, error)
+		wantStatusCode int
+		expectedBody   string
+	}{
+		{
+			name: "Success: Returns list of groups with members",
+			mockBehavior: func(ctx context.Context) ([]domain.GroupDetail, error) {
+				return []domain.GroupDetail{
+					{
+						ID:         1,
+						Name:       "The A-Team",
+						InviteCode: "AB12CD",
+						LeaderID:   uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
+						Members: []domain.GroupMember{
+							{ID: uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"), FirstName: "Alice", Email: "alice@test.com", Level: 5},
+							{ID: uuid.MustParse("550e8400-e29b-41d4-a716-446655440001"), FirstName: "Bob", Email: "bob@test.com", Level: 3},
+						},
+					},
+				}, nil
+			},
+			wantStatusCode: http.StatusOK,
+			expectedBody:   `"name":"The A-Team"`,
+		},
+		{
+			name: "Success: Returns empty list",
+			mockBehavior: func(ctx context.Context) ([]domain.GroupDetail, error) {
+				return []domain.GroupDetail{}, nil
+			},
+			wantStatusCode: http.StatusOK,
+			expectedBody:   `[]`,
+		},
+		{
+			name: "Error: Service failure returns 500",
+			mockBehavior: func(ctx context.Context) ([]domain.GroupDetail, error) {
+				return nil, errors.New("database connection lost")
+			},
+			wantStatusCode: http.StatusInternalServerError,
+			expectedBody:   `{"error":"failed to fetch groups"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mService := &mockGroupService{getAllGroupsFunc: tt.mockBehavior}
+			h := &handlers.Handler{GroupService: mService}
+
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			c.Request = httptest.NewRequest("GET", "/api/admin/groups", nil)
+
+			h.GetAllGroups(c)
+
+			if w.Code != tt.wantStatusCode {
+				t.Errorf("Handler.GetAllGroups() status = %v, want %v", w.Code, tt.wantStatusCode)
+			}
+
+			gotBody := w.Body.String()
+			if !strings.Contains(gotBody, tt.expectedBody) {
+				t.Errorf("Handler.GetAllGroups() body = %v, want to contain %v", gotBody, tt.expectedBody)
+			}
+		})
+	}
+}
+
+// ============================================
+// TestHandler_AdminDeleteGroup
+// ============================================
+
+func TestHandler_AdminDeleteGroup(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tests := []struct {
+		name           string
+		groupIDParam   string
+		mockBehavior   func(ctx context.Context, groupID int64) error
+		wantStatusCode int
+		expectedBody   string
+	}{
+		{
+			name:         "Success: Deletes group and returns 200",
+			groupIDParam: "1",
+			mockBehavior: func(ctx context.Context, groupID int64) error {
+				return nil
+			},
+			wantStatusCode: http.StatusOK,
+			expectedBody:   `{"message":"group deleted successfully"}`,
+		},
+		{
+			name:         "Error: Invalid group ID returns 400",
+			groupIDParam: "abc",
+			mockBehavior: nil,
+			wantStatusCode: http.StatusBadRequest,
+			expectedBody:   `{"error":"invalid group id format"}`,
+		},
+		{
+			name:         "Error: Service failure returns 500",
+			groupIDParam: "99",
+			mockBehavior: func(ctx context.Context, groupID int64) error {
+				return errors.New("group not found")
+			},
+			wantStatusCode: http.StatusInternalServerError,
+			expectedBody:   `{"error":"group not found"}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mService := &mockGroupService{deleteGroupFunc: tt.mockBehavior}
+			h := &handlers.Handler{GroupService: mService}
+
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			c.Params = gin.Params{{Key: "id", Value: tt.groupIDParam}}
+			c.Request = httptest.NewRequest("DELETE", "/api/admin/groups/"+tt.groupIDParam, nil)
+
+			h.AdminDeleteGroup(c)
+
+			if w.Code != tt.wantStatusCode {
+				t.Errorf("Handler.AdminDeleteGroup() status = %v, want %v", w.Code, tt.wantStatusCode)
+			}
+
+			gotBody := w.Body.String()
+			if !strings.Contains(gotBody, tt.expectedBody) {
+				t.Errorf("Handler.AdminDeleteGroup() body = %v, want to contain %v", gotBody, tt.expectedBody)
+			}
+		})
+	}
+}
