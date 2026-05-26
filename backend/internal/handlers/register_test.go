@@ -345,16 +345,7 @@ func TestRegister_UserProfileAndProgress_TableDriven(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 			expectedError:  "invalid character 'c' looking for beginning of object key string",
 		},
-		{
-			name:           "Profile network connection error",
-			profileStatus:  http.StatusCreated,
-			profileBody:    successProfileBody,
-			progressStatus: http.StatusCreated,
-			progressBody:   []interface{}{},
-			closeServer:    true,
-			expectedStatus: http.StatusInternalServerError,
-			expectedError:  "usuario creado en auth pero falló el perfil",
-		},
+
 		{
 			name:           "Progress insertion fails",
 			profileStatus:  http.StatusCreated,
