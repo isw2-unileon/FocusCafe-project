@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-export const supabase = createClient(
+const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
   import.meta.env.VITE_SUPABASE_ANON_KEY
 );
@@ -26,7 +26,6 @@ export const loginWithGoogle = (): void => {
 export const loginWithGoogle = async (): Promise<void> => {
   // Detecta si estás en localhost:5173 o en focuscafe-front.onrender.com
   const currentOrigin = window.location.origin; 
-  localStorage.setItem('oauth_intent', 'login');
 
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
@@ -66,7 +65,6 @@ export const registerWithEmail = async (data: RegisterData): Promise<void> => {
 
 export const registerWithGoogle = async (): Promise<void> => {
   const currentOrigin = window.location.origin; 
-  localStorage.setItem('oauth_intent', 'register');
 
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
@@ -81,14 +79,9 @@ export const registerWithGoogle = async (): Promise<void> => {
 
 
 // ---- SYNC (Google OAuth callback) ----
-export interface SyncResponse {
-  token: string | null;
-  synced: boolean;
-}
-
-export const syncGoogleUser = async (): Promise<SyncResponse> => {
+export const syncGoogleUser = async (): Promise<string | null> => {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return { token: null, synced: false };
+  if (!session) return null;
 
   const res = await fetch(`${API_URL}/auth/sync`, {
     method: 'POST',
@@ -97,11 +90,7 @@ export const syncGoogleUser = async (): Promise<SyncResponse> => {
     }
   });
 
-  if (!res.ok) return { token: null, synced: false };
+  if (!res.ok) return null;
   
-  const data = await res.json();
-  return { 
-    token: session.access_token, 
-    synced: data.synced 
-  };
+  return session.access_token;
 };

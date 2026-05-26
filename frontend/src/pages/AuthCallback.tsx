@@ -1,37 +1,18 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { syncGoogleUser, supabase } from '../services/auth_service';
+import { syncGoogleUser } from '../services/auth_service';
 import { useAuth } from '@/context/AuthContext';
 
 export default function AuthCallback() {
   const navigate = useNavigate();
   const { handleOAuthToken } = useAuth();
-  const called = useRef(false);
 
   useEffect(() => {
-    if (called.current) return;
-    called.current = true;
-
     const sync = async () => {
-      const { token, synced } = await syncGoogleUser();
-      
-      // Obtener el intent (login o register) de localStorage
-      const intent = localStorage.getItem('oauth_intent');
-      console.log('DEBUG OAuth:', { intent, synced, hasToken: !!token });
-      localStorage.removeItem('oauth_intent');
-
+      const token = await syncGoogleUser();
       if (token) {
-        // Si el usuario intentaba registrarse pero ya existía en la base de datos
-        if (intent === 'register' && !synced) {
-          console.log('Duplicate detected, aborting login...');
-          await supabase.auth.signOut();
-          localStorage.removeItem('token'); // Aseguramos que no quede rastro del token
-          navigate('/register?error=already_exists', { replace: true });
-          return;
-        }
-
         await handleOAuthToken(token);
-        navigate('/home', { replace: true });
+        navigate('/home');
       } else {
         navigate('/login');
       }

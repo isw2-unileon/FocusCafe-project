@@ -35,5 +35,5 @@ export const useRegister = () => {
     }
   };
 
-  return { register, registerWithGoogle, error, setError };
+  return { register, registerWithGoogle, error};
 };

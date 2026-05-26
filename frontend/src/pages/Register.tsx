@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Coffee } from 'lucide-react';
 import { useRegister } from '../context/useRegister';
 
@@ -9,15 +9,7 @@ export default function Register() {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
-  const { register, registerWithGoogle, error, setError } = useRegister();
-  const location = useLocation();
-
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get('error') === 'already_exists') {
-      setError("You're already a member of FocusCafe! This Google account is already registered, so please sign in instead.");
-    }
-  }, [location, setError]);
+  const { register, registerWithGoogle, error } = useRegister();
 
   return (
     <div className="min-h-screen bg-orange-50 flex items-center justify-center p-4">
