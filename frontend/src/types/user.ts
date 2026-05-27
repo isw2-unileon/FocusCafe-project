@@ -1,5 +1,5 @@
 export interface Group {
-    id: string;          // UUID
+    id: number;
     name: string;
     invite_code: string;
     leader_id: string;
