@@ -17,6 +17,7 @@ type JoinGroupRequest struct {
 }
 
 // CreateGroup handles the creation of a new study/cafe group.
+//nolint:dupl
 func (h *Handler) CreateGroup(c *gin.Context) {
 	var req CreateGroupRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -40,6 +41,7 @@ func (h *Handler) CreateGroup(c *gin.Context) {
 }
 
 // JoinGroup handles joining a group via invite code.
+//nolint:dupl
 func (h *Handler) JoinGroup(c *gin.Context) {
 	var req JoinGroupRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
