@@ -41,9 +41,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	userService, userOrderService, studyService, aiService := initServices(cfg)
+	userService, userOrderService, studyService, aiService, groupService := initServices(cfg)
 
-	r := setupRouter(cfg, adapterJWT, userService, userOrderService, studyService, aiService)
+	r := setupRouter(cfg, adapterJWT, userService, userOrderService, studyService, aiService, groupService)
 
 	srv := createServer(cfg, r)
 
@@ -61,7 +61,7 @@ func initJWTAdapter(supabaseURL string) (*supabase.JWTAdapter, error) {
 	return adapterJWT, nil
 }
 
-func initServices(cfg *config.Config) (*services.UserService, *services.UserOrdersService, *services.StudyService, *services.AIService) {
+func initServices(cfg *config.Config) (*services.UserService, *services.UserOrdersService, *services.StudyService, *services.AIService, *services.GroupService) {
 	userRepo := repository.NewUserRepository(database.DB)
 	userService := services.NewUserService(userRepo)
 
@@ -73,10 +73,13 @@ func initServices(cfg *config.Config) (*services.UserService, *services.UserOrde
 
 	aiService := services.NewAIService(cfg.GeminiKey)
 
-	return userService, userOrderService, studyService, aiService
+	groupRepo := repository.NewGroupRepository(database.DB)
+	groupService := services.NewGroupService(groupRepo)
+
+	return userService, userOrderService, studyService, aiService, groupService
 }
 
-func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userService *services.UserService, userOrderService *services.UserOrdersService, studyService *services.StudyService, aiService *services.AIService) *gin.Engine {
+func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userService *services.UserService, userOrderService *services.UserOrdersService, studyService *services.StudyService, aiService *services.AIService, groupService *services.GroupService) *gin.Engine {
 	gin.SetMode(cfg.GinMode)
 
 	r := gin.New()
@@ -87,7 +90,7 @@ func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userServic
 	}))
 	r.Use(gin.Logger(), gin.Recovery())
 
-	h := handlers.NewHandler(cfg.SupabaseURL, cfg.SupabaseKey, cfg.SupabaseServiceRoleKey, cfg.ClientURL, adapterJWT, userService, userOrderService, studyService, aiService)
+	h := handlers.NewHandler(cfg.SupabaseURL, cfg.SupabaseKey, cfg.SupabaseServiceRoleKey, cfg.ClientURL, adapterJWT, userService, userOrderService, studyService, aiService, groupService)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -110,6 +113,10 @@ func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userServic
 	protected.GET("/hello", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
 	})
+	protected.POST("/groups", h.CreateGroup)
+	protected.POST("/groups/join", h.JoinGroup)
+	protected.POST("/groups/leave", h.LeaveGroup)
+	protected.DELETE("/groups", h.DeleteGroup)
 	protected.POST("/study/start", h.StartStudySessionHandler)
 	protected.POST("/study/generate-quiz/:session_id", h.CreateQuizFromSession)
 	protected.POST("/user/progress", h.UpdateProgressHandler)
@@ -121,6 +128,8 @@ func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userServic
 	admin.GET("/users/search", h.GetUserByEmail)
 	admin.POST("/users", h.AdminCreateUser)
 	admin.DELETE("/users/:id", h.DeleteUser)
+	admin.GET("/groups", h.GetAllGroups)
+	admin.DELETE("/groups/:id", h.AdminDeleteGroup)
 
 	return r
 }

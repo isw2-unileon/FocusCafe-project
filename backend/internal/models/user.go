@@ -17,9 +17,12 @@ type User struct {
 	Role      string    `json:"role" gorm:"default:'user'"`
 	CreatedAt time.Time `json:"created_at" gorm:"autoCreateTime"`
 
+	GroupID *int64 `json:"group_id,omitempty" gorm:"type:bigint"`
+
 	// Relationships
 	Progress *UserProgress `json:"progress,omitempty" gorm:"foreignKey:UserID"`
 	Orders   []UserOrder   `json:"orders,omitempty" gorm:"foreignKey:UserID"`
+	Group    *Group        `json:"group,omitempty" gorm:"foreignKey:GroupID;references:ID"`
 }
 
 // TableName overrides the default table name for the model.

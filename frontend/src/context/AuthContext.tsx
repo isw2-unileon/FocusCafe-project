@@ -13,7 +13,7 @@ interface AuthContextType{
     loginWithGoogle: () => void;
     handleOAuthToken: (token: string) => Promise<void>;
     logout: () => void;
-    setUserStats : (user: UserStats | null) => void;
+    setUserStats: React.Dispatch<React.SetStateAction<UserStats | null>>;
     error: string | null;
 }
 
