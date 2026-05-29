@@ -18,6 +18,7 @@ import (
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/repository"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/services"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/supabase"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/ws"
 )
 
 var logger = slog.New(slog.NewJSONHandler(os.Stdout, nil))
@@ -43,7 +44,10 @@ func main() {
 
 	userService, userOrderService, studyService, aiService, groupService := initServices(cfg)
 
-	r := setupRouter(cfg, adapterJWT, userService, userOrderService, studyService, aiService, groupService)
+	wsHub := ws.NewHub()
+	go wsHub.Run()
+
+	r := setupRouter(cfg, adapterJWT, userService, userOrderService, studyService, aiService, groupService, wsHub)
 
 	srv := createServer(cfg, r)
 
@@ -79,7 +83,7 @@ func initServices(cfg *config.Config) (*services.UserService, *services.UserOrde
 	return userService, userOrderService, studyService, aiService, groupService
 }
 
-func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userService *services.UserService, userOrderService *services.UserOrdersService, studyService *services.StudyService, aiService *services.AIService, groupService *services.GroupService) *gin.Engine {
+func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userService *services.UserService, userOrderService *services.UserOrdersService, studyService *services.StudyService, aiService *services.AIService, groupService *services.GroupService, wsHub *ws.Hub) *gin.Engine {
 	gin.SetMode(cfg.GinMode)
 
 	r := gin.New()
@@ -90,7 +94,7 @@ func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userServic
 	}))
 	r.Use(gin.Logger(), gin.Recovery())
 
-	h := handlers.NewHandler(cfg.SupabaseURL, cfg.SupabaseKey, cfg.SupabaseServiceRoleKey, cfg.ClientURL, adapterJWT, userService, userOrderService, studyService, aiService, groupService)
+	h := handlers.NewHandler(cfg.SupabaseURL, cfg.SupabaseKey, cfg.SupabaseServiceRoleKey, cfg.ClientURL, adapterJWT, userService, userOrderService, studyService, aiService, groupService, wsHub)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -102,6 +106,7 @@ func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userServic
 	api.POST("/register", h.Register)
 	api.GET("/auth/google", h.GoogleAuth)
 	api.POST("/auth/sync", h.SyncUser)
+	api.GET("/ws", h.WSHandler(wsHub))
 
 	// Protected route
 	protected := api.Group("/")

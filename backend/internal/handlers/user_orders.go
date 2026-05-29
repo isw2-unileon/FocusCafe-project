@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"context"
+	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/ws"
 )
 
 // GetUserOrders obtains the orders of the authenticated user.
@@ -59,4 +62,29 @@ func (h *Handler) CompleteUserOrder(c *gin.Context) {
 		"message": "Order successfully completed!",
 		"status":  "completed",
 	})
+
+	// 4. Notify via WebSocket
+	go func() {
+		// Use Background context because the request context will be cancelled
+		bgCtx := context.Background()
+
+		h.WSHub.SendToUser(userID, ws.Message{
+			Type:    "ORDERS_UPDATED",
+			Payload: gin.H{"order_id": orderID},
+		})
+
+		// If the user belongs to a group, also notify the group
+		profile, err := h.UserService.GetUserProfile(bgCtx, userID)
+		if err != nil {
+			log.Printf("Error fetching user profile for WS broadcast: %v", err)
+			return
+		}
+
+		if profile.Group != nil {
+			h.WSHub.BroadcastToGroup(profile.Group.ID, ws.Message{
+				Type:    "ORDERS_UPDATED",
+				Payload: gin.H{"order_id": orderID, "completed_by": userID},
+			})
+		}
+	}()
 }
