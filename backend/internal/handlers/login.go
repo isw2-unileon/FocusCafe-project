@@ -25,7 +25,7 @@ func (h *Handler) Login(c *gin.Context) {
 
 	token, user, err := h.authenticateUser(req.Email, req.Password)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
