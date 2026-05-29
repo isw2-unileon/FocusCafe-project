@@ -181,23 +181,11 @@ const Dashboard = () => {
                       <Award className="text-blue-500" size={20} />
                     </div>
                     <div className="flex-1">
-                      <div className="flex justify-between items-end mb-1">
+                      <div className="flex justify-between items-center">
                         <p className="text-[11px] font-bold uppercase text-gray-500">Experience</p>
                         <p className="text-sm font-black text-gray-800">
-                           {profile.xp ?? 0}{' '}
-                          <span className="text-gray-400 font-medium">/ {(profile.level || 1) * 100}</span>
+                          {profile.xp ?? 0} <span className="text-gray-400 font-medium">XP</span>
                         </p>
-                      </div>
-                      <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-blue-500 transition-all duration-500"
-                          style={{
-                            width: `${Math.min(
-                              (((profile.xp ?? 0) / ((profile.level || 1) * 100)) * 100),
-                              100
-                            )}%`,
-                          }}
-                        />
                       </div>
                     </div>
                   </div>
