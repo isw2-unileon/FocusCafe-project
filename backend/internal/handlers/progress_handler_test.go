@@ -14,6 +14,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/auth"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/handlers"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/repository"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/services"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -67,7 +69,12 @@ func TestUpdateProgressHandler(t *testing.T) {
 		mock.ExpectCommit()
 		// --- TRANSACTION ENDS HERE ---
 		// 3. Execute
-		handlers.UpdateProgressHandler(gormDB)(c)
+		repo := repository.NewStudyRepository(gormDB)
+		svc := services.NewStudyService(repo)
+		h := &handlers.Handler{
+			StudyService: svc,
+		}
+		h.UpdateProgressHandler(c)
 
 		// 4. Assert
 		if w.Code != http.StatusOK {
