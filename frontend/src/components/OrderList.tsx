@@ -2,35 +2,88 @@ import { completeOrder, getUserOrders } from '@/services/user_order_service';
 import { getRemoteUserStats } from '@/services/user_service';
 import {UserOrder} from '@/types/user-order';
 import { Coffee, Users, Zap } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Card } from "@/components/ui/card";
 import { useAuth } from '@/context/AuthContext';
+import { useWebSocket } from '@/context/WebSocketContext';
 import { showLevelUpModal, showOrderServedToast, showXpToast } from '@/lib/notifications';
 
 
 
 export const OrderList = ({ inGroup = false }: { inGroup?: boolean }) => {
     const { userStats, setUserStats } = useAuth();
+    const { subscribe } = useWebSocket();
     const [orders, setOrders] = useState<UserOrder[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchOrders = async () => {
-        setLoading(true);
+    const fetchOrders = useCallback(async (showLoading = true) => {
+        if (showLoading) setLoading(true);
         try {
             const fetchedOrders = await getUserOrders();
             setOrders(fetchedOrders);
+            
+            // Also refresh stats when orders are updated to reflect potential XP/Energy changes from collaborative work
+            const stats = await getRemoteUserStats();
+            setUserStats(stats);
         } catch (error) {
             console.error('Failed to fetch orders:', error);
         } finally {
-            setLoading(false);
+            if (showLoading) setLoading(false);
         }
-    };
+    }, [setUserStats]);
 
     useEffect(() => {
-        fetchOrders();
-    }, []);
+        fetchOrders(true);
+
+        // Subscribe to real-time updates
+        const unsubscribe = subscribe('ORDERS_UPDATED', (payload) => {
+            console.log('Real-time update received: Triggering smart refresh');
+            
+            if (payload && payload.order_id) {
+                showOrderServedToast();
+                setOrders((currentOrders) => {
+                    const updatedOrders = currentOrders.filter(order => order.id !== payload.order_id);
+                    
+                    if (inGroup) {
+                        const remainingGroup = updatedOrders.filter(o => !!o.group_id);
+                        if (remainingGroup.length === 0) {
+                            fetchOrders(false)
+                        }
+                    } else {
+                        const remainingIndividual = updatedOrders.filter(o => !o.group_id);
+                        if (remainingIndividual.length === 0) {
+                            fetchOrders(false);
+                        }
+                    }
+
+                    return updatedOrders; 
+                });
+
+            } else {
+                fetchOrders(false);
+            }
+    });
+
+        return () => unsubscribe();
+    }, [subscribe, fetchOrders]);
+
+    /*const removeOrderFromUI = useCallback((orderId: number) => {
+    setOrders((currentOrders) => {
+        const updatedOrders = currentOrders.filter(order => order.id !== orderId);
+        
+        if (inGroup) {
+            const remainingGroup = updatedOrders.filter(o => !!o.group_id);
+            if (remainingGroup.length === 0) fetchOrders(false);
+        } else {
+            const remainingIndividual = updatedOrders.filter(o => !o.group_id);
+            if (remainingIndividual.length === 0) fetchOrders(false);
+        }
+        
+        return updatedOrders;
+    });
+}, [inGroup, fetchOrders]);*/
 
     const handleComplete = async (order: UserOrder) =>{
         try{
@@ -44,10 +97,19 @@ export const OrderList = ({ inGroup = false }: { inGroup?: boolean }) => {
             setUserStats(stats);
             
             const remainingOrders = orders.filter(o => o.id !== orderId);
-            if (remainingOrders.length === 0) {
-                await fetchOrders();
+            setOrders(remainingOrders);
+
+            if (inGroup) {
+                const remainingGroupOrders = remainingOrders.filter(o => !!o.group_id);
+                if (remainingGroupOrders.length === 0) {
+                    await fetchOrders();
+                }
             } else {
-                setOrders(remainingOrders);
+                const remainingIndividualOrders = remainingOrders.filter(o => !o.group_id);
+                if (remainingIndividualOrders.length === 0) {
+                    console.log("¡Se han acabado los pedidos individuales! Recargando...");
+                    await fetchOrders();
+                }
             }
 
             if (stats.level > levelBefore) {
