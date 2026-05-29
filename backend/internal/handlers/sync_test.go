@@ -1,4 +1,4 @@
-package handlers_test
+package handlers // 1. Cambiado a paquete interno para evitar ciclos
 
 import (
 	"encoding/json"
@@ -14,12 +14,17 @@ import (
 // Helpers
 // ─────────────────────────────────────────────
 
-// syncStub starts an httptest.Server that routes requests for SyncUser tests.
-// authStatus/authBody  → GET  /auth/v1/user
-// existsBody           → GET  /rest/v1/users?id=eq.*
-// profileStatus        → POST /rest/v1/users
-// /rest/v1/user_progress always returns 201
-func syncStub(
+// newSyncHandler inicializa el Handler con un nombre único para esta clase de tests
+func newSyncHandler(supabaseURL string) *Handler {
+	return &Handler{
+		SupabaseURL: supabaseURL,
+		SupabaseKey: "test-api-key",
+		ClientURL:   "http://localhost:5173",
+	}
+}
+
+// supabaseSyncStub arranca el servidor de simulación exclusivo para SyncUser
+func supabaseSyncStub(
 	t *testing.T,
 	authStatus int, authBody interface{},
 	existsBody interface{},
@@ -100,12 +105,12 @@ func TestSyncUser_Auth_TableDriven(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			stub := syncStub(t,
+			stub := supabaseSyncStub(t,
 				tt.authStatus, tt.authBody,
 				[]interface{}{},
 				http.StatusCreated,
 			)
-			h := newHandler(stub.URL)
+			h := newSyncHandler(stub.URL)
 
 			w := httptest.NewRecorder()
 			_, r := gin.CreateTestContext(w)
@@ -177,12 +182,12 @@ func TestSyncUser_ExtractUserData_TableDriven(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			stub := syncStub(t,
+			stub := supabaseSyncStub(t,
 				http.StatusOK, tt.authBody,
 				[]interface{}{}, // user does not exist yet
 				http.StatusCreated,
 			)
-			h := newHandler(stub.URL)
+			h := newSyncHandler(stub.URL)
 
 			w := httptest.NewRecorder()
 			_, r := gin.CreateTestContext(w)
@@ -210,12 +215,12 @@ func TestSyncUser_ExtractUserData_TableDriven(t *testing.T) {
 func TestSyncUser_UserAlreadyExists(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	stub := syncStub(t,
+	stub := supabaseSyncStub(t,
 		http.StatusOK, validAuthBody("user@focus.com"),
 		[]interface{}{map[string]interface{}{"id": "uuid-001"}}, // user exists
 		http.StatusCreated,
 	)
-	h := newHandler(stub.URL)
+	h := newSyncHandler(stub.URL)
 
 	w := httptest.NewRecorder()
 	_, r := gin.CreateTestContext(w)
@@ -263,12 +268,12 @@ func TestSyncUser_ProfileCreation_TableDriven(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			stub := syncStub(t,
+			stub := supabaseSyncStub(t,
 				http.StatusOK, validAuthBody("user@focus.com"),
 				[]interface{}{}, // user does not exist
 				tt.profileStatus,
 			)
-			h := newHandler(stub.URL)
+			h := newSyncHandler(stub.URL)
 
 			w := httptest.NewRecorder()
 			_, r := gin.CreateTestContext(w)
@@ -294,12 +299,12 @@ func TestSyncUser_ProfileCreation_TableDriven(t *testing.T) {
 func TestSyncUser_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	stub := syncStub(t,
+	stub := supabaseSyncStub(t,
 		http.StatusOK, validAuthBody("ada@focus.com"),
 		[]interface{}{}, // user does not exist yet
 		http.StatusCreated,
 	)
-	h := newHandler(stub.URL)
+	h := newSyncHandler(stub.URL)
 
 	w := httptest.NewRecorder()
 	_, r := gin.CreateTestContext(w)

@@ -1,17 +1,24 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Zap, BookOpen, ChevronRight, Award, Shield, LogIn, PlusCircle } from 'lucide-react';
+import { Zap, BookOpen, ChevronRight, Award, Shield, LogIn, PlusCircle, Copy, Check, Trash2, LogOut } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { StatCard } from "../components/StatCard";
 import { getRemoteUserStats } from "@/services/user_service";
+import { createGroup, joinGroup, leaveGroup, deleteGroup } from "@/services/group_service";
 import { OrderList } from "@/components/OrderList";
 import { AvatarDashboard } from "@/components/AvatarDashboard";
 import { useAuth } from "@/context/AuthContext";
 
 const Home = () => {
-    const { logout, userStats, setUserStats, isAdmin } = useAuth();
+    const { logout, userStats, setUserStats, isAdmin, userId } = useAuth();
     const [loading, setLoading] = useState(true);
     const [inviteCode, setInviteCode] = useState("");
     const [newGroupName, setNewGroupName] = useState("");
+    const [isGroupLoading, setIsGroupLoading] = useState(false);
+    const [showInviteModal, setShowInviteModal] = useState(false);
+    const [createdGroupName, setCreatedGroupName] = useState("");
+    const [createdGroupCode, setCreatedGroupCode] = useState("");
+    const [copied, setCopied] = useState(false);
     const navigate = useNavigate();
     
     useEffect(() => {
@@ -36,13 +43,87 @@ const Home = () => {
     };
 
     const handleCreateGroup = async () => {
-        // TODO: API Call createGroup(newGroupName)
-        console.log("Creating group:", newGroupName);
+        if (!newGroupName.trim()) {
+            toast.error("Team name is required");
+            return;
+        }
+        setIsGroupLoading(true);
+        try {
+            const group = await createGroup(newGroupName.trim());
+            setUserStats(prev => prev ? { ...prev, group } : prev);
+            setCreatedGroupName(group.name);
+            setCreatedGroupCode(group.invite_code);
+            setShowInviteModal(true);
+            setNewGroupName("");
+            toast.success(`Team "${group.name}" created!`);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Error creating team");
+        } finally {
+            setIsGroupLoading(false);
+        }
     };
 
     const handleJoinGroup = async () => {
-        // TODO: API Call joinGroup(inviteCode)
-        console.log("Joining with code:", inviteCode);
+        if (!inviteCode.trim()) {
+            toast.error("Invite code is required");
+            return;
+        }
+        setIsGroupLoading(true);
+        try {
+            const group = await joinGroup(inviteCode.trim());
+            setUserStats(prev => prev ? { ...prev, group } : prev);
+            setInviteCode("");
+            toast.success(`Joined team "${group.name}"!`);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Invalid invite code");
+        } finally {
+            setIsGroupLoading(false);
+        }
+    };
+
+    const handleLeaveTeam = async () => {
+        if (!confirm("Are you sure you want to leave this team?")) return;
+        setIsGroupLoading(true);
+        try {
+            await leaveGroup();
+            setUserStats(prev => prev ? { ...prev, group: undefined } : prev);
+            toast.success("You left the team");
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Error leaving team");
+        } finally {
+            setIsGroupLoading(false);
+        }
+    };
+
+    const handleDeleteTeam = async () => {
+        if (!confirm("Are you sure you want to delete this team? All members will be removed.")) return;
+        setIsGroupLoading(true);
+        try {
+            await deleteGroup();
+            setUserStats(prev => prev ? { ...prev, group: undefined } : prev);
+            toast.success("Team deleted");
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Error deleting team");
+        } finally {
+            setIsGroupLoading(false);
+        }
+    };
+
+    const handleCopyCode = async () => {
+        try {
+            await navigator.clipboard.writeText(createdGroupCode);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch {
+            const textArea = document.createElement("textarea");
+            textArea.value = createdGroupCode;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
     };
 
     const handleStudySessionClick = () => {
@@ -75,25 +156,41 @@ const Home = () => {
                         {/* Group Logic in Header */}
                         {!userStats.group ? (
                             <div className="flex items-center gap-2 px-2">
-                                <div className="flex gap-1 border-r pr-4 border-stone-200">
-                                    <input 
-                                        className="bg-white border-none text-xs rounded-lg px-3 py-2 w-28 focus:ring-1 focus:ring-orange-500 outline-none shadow-sm"
-                                        placeholder="Invite Code"
-                                        value={inviteCode}
-                                        onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                                    />
-                                    <button onClick={handleJoinGroup} className="p-2 hover:bg-stone-800 hover:text-white rounded-lg transition-colors" title="Join Team">
-                                        <LogIn size={18} />
-                                    </button>
+                                <div className="flex flex-col border-r pr-4 border-stone-200">
+                                    <div className="flex gap-1">
+                                        <input 
+                                            className="bg-white border-none text-xs rounded-lg px-3 py-2 w-28 focus:ring-1 focus:ring-orange-500 outline-none shadow-sm disabled:opacity-50"
+                                            placeholder="Invite Code"
+                                            value={inviteCode}
+                                            disabled={isGroupLoading}
+                                            onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleJoinGroup()}
+                                        />
+                                        <button 
+                                            onClick={handleJoinGroup} 
+                                            disabled={isGroupLoading}
+                                            className="p-2 hover:bg-stone-800 hover:text-white rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed" 
+                                            title="Join Team"
+                                        >
+                                            <LogIn size={18} />
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="flex gap-1">
                                     <input 
-                                        className="bg-white border-none text-xs rounded-lg px-3 py-2 w-28 focus:ring-1 focus:ring-orange-700 outline-none shadow-sm"
+                                        className="bg-white border-none text-xs rounded-lg px-3 py-2 w-28 focus:ring-1 focus:ring-orange-700 outline-none shadow-sm disabled:opacity-50"
                                         placeholder="New Team"
                                         value={newGroupName}
+                                        disabled={isGroupLoading}
                                         onChange={(e) => setNewGroupName(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleCreateGroup()}
                                     />
-                                    <button onClick={handleCreateGroup} className="p-2 hover:bg-orange-600 hover:text-white rounded-lg transition-colors text-orange-700" title="Create Team">
+                                    <button 
+                                        onClick={handleCreateGroup} 
+                                        disabled={isGroupLoading}
+                                        className="p-2 hover:bg-orange-600 hover:text-white rounded-lg transition-colors text-orange-700 disabled:opacity-40 disabled:cursor-not-allowed" 
+                                        title="Create Team"
+                                    >
                                         <PlusCircle size={18} />
                                     </button>
                                 </div>
@@ -108,6 +205,25 @@ const Home = () => {
                                     <span className="text-[10px] block opacity-70 leading-none">CODE</span>
                                     <span className="text-xs font-mono font-bold">{userStats.group.invite_code}</span>
                                 </div>
+                                {userId === userStats.group.leader_id ? (
+                                    <button
+                                        onClick={handleDeleteTeam}
+                                        disabled={isGroupLoading}
+                                        className="p-2 hover:bg-red-600 hover:text-white rounded-lg transition-colors text-red-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                                        title="Delete Team"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={handleLeaveTeam}
+                                        disabled={isGroupLoading}
+                                        className="p-2 hover:bg-stone-800 hover:text-white rounded-lg transition-colors text-stone-400 disabled:opacity-40 disabled:cursor-not-allowed"
+                                        title="Leave Team"
+                                    >
+                                        <LogOut size={16} />
+                                    </button>
+                                )}
                             </div>
                         )}
 
@@ -152,9 +268,6 @@ const Home = () => {
                     />
                     <OrderList inGroup={false}/>
                     <OrderList inGroup={true}/>
-                    {/* <OrderList/> */}
-                    {/*<StatCard icon={<Trophy className="text-amber-500" size={20}/>} label="Ranking" value={`${user.ranking}`} color="bg-amber-50" />
-                    <StatCard icon={<Users className="text-blue-500" size={20}/>} label="Online" value={onlineUsers} color="bg-blue-50" />*/}
                 </div>
 
                 {/* Main Action Area */}
@@ -177,6 +290,40 @@ const Home = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Success Modal for Created Group */}
+            {showInviteModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 text-center shadow-2xl">
+                        <h3 className="text-2xl font-black text-stone-800 mb-1">Team Created!</h3>
+                        <p className="text-lg font-bold text-orange-600 mb-4">{createdGroupName}</p>
+                        <p className="text-stone-600 mb-6">Share this code with your friends:</p>
+                        
+                        <div 
+                            className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-6 mb-6 cursor-pointer hover:bg-orange-100 transition-colors relative"
+                            onClick={handleCopyCode}
+                            title="Click to copy"
+                        >
+                            <span className="text-4xl font-mono font-black text-orange-600 tracking-widest block">
+                                {createdGroupCode}
+                            </span>
+                            <div className="absolute top-2 right-2 text-orange-400">
+                                {copied ? <Check size={20} /> : <Copy size={20} />}
+                            </div>
+                            {copied && (
+                                <span className="text-xs text-orange-600 font-bold absolute bottom-1 left-0 right-0">Copied!</span>
+                            )}
+                        </div>
+                        
+                        <button 
+                            onClick={() => setShowInviteModal(false)}
+                            className="bg-orange-600 text-white px-8 py-3 rounded-xl font-black text-lg hover:bg-orange-700 transition-colors"
+                        >
+                            Done!
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

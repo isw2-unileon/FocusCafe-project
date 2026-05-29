@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from "react-router-dom";
 import toast from 'react-hot-toast';
-import { UserPlus, Trash2, Shield, Search, Mail, ChevronRight, X, AlertTriangle, LogOut, ChevronDown } from 'lucide-react';
+import { UserPlus, Trash2, Shield, Search, Mail, ChevronRight, X, AlertTriangle, LogOut, ChevronDown, Users, UsersRound, Crown } from 'lucide-react';
 import { useAuth } from "@/context/AuthContext";
 import { getAllUsers, createUser, deleteUser } from "@/services/user_service";
+import { getAllGroups, adminDeleteGroup, GroupDetail } from "@/services/group_service";
 import { UserProfile } from "@/types/user-profile";
 
 const AVATAR_COLORS = [
@@ -21,35 +22,25 @@ function getAvatarColor(seed: string): { bg: string; text: string } {
     return AVATAR_COLORS[index]!;
 }
 
+type Tab = 'users' | 'groups';
+
 const AdminDashboard = () => {
     const { logout, userId } = useAuth();
     const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState<Tab>('users');
+
+    // Users state
     const [users, setUsers] = useState<UserProfile[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [usersLoading, setUsersLoading] = useState(true);
+    const [usersError, setUsersError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
 
-    const filteredUsers = useMemo(() => {
-        let result = users;
-        if (searchQuery.trim()) {
-            const q = searchQuery.toLowerCase();
-            result = users.filter(u => {
-                const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim().toLowerCase();
-                return (
-                    u.first_name?.toLowerCase().includes(q) ||
-                    u.last_name?.toLowerCase().includes(q) ||
-                    u.email?.toLowerCase().includes(q) ||
-                    fullName.includes(q)
-                );
-            });
-        }
-        // Put current admin first in the list
-        return result.sort((a, b) => {
-            if (a.id === userId) return -1;
-            if (b.id === userId) return 1;
-            return 0;
-        });
-    }, [users, searchQuery, userId]);
+    // Groups state
+    const [groups, setGroups] = useState<GroupDetail[]>([]);
+    const [groupsLoading, setGroupsLoading] = useState(false);
+    const [groupsError, setGroupsError] = useState<string | null>(null);
+    const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
+    const [groupSearchQuery, setGroupSearchQuery] = useState("");
 
     // Modal state
     const [showModal, setShowModal] = useState(false);
@@ -65,21 +56,73 @@ const AdminDashboard = () => {
     // Delete modal state
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
+    const [groupToDelete, setGroupToDelete] = useState<GroupDetail | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
+        setUsersLoading(true);
         getAllUsers()
             .then((data) => {
                 setUsers(data);
-                setError(null);
+                setUsersError(null);
             })
             .catch((err) => {
                 console.error("Error fetching users:", err);
-                setError("Failed to load users.");
+                setUsersError("Failed to load users.");
             })
-            .finally(() => setLoading(false));
+            .finally(() => setUsersLoading(false));
     }, []);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    useEffect(() => {
+        if (activeTab === 'groups') {
+            setGroupsLoading(true);
+            getAllGroups()
+                .then((data) => {
+                    setGroups(data);
+                    setGroupsError(null);
+                })
+                .catch((err) => {
+                    console.error("Error fetching groups:", err);
+                    setGroupsError("Failed to load groups.");
+                })
+                .finally(() => setGroupsLoading(false));
+        }
+    }, [activeTab]);
+
+    const filteredUsers = useMemo(() => {
+        let result = users;
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
+            result = users.filter(u => {
+                const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim().toLowerCase();
+                return (
+                    u.first_name?.toLowerCase().includes(q) ||
+                    u.last_name?.toLowerCase().includes(q) ||
+                    u.email?.toLowerCase().includes(q) ||
+                    fullName.includes(q)
+                );
+            });
+        }
+        return result.sort((a, b) => {
+            if (a.id === userId) return -1;
+            if (b.id === userId) return 1;
+            return 0;
+        });
+    }, [users, searchQuery, userId]);
+
+    const filteredGroups = useMemo(() => {
+        const safeGroups = Array.isArray(groups) ? groups : [];
+        if (!groupSearchQuery.trim()) {
+            return safeGroups;
+        }
+        const q = groupSearchQuery.toLowerCase();
+        return safeGroups.filter(g =>
+            g.name.toLowerCase().includes(q) ||
+            g.invite_code.toLowerCase().includes(q)
+        );
+    }, [groups, groupSearchQuery]);
 
     const handleLogout = () => {
         logout();
@@ -96,7 +139,7 @@ const AdminDashboard = () => {
         setFormError(null);
     };
 
-    const handleDelete = async () => {
+    const handleDeleteUser = async () => {
         if (!userToDelete) return;
         setDeleteLoading(true);
         try {
@@ -116,12 +159,39 @@ const AdminDashboard = () => {
         }
     };
 
-    const openDeleteModal = (user: UserProfile) => {
+    const handleDeleteGroup = async () => {
+        if (!groupToDelete) return;
+        setDeleteLoading(true);
+        try {
+            await adminDeleteGroup(groupToDelete.id);
+            const updatedGroups = await getAllGroups();
+            setGroups(updatedGroups);
+            toast.success('Group deleted successfully');
+            setShowDeleteModal(false);
+            setGroupToDelete(null);
+        } catch (err) {
+            console.error("Error deleting group:", err);
+            toast.error('Failed to delete group. Please try again.');
+            setShowDeleteModal(false);
+            setGroupToDelete(null);
+        } finally {
+            setDeleteLoading(false);
+        }
+    };
+
+    const openDeleteUserModal = (user: UserProfile) => {
         if (user.id === userId) {
             toast.error('You cannot delete your own account');
             return;
         }
         setUserToDelete(user);
+        setGroupToDelete(null);
+        setShowDeleteModal(true);
+    };
+
+    const openDeleteGroupModal = (group: GroupDetail) => {
+        setGroupToDelete(group);
+        setUserToDelete(null);
         setShowDeleteModal(true);
     };
 
@@ -161,11 +231,9 @@ const AdminDashboard = () => {
                 role,
             });
 
-            // Refresh user list
             const updatedUsers = await getAllUsers();
             setUsers(updatedUsers);
 
-            // Close modal and reset
             setShowModal(false);
             resetForm();
             toast.success('User created successfully');
@@ -176,12 +244,15 @@ const AdminDashboard = () => {
         }
     };
 
-    if (loading) {
+    const isLoading = activeTab === 'users' ? usersLoading : groupsLoading;
+    const error = activeTab === 'users' ? usersError : groupsError;
+
+    if (isLoading) {
         return (
             <div className="min-h-screen bg-stone-100 flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
-                    <p className="text-stone-600 font-semibold">Loading staff...</p>
+                    <p className="text-stone-600 font-semibold">Loading...</p>
                 </div>
             </div>
         );
@@ -224,97 +295,228 @@ const AdminDashboard = () => {
                     </button>
                 </div>
 
-                {/* Finder*/}
+                {/* Tabs */}
+                <div className="flex gap-2 mb-8">
+                    <button
+                        onClick={() => setActiveTab('users')}
+                        className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all ${
+                            activeTab === 'users' 
+                                ? 'bg-orange-600 text-white shadow-lg' 
+                                : 'bg-white text-stone-600 hover:bg-stone-50'
+                        }`}
+                    >
+                        <Users size={20} />
+                        Staff
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('groups')}
+                        className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all ${
+                            activeTab === 'groups' 
+                                ? 'bg-orange-600 text-white shadow-lg' 
+                                : 'bg-white text-stone-600 hover:bg-stone-50'
+                        }`}
+                    >
+                        <UsersRound size={20} />
+                        Teams
+                    </button>
+                </div>
+
+                {/* Search */}
                 <div className="bg-[#fdfaf7] rounded-[2rem] p-5 mb-8 border-4 border-white shadow-xl flex items-center gap-4">
                     <Search className="text-stone-300" size={24} />
                     <input 
                         type="text" 
-                        placeholder="Search by name or email..." 
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder={activeTab === 'users' ? "Search by name or email..." : "Search by team name or code..."}
+                        value={activeTab === 'users' ? searchQuery : groupSearchQuery}
+                        onChange={(e) => activeTab === 'users' ? setSearchQuery(e.target.value) : setGroupSearchQuery(e.target.value)}
                         className="bg-transparent w-full outline-none font-bold text-lg text-stone-700"
                     />
                 </div>
 
-                {/* User List */}
-                <div className="grid gap-4 mb-12">
-                    {filteredUsers.length === 0 && searchQuery.trim() && (
-                        <div className="bg-white rounded-2xl p-8 shadow-lg text-center">
-                            <p className="text-stone-400 font-bold">No users found matching "{searchQuery}"</p>
-                        </div>
-                    )}
-                    {filteredUsers.length === 0 && !searchQuery.trim() && (
-                        <div className="bg-white rounded-2xl p-10 shadow-lg text-center">
-                            <p className="text-stone-800 font-black text-xl mb-2">No staff yet</p>
-                            <p className="text-stone-400 font-medium">Hire your first team member to get started.</p>
-                        </div>
-                    )}
-                    {filteredUsers.map((user) => {
-                        const color = getAvatarColor(user.first_name);
-                        const displayName = `${user.first_name} ${user.last_name || ''}`.trim();
-                        return (
-                            <div key={user.id} className="bg-[#fdfaf7] rounded-[2.5rem] p-6 border-4 border-white shadow-lg flex items-center justify-between">
-                                <div className="flex items-center gap-5">
-                                    <div className={`w-16 h-16 ${color.bg} rounded-2xl flex items-center justify-center font-black ${color.text} text-2xl border-2 border-white shadow-inner`}>
-                                        {user.first_name?.[0] ?? '?'}
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="text-xl font-black text-stone-800">{displayName}</h3>
-                                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${user.role === 'admin' ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-white text-stone-400 border-stone-200'}`}>
-                                                    {user.role?.toUpperCase()}
-                                            </span>
-                                        </div>
-                                        <p className="text-stone-400 font-bold text-sm flex items-center gap-1">
-                                            <Mail size={14}/> {user.email}
-                                        </p>
-                                    </div>
+                {/* Content */}
+                {activeTab === 'users' ? (
+                    <>
+                        {/* User List */}
+                        <div className="grid gap-4 mb-12">
+                            {filteredUsers.length === 0 && searchQuery.trim() && (
+                                <div className="bg-white rounded-2xl p-8 shadow-lg text-center">
+                                    <p className="text-stone-400 font-bold">No users found matching "{searchQuery}"</p>
                                 </div>
-
-                                <div className="flex items-center gap-6">
-                                    <div className="hidden md:flex items-center gap-4">
-                                        <div className="text-right">
-                                            <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest text-center">Energy</p>
-                                            <p className="text-xl font-black text-yellow-600">{user.energy ?? 0}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest text-center">Member Since</p>
-                                            <p className="text-sm font-black text-stone-600">{user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'}</p>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest text-center">Level</p>
-                                        <p className="text-2xl font-black text-stone-700">{user.level ?? 1}</p>
-                                    </div>
-                                    <button 
-                                        onClick={() => openDeleteModal(user)}
-                                        className="bg-white p-4 rounded-2xl text-stone-200 hover:text-red-500 border border-stone-100 shadow-sm transition-all active:scale-90"
-                                    >
-                                        <Trash2 size={24} />
-                                    </button>
+                            )}
+                            {filteredUsers.length === 0 && !searchQuery.trim() && (
+                                <div className="bg-white rounded-2xl p-10 shadow-lg text-center">
+                                    <p className="text-stone-800 font-black text-xl mb-2">No staff yet</p>
+                                    <p className="text-stone-400 font-medium">Hire your first team member to get started.</p>
                                 </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                            )}
+                            {filteredUsers.map((user) => {
+                                const color = getAvatarColor(user.first_name);
+                                const displayName = `${user.first_name} ${user.last_name || ''}`.trim();
+                                return (
+                                    <div key={user.id} className="bg-[#fdfaf7] rounded-[2.5rem] p-6 border-4 border-white shadow-lg flex items-center justify-between">
+                                        <div className="flex items-center gap-5">
+                                            <div className={`w-16 h-16 ${color.bg} rounded-2xl flex items-center justify-center font-black ${color.text} text-2xl border-2 border-white shadow-inner`}>
+                                                {user.first_name?.[0] ?? '?'}
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="text-xl font-black text-stone-800">{displayName}</h3>
+                                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${user.role === 'admin' ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-white text-stone-400 border-stone-200'}`}>
+                                                            {user.role?.toUpperCase()}
+                                                    </span>
+                                                </div>
+                                                <p className="text-stone-400 font-bold text-sm flex items-center gap-1">
+                                                    <Mail size={14}/> {user.email}
+                                                </p>
+                                            </div>
+                                        </div>
 
-                <div className="flex justify-center mt-10">
-                    <button 
-                        onClick={() => {
-                            resetForm();
-                            setShowModal(true);
-                        }}
-                        className="bg-white text-stone-900 px-12 py-6 rounded-2xl font-black text-xl shadow-2xl hover:bg-orange-600 hover:text-white transition-all flex items-center gap-3 active:scale-95 group border-8 border-white"
-                    >
-                        <UserPlus size={28}/> HIRE NEW STAFF
-                        <ChevronRight className="group-hover:translate-x-1 transition-transform" />
-                    </button>
-                </div>
+                                        <div className="flex items-center gap-6">
+                                            <div className="hidden md:flex items-center gap-4">
+                                                <div className="text-right">
+                                                    <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest text-center">Energy</p>
+                                                    <p className="text-xl font-black text-yellow-600">{user.energy ?? 0}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest text-center">Member Since</p>
+                                                    <p className="text-sm font-black text-stone-600">{user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest text-center">Level</p>
+                                                <p className="text-2xl font-black text-stone-700">{user.level ?? 1}</p>
+                                            </div>
+                                            <button
+                                                data-testid={`delete-user-${user.email}`}
+                                                onClick={() => openDeleteUserModal(user)}
+                                                className="bg-white p-4 rounded-2xl text-stone-200 hover:text-red-500 border border-stone-100 shadow-sm transition-all active:scale-90"
+                                            >
+                                                <Trash2 size={24} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
 
+                        <div className="flex justify-center mt-10">
+                            <button 
+                                onClick={() => {
+                                    resetForm();
+                                    setShowModal(true);
+                                }}
+                                className="bg-white text-stone-900 px-12 py-6 rounded-2xl font-black text-xl shadow-2xl hover:bg-orange-600 hover:text-white transition-all flex items-center gap-3 active:scale-95 group border-8 border-white"
+                            >
+                                <UserPlus size={28}/> HIRE NEW STAFF
+                                <ChevronRight className="group-hover:translate-x-1 transition-transform" />
+                            </button>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        {/* Group List */}
+                        <div className="grid gap-4 mb-12">
+                            {filteredGroups.length === 0 ? (
+                                groupSearchQuery.trim() ? (
+                                    <div className="bg-white rounded-2xl p-8 shadow-lg text-center">
+                                        <p className="text-stone-400 font-bold">No teams found matching "{groupSearchQuery}"</p>
+                                    </div>
+                                ) : (
+                                    <div className="bg-white rounded-2xl p-10 shadow-lg text-center">
+                                        <p className="text-stone-800 font-black text-xl mb-2">No teams yet</p>
+                                        <p className="text-stone-400 font-medium">Teams will appear here when users create them.</p>
+                                    </div>
+                                )
+                            ) : filteredGroups.map((group) => {
+                                const isExpanded = expandedGroup === group.id;
+                                const leader = group.members.find(m => m.id === group.leader_id);
+                                return (
+                                    <div key={group.id} className="bg-[#fdfaf7] rounded-[2.5rem] p-6 border-4 border-white shadow-lg">
+                                        <div className="flex items-center justify-between cursor-pointer" onClick={() => setExpandedGroup(isExpanded ? null : group.id)}>
+                                            <div className="flex items-center gap-5">
+                                                <div className="w-16 h-16 bg-blue-200 rounded-2xl flex items-center justify-center font-black text-blue-700 text-2xl border-2 border-white shadow-inner">
+                                                    <UsersRound size={28} />
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="text-xl font-black text-stone-800">{group.name}</h3>
+                                                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full border bg-blue-50 text-blue-600 border-blue-200">
+                                                            {group.members.length} MEMBERS
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-stone-400 font-bold text-sm">
+                                                        Code: <span className="font-mono text-stone-600">{group.invite_code}</span>
+                                                    </p>
+                                                    {leader && (
+                                                        <p className="text-stone-400 text-xs font-medium">
+                                                            Leader: {leader.first_name} {leader.last_name}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-4">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        openDeleteGroupModal(group);
+                                                    }}
+                                                    className="bg-white p-4 rounded-2xl text-stone-200 hover:text-red-500 border border-stone-100 shadow-sm transition-all active:scale-90"
+                                                >
+                                                    <Trash2 size={24} />
+                                                </button>
+                                                <ChevronDown 
+                                                    size={24} 
+                                                    className={`text-stone-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Expanded Members */}
+                                        {isExpanded && (
+                                            <div className="mt-4 pt-4 border-t border-stone-200">
+                                                <p className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-3">Members</p>
+                                                <div className="grid gap-2">
+                                                    {group.members.map((member) => {
+                                                        const isLeader = member.id === group.leader_id;
+                                                        const color = getAvatarColor(member.first_name);
+                                                        return (
+                                                            <div key={member.id} className={`flex items-center gap-3 p-3 rounded-xl ${isLeader ? 'bg-orange-50 border border-orange-200' : 'bg-white border border-stone-100'}`}>
+                                                                <div className={`w-10 h-10 ${color.bg} rounded-xl flex items-center justify-center font-black ${color.text} text-lg`}>
+                                                                    {member.first_name?.[0] ?? '?'}
+                                                                </div>
+                                                                <div className="flex-1">
+                                                                    <p className="font-bold text-stone-700 text-sm">
+                                                                        {member.first_name} {member.last_name}
+                                                                        {isLeader && (
+                                                                            <span className="ml-2 text-[10px] font-black bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full border border-orange-200">
+                                                                                <Crown size={10} className="inline mr-1" />
+                                                                                LEADER
+                                                                            </span>
+                                                                        )}
+                                                                    </p>
+                                                                    <p className="text-stone-400 text-xs">{member.email}</p>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <p className="text-[10px] font-black text-stone-400 uppercase">Level</p>
+                                                                    <p className="text-lg font-black text-stone-700">{member.level}</p>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </>
+                )}
             </div>
 
             {/* Delete Confirmation Modal */}
-            {showDeleteModal && userToDelete && (
+            {showDeleteModal && (userToDelete || groupToDelete) && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDeleteModal(false)}>
                     <div 
                         className="bg-white rounded-[2.5rem] shadow-2xl p-10 max-w-md w-full border-b-8 border-red-200"
@@ -322,7 +524,8 @@ const AdminDashboard = () => {
                     >
                         <div className="flex justify-between items-center mb-8">
                             <h2 className="text-2xl font-black text-stone-800 flex items-center gap-2">
-                                <AlertTriangle className="text-red-500" size={28} /> Remove Staff
+                                <AlertTriangle className="text-red-500" size={28} /> 
+                                {userToDelete ? 'Remove Staff' : 'Delete Team'}
                             </h2>
                             <button
                                 onClick={() => setShowDeleteModal(false)}
@@ -334,8 +537,16 @@ const AdminDashboard = () => {
 
                         <div className="space-y-4">
                             <p className="text-stone-600 font-medium text-center">
-                                Are you sure you want to delete <span className="font-black text-stone-800">{userToDelete.first_name} {userToDelete.last_name}</span>?
+                                Are you sure you want to delete{' '}
+                                <span className="font-black text-stone-800">
+                                    {userToDelete ? `${userToDelete.first_name} ${userToDelete.last_name}` : groupToDelete?.name}
+                                </span>?
                             </p>
+                            {groupToDelete && (
+                                <p className="text-stone-400 text-sm text-center">
+                                    This will remove all {groupToDelete.members.length} members from the team.
+                                </p>
+                            )}
                             <p className="text-stone-400 text-sm text-center">
                                 This action cannot be undone.
                             </p>
@@ -350,7 +561,7 @@ const AdminDashboard = () => {
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={handleDelete}
+                                    onClick={userToDelete ? handleDeleteUser : handleDeleteGroup}
                                     disabled={deleteLoading}
                                     className="flex-1 bg-red-500 text-white px-6 py-4 rounded-2xl font-bold hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
@@ -397,6 +608,7 @@ const AdminDashboard = () => {
                                 />
                             </div>
                             <input
+                                data-testid="create-user-email"
                                 type="email"
                                 placeholder="Email"
                                 value={email}

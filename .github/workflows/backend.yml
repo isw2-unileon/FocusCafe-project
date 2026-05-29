@@ -16,6 +16,7 @@ on:
       - "go.sum"
       - ".golangci.yml"
       - ".github/workflows/backend.yml"
+  workflow_dispatch:
 
 jobs:
   build:

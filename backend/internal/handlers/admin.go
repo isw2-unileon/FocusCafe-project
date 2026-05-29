@@ -171,3 +171,30 @@ func (h *Handler) deleteAuthUser(userID string) error {
 	slog.Info("user deleted from Supabase Auth", "id", userID)
 	return nil
 }
+
+// GetAllGroups returns a list of all groups with their members.
+func (h *Handler) GetAllGroups(c *gin.Context) {
+	groups, err := h.GroupService.GetAllGroups(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch groups"})
+		return
+	}
+	c.JSON(http.StatusOK, groups)
+}
+
+// AdminDeleteGroup deletes a group by ID (admin only).
+func (h *Handler) AdminDeleteGroup(c *gin.Context) {
+	idStr := c.Param("id")
+	var groupID int64
+	if _, err := fmt.Sscanf(idStr, "%d", &groupID); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid group id format"})
+		return
+	}
+
+	if err := h.GroupService.DeleteGroup(c.Request.Context(), groupID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "group deleted successfully"})
+}
