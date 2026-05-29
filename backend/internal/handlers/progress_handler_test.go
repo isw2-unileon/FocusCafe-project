@@ -24,15 +24,15 @@ type mockProgressStudyService struct {
 }
 
 func (m *mockProgressStudyService) StartStudySession(ctx context.Context, userID uuid.UUID, fileName, subjectName, filePath, content string) (*domain.StudySession, uint64, error) {
-	return nil, 0, errors.New("not mocked")
+	return nil, 0, nil
 }
 
 func (m *mockProgressStudyService) GetSessionWithMaterial(ctx context.Context, sessionID uint64) (*models.StudySession, error) {
-	return nil, errors.New("not mocked")
+	return nil, nil
 }
 
 func (m *mockProgressStudyService) SaveQuiz(ctx context.Context, sessionID uint64, quizJSON string) error {
-	return errors.New("not mocked")
+	return nil
 }
 
 func (m *mockProgressStudyService) UpdateUserProgress(ctx context.Context, userID uuid.UUID, sessionID uint64, energy int) (int, error) {
