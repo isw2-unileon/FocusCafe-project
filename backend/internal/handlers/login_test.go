@@ -106,7 +106,7 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseResponse: successBody,
 			expectedStatus:   http.StatusBadRequest,
 			checkBody: func(t *testing.T, body map[string]interface{}) {
-				assert.Equal(t, "Datos inválidos", body["error"])
+				assert.Equal(t, "Invalid Credentials", body["error"])
 			},
 		},
 		{

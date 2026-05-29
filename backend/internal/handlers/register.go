@@ -206,7 +206,7 @@ func (h *Handler) createUserProgress(userID string) error {
 		if err != nil {
 			return err
 		}
-		return fmt.Errorf("error: rror saving progress")
+		return fmt.Errorf("error: Error saving progress")
 	}
 
 	return nil

@@ -353,7 +353,7 @@ func TestRegister_UserProfileAndProgress_TableDriven(t *testing.T) {
 			progressStatus: http.StatusInternalServerError,
 			progressBody:   map[string]interface{}{"message": "db error"},
 			expectedStatus: http.StatusInternalServerError,
-			expectedError:  "error: rror saving progress",
+			expectedError:  "error: Error saving progress",
 		},
 		{
 			name:           "Progress insertion returns corrupt JSON error",

@@ -1,4 +1,4 @@
-package handlers // 1. Cambiado a paquete interno para evitar ciclos
+package handlers
 
 import (
 	"encoding/json"
