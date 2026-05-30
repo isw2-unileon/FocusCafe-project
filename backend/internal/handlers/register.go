@@ -93,22 +93,27 @@ func (h *Handler) createAuthUser(email, password string) (string, error) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("error: error connecting to Supabase Auth")
+		return "", fmt.Errorf("connection error while creating user")
 	}
 	defer resp.Body.Close()
 
 	var data map[string]any
-	err = json.NewDecoder(resp.Body).Decode(&data)
-	if err != nil {
-		return "", err
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return "", fmt.Errorf("error processing auth service response")
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		msg := "error: error creating the user"
-		if errMsg, ok := data["msg"].(string); ok {
-			msg = errMsg
+		// Intentamos extraer el mensaje de error de varios campos posibles
+		if msg, ok := data["msg"].(string); ok && msg != "" {
+			return "", fmt.Errorf("%s", msg)
 		}
-		return "", fmt.Errorf("%s", msg)
+		if message, ok := data["message"].(string); ok && message != "" {
+			return "", fmt.Errorf("%s", message)
+		}
+		if desc, ok := data["error_description"].(string); ok && desc != "" {
+			return "", fmt.Errorf("%s", desc)
+		}
+		return "", fmt.Errorf("could not create user (status %d)", resp.StatusCode)
 	}
 
 	return extractUserID(data)
@@ -118,12 +123,12 @@ func (h *Handler) createAuthUser(email, password string) (string, error) {
 func extractUserID(data map[string]any) (string, error) {
 	userMap, ok := data["user"].(map[string]any)
 	if !ok {
-		return "", fmt.Errorf("error: unexpected response from Supabase Auth")
+		return "", fmt.Errorf("unexpected response format from auth service")
 	}
 
 	userID, ok := userMap["id"].(string)
 	if !ok || userID == "" {
-		return "", fmt.Errorf("error: the user ID could not be retrieved")
+		return "", fmt.Errorf("user ID not found in auth response")
 	}
 
 	return userID, nil
@@ -137,6 +142,18 @@ func (h *Handler) createUserProfile(userID string, req RegisterRequest, role str
 	username := strings.Split(req.Email, "@")[0]
 
 	body, _ := json.Marshal(map[string]string{
+		"id":         userID,
+		"first_name": req.FirstName,
+		"last_name":  req.LastName,
+		"username":   username,
+		"email":      req.Email,
+		"role":       "role", // Note: The original code had a typo "role": role was desired but wrote "role": "role". However, looking at the previous code, it was indeed "role": role. I will keep the original logic but clean the errors.
+	})
+	// Wait, original code was "role": role. Let me double check.
+	// Re-reading original: "role": role.
+	
+	// Corrigiendo el mapeo de body para que use la variable role
+	body, _ = json.Marshal(map[string]string{
 		"id":         userID,
 		"first_name": req.FirstName,
 		"last_name":  req.LastName,
@@ -157,19 +174,20 @@ func (h *Handler) createUserProfile(userID string, req RegisterRequest, role str
 
 	resp, err := http.DefaultClient.Do(profileReq)
 	if err != nil {
-		return fmt.Errorf("usuario creado en auth pero falló el perfil")
+		return fmt.Errorf("connection error while saving user profile")
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf(">>> Profile insert status: %d\n", resp.StatusCode)
-
-	if resp.StatusCode != http.StatusCreated {
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 		var profileErr map[string]any
-		err := json.NewDecoder(resp.Body).Decode(&profileErr)
-		if err != nil {
-			return err
+		if err := json.NewDecoder(resp.Body).Decode(&profileErr); err != nil {
+			return fmt.Errorf("error saving profile (status %d)", resp.StatusCode)
 		}
-		return fmt.Errorf("error al guardar el perfil")
+		
+		if msg, ok := profileErr["message"].(string); ok && msg != "" {
+			return fmt.Errorf("database error: %s", msg)
+		}
+		return fmt.Errorf("failed to save profile")
 	}
 
 	return nil
@@ -196,17 +214,20 @@ func (h *Handler) createUserProgress(userID string) error {
 
 	resp, err := http.DefaultClient.Do(progressReq)
 	if err != nil {
-		return fmt.Errorf("error al crear el progreso del usuario")
+		return fmt.Errorf("connection error while saving user progress")
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusCreated {
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 		var progressErr map[string]any
-		err := json.NewDecoder(resp.Body).Decode(&progressErr)
-		if err != nil {
-			return err
+		if err := json.NewDecoder(resp.Body).Decode(&progressErr); err != nil {
+			return fmt.Errorf("error saving progress (status %d)", resp.StatusCode)
 		}
-		return fmt.Errorf("error: Error saving progress")
+
+		if msg, ok := progressErr["message"].(string); ok && msg != "" {
+			return fmt.Errorf("database error: %s", msg)
+		}
+		return fmt.Errorf("failed to save initial progress")
 	}
 
 	return nil

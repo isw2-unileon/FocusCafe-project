@@ -19,12 +19,13 @@ type LoginRequest struct {
 func (h *Handler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Credentials"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
 
 	token, user, err := h.authenticateUser(req.Email, req.Password)
 	if err != nil {
+		// Aquí nos aseguramos de que el error siempre se envíe como un string limpio
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
@@ -39,12 +40,12 @@ func (h *Handler) Login(c *gin.Context) {
 func (h *Handler) authenticateUser(email, password string) (string, interface{}, error) {
 	body, err := buildLoginBody(email, password)
 	if err != nil {
-		return "", nil, fmt.Errorf("error creating the request")
+		return "", nil, fmt.Errorf("internal error creating login request")
 	}
 
 	resp, err := h.callSupabaseAuth(body)
 	if err != nil {
-		return "", nil, fmt.Errorf("error connecting to Supabase")
+		return "", nil, fmt.Errorf("connection error: could not reach auth service")
 	}
 	defer resp.Body.Close()
 
@@ -87,24 +88,28 @@ func (h *Handler) GoogleAuth(c *gin.Context) {
 
 // parseAuthResponse process the supabase's response and extracts token and user
 func parseAuthResponse(resp *http.Response) (string, interface{}, error) {
-	defer resp.Body.Close()
-
 	var result map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", nil, fmt.Errorf("error at the codifying the response: %w", err)
+		return "", nil, fmt.Errorf("error processing auth response")
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		errMsg, ok := result["error_description"].(string)
-		if !ok || errMsg == "" {
-			errMsg = "Incorrect credentials"
+		// Intentamos extraer el mensaje de error de varios campos posibles en Supabase
+		if errMsg, ok := result["error_description"].(string); ok && errMsg != "" {
+			return "", nil, fmt.Errorf("%s", errMsg)
 		}
-		return "", nil, fmt.Errorf("%s", errMsg)
+		if msg, ok := result["msg"].(string); ok && msg != "" {
+			return "", nil, fmt.Errorf("%s", msg)
+		}
+		if message, ok := result["message"].(string); ok && message != "" {
+			return "", nil, fmt.Errorf("%s", message)
+		}
+		return "", nil, fmt.Errorf("invalid credentials")
 	}
 
 	token, ok := result["access_token"].(string)
 	if !ok {
-		return "", nil, fmt.Errorf("error retrieving the token")
+		return "", nil, fmt.Errorf("authentication token not found")
 	}
 
 	return token, result["user"], nil

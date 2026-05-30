@@ -106,7 +106,7 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseResponse: successBody,
 			expectedStatus:   http.StatusBadRequest,
 			checkBody: func(t *testing.T, body map[string]interface{}) {
-				assert.Equal(t, "Invalid Credentials", body["error"])
+				assert.Equal(t, "invalid request body", body["error"])
 			},
 		},
 		{
@@ -126,7 +126,7 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseResponse: map[string]interface{}{"error": "unknown"},
 			expectedStatus:   http.StatusUnauthorized,
 			checkBody: func(t *testing.T, body map[string]interface{}) {
-				assert.Equal(t, "Incorrect credentials", body["error"])
+				assert.Equal(t, "invalid credentials", body["error"])
 			},
 		},
 		{
@@ -136,7 +136,7 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseResponse: "{bad-json-corrupt-data",
 			expectedStatus:   http.StatusUnauthorized,
 			checkBody: func(t *testing.T, body map[string]interface{}) {
-				assert.Contains(t, body["error"].(string), "error at the codifying the response")
+				assert.Contains(t, body["error"].(string), "error processing auth response")
 			},
 		},
 		{
@@ -147,7 +147,7 @@ func TestLogin_TableDriven(t *testing.T) {
 			closeServer:      true,
 			expectedStatus:   http.StatusUnauthorized,
 			checkBody: func(t *testing.T, body map[string]interface{}) {
-				assert.Equal(t, "error connecting to Supabase", body["error"])
+				assert.Equal(t, "connection error: could not reach auth service", body["error"])
 			},
 		},
 	}
@@ -256,7 +256,7 @@ func TestLogin_ParseAuthResponse_MissingToken(t *testing.T) {
 	_ = json.Unmarshal(w.Body.Bytes(), &body)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Equal(t, "error retrieving the token", body["error"])
+	assert.Equal(t, "authentication token not found", body["error"])
 }
 
 // ─────────────────────────────────────────────
