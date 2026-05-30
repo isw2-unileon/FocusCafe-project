@@ -63,28 +63,32 @@ func (h *Handler) CompleteUserOrder(c *gin.Context) {
 		"status":  "completed",
 	})
 
-	// 4. Notify via WebSocket
-	go func() {
-		// Use Background context because the request context will be cancelled
-		bgCtx := context.Background()
+	if h.WSHub != nil {
+		// 4. Notify via WebSocket
+		go func() {
+			// Use Background context because the request context will be cancelled
+			bgCtx := context.Background()
 
-		h.WSHub.SendToUser(userID, ws.Message{
-			Type:    "ORDERS_UPDATED",
-			Payload: gin.H{"order_id": orderID},
-		})
-
-		// If the user belongs to a group, also notify the group
-		profile, err := h.UserService.GetUserProfile(bgCtx, userID)
-		if err != nil {
-			log.Printf("Error fetching user profile for WS broadcast: %v", err)
-			return
-		}
-
-		if profile.Group != nil {
-			h.WSHub.BroadcastToGroup(profile.Group.ID, ws.Message{
+			h.WSHub.SendToUser(userID, ws.Message{
 				Type:    "ORDERS_UPDATED",
-				Payload: gin.H{"order_id": orderID, "completed_by": userID},
+				Payload: gin.H{"order_id": orderID},
 			})
-		}
-	}()
+
+			// If the user belongs to a group, also notify the group
+			profile, err := h.UserService.GetUserProfile(bgCtx, userID)
+			if err != nil {
+				log.Printf("Error fetching user profile for WS broadcast: %v", err)
+				return
+			}
+
+			if profile.Group != nil {
+				h.WSHub.BroadcastToGroup(profile.Group.ID, ws.Message{
+					Type:    "ORDERS_UPDATED",
+					Payload: gin.H{"order_id": orderID, "completed_by": userID},
+				})
+			}
+		}()
+	} else {
+		log.Println("Skipping WebSocket broadcast: WSHub is nil")
+	}
 }

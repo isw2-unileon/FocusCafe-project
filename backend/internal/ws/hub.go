@@ -44,6 +44,7 @@ type Hub struct {
 	mu sync.RWMutex
 }
 
+// NewHub creates and initializaes a new instance of Hub
 func NewHub() *Hub {
 	return &Hub{
 		broadcast:  make(chan []byte),
@@ -53,6 +54,7 @@ func NewHub() *Hub {
 	}
 }
 
+// Run executes the main loop of the Hub to manage client lifecycles and broadcasting
 func (h *Hub) Run() {
 	for {
 		select {
@@ -98,7 +100,11 @@ func (h *Hub) BroadcastToGroup(groupID int64, msg Message) {
 	defer h.mu.RUnlock()
 	for client := range h.clients {
 		if client.GroupID != nil && *client.GroupID == groupID {
-			client.Send <- data
+			select {
+			case client.Send <- data:
+			default:
+				// Prevents blocking if client channel is full
+			}
 		}
 	}
 }
@@ -110,40 +116,40 @@ func (h *Hub) SendToUser(userID uuid.UUID, msg Message) {
 	defer h.mu.RUnlock()
 	for client := range h.clients {
 		if client.UserID == userID {
-			client.Send <- data
+			select {
+			case client.Send <- data:
+			default:
+				// Prevents blocking if client channel is full
+			}
 		}
 	}
 }
 
+// WritePump pumps messages from the hub to the WebSocket connection
 func (c *Client) WritePump() {
 	defer func() {
-		c.Conn.Close()
+		_ = c.Conn.Close()
 	}()
-	for {
-		select {
-		case message, ok := <-c.Send:
-			if !ok {
-				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
+	for message := range c.Send {
+		w, err := c.Conn.NextWriter(websocket.TextMessage)
+		if err != nil {
+			return
+		}
+		_, _ = w.Write(message) // Explicitly ignore error to satisfy errcheck
 
-			w, err := c.Conn.NextWriter(websocket.TextMessage)
-			if err != nil {
-				return
-			}
-			w.Write(message)
-
-			if err := w.Close(); err != nil {
-				return
-			}
+		if err := w.Close(); err != nil {
+			return
 		}
 	}
+	// If the channel is closed by the hub
+	_ = c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 }
 
+// ReadPump pumps messages from the WebSocket coneection to the hub
 func (c *Client) ReadPump(validator auth.TokenValidator, userService service.UserServiceInterface) {
 	defer func() {
 		c.Hub.unregister <- c
-		c.Conn.Close()
+		_ = c.Conn.Close()
 	}()
 
 	authenticated := false
@@ -158,39 +164,47 @@ func (c *Client) ReadPump(validator auth.TokenValidator, userService service.Use
 		}
 
 		if !authenticated {
-			var msg Message
-			if err := json.Unmarshal(message, &msg); err != nil {
-				continue
-			}
-
-			if msg.Type == "AUTH" {
-				token, ok := msg.Payload.(string)
-				if !ok {
-					continue
-				}
-
-				claims, err := validator.ValidateToken(token)
-				if err != nil {
-					log.Printf("Auth failed: %v", err)
-					continue
-				}
-
-				userID, _ := uuid.Parse(claims.GetID())
-				c.UserID = userID
-
-				profile, err := userService.GetUserProfile(context.Background(), userID)
-				if err == nil && profile.Group != nil {
-					groupID := profile.Group.ID
-					c.GroupID = &groupID
-				}
-
-				c.Hub.RegisterClient(c)
+			if c.handleAuthentication(message, validator, userService) {
 				authenticated = true
-				log.Printf("Client authenticated and registered: %s", c.UserID)
 			}
 			continue
 		}
 
 		// Handle other messages from client if needed
 	}
+}
+
+// handleAuthentication is a privagte helper that proceses the AUTH handshake message
+func (c *Client) handleAuthentication(message []byte, validator auth.TokenValidator, userService service.UserServiceInterface) bool {
+	var msg Message
+	if err := json.Unmarshal(message, &msg); err != nil {
+		return false
+	}
+	if msg.Type != "AUTH" {
+		return false
+	}
+
+	token, ok := msg.Payload.(string)
+	if !ok {
+		return false
+	}
+
+	claims, err := validator.ValidateToken(token)
+	if err != nil {
+		log.Printf("Auth failed: %v", err)
+		return false
+	}
+
+	userID, _ := uuid.Parse(claims.GetID())
+	c.UserID = userID
+
+	profile, err := userService.GetUserProfile(context.Background(), userID)
+	if err == nil && profile.Group != nil {
+		groupID := profile.Group.ID
+		c.GroupID = &groupID
+	}
+
+	c.Hub.RegisterClient(c)
+	log.Printf("Client authenticated and registered: %s", c.UserID)
+	return true
 }
