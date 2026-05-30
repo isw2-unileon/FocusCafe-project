@@ -35,7 +35,12 @@ export const OrderList = ({ inGroup = false }: { inGroup?: boolean }) => {
     }, [setUserStats]);
 
     useEffect(() => {
+        console.log('Group status changed or mounted. Fetching fresh orders...');
         fetchOrders(true);
+    }, [fetchOrders, userStats?.group?.id]);
+
+    useEffect(() => {
+        console.log('Initializing WebSocket listener for orders...');
 
         // Subscribe to real-time updates
         const unsubscribe = subscribe('ORDERS_UPDATED', (payload) => {
@@ -65,25 +70,12 @@ export const OrderList = ({ inGroup = false }: { inGroup?: boolean }) => {
                 fetchOrders(false);
             }
     });
+        return () => {
+            console.log('Cleaning up WebSocket subscription');
+            unsubscribe();
+        };
 
-        return () => unsubscribe();
     }, [subscribe, fetchOrders, inGroup]);
-
-    /*const removeOrderFromUI = useCallback((orderId: number) => {
-    setOrders((currentOrders) => {
-        const updatedOrders = currentOrders.filter(order => order.id !== orderId);
-        
-        if (inGroup) {
-            const remainingGroup = updatedOrders.filter(o => !!o.group_id);
-            if (remainingGroup.length === 0) fetchOrders(false);
-        } else {
-            const remainingIndividual = updatedOrders.filter(o => !o.group_id);
-            if (remainingIndividual.length === 0) fetchOrders(false);
-        }
-        
-        return updatedOrders;
-    });
-}, [inGroup, fetchOrders]);*/
 
     const handleComplete = async (order: UserOrder) =>{
         try{
