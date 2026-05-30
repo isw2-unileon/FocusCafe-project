@@ -157,6 +157,16 @@ func TestHandler_CompleteUserOrder(t *testing.T) {
 			wantStatusCode:  http.StatusUnauthorized,
 			expectedBody:    `{"error":"unauthorized"}`,
 		},
+		{
+			name:            "Error: Order already completed returns 409 Conflict",
+			orderIDParam:    "123",
+			userIDInContext: uuid.New(),
+			mockBehavior: func(ctx context.Context, userId uuid.UUID, orderId uint) error {
+				return errors.New("order already completed")
+			},
+			wantStatusCode: http.StatusConflict,
+			expectedBody:   `"error":"This order has already been completed by another user"`,
+		},
 	}
 
 	for _, tt := range tests {

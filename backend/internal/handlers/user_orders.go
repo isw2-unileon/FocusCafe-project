@@ -53,6 +53,10 @@ func (h *Handler) CompleteUserOrder(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Not enough energy"})
 			return
 		}
+		if err.Error() == "order already completed" {
+			c.JSON(http.StatusConflict, gin.H{"error": "This order has already been completed by another user"})
+			return
+		}
 
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error at completing the order: " + err.Error()})
 		return
