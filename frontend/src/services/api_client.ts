@@ -23,8 +23,7 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
 
     if (response.status === 401) {
         localStorage.removeItem('token');
-        window.location.href = '/login';
-        throw new Error("Sesión expirada.");
+        throw new Error("Session expired.");
     }
 
     if (!response.ok) {

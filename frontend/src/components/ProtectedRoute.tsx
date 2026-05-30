@@ -2,9 +2,13 @@ import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 
 export const ProtectedRoute = () => {
-    const { isAuthenticated, isAdmin } = useAuth();
+    const { isAdmin } = useAuth();
 
-    if (!isAuthenticated) {
+    // Read token directly from localStorage to avoid race conditions
+    // where React state hasn't propagated yet after login
+    const hasToken = !!localStorage.getItem('token');
+
+    if (!hasToken) {
         return <Navigate to="/" replace />;
     }
 

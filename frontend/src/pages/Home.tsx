@@ -240,7 +240,7 @@ const Home = () => {
                                     <Shield size={22} />
                                 </Link>
                             )}
-                            <Link to="/dashboard" className="transition-transform hover:scale-110 active:scale-95">
+                            <Link to="/dashboard" data-testid="nav-dashboard" className="transition-transform hover:scale-110 active:scale-95">
                                 <AvatarDashboard />
                             </Link>
                             <button onClick={handleLogout} className="text-stone-400 hover:text-red-500 font-bold text-xs uppercase tracking-tighter">
