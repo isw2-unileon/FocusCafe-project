@@ -158,52 +158,56 @@ const Home = () => {
                             <div className="flex items-center gap-2 px-2">
                                 <div className="flex flex-col border-r pr-4 border-stone-200">
                                     <div className="flex gap-1">
-                                        <input 
+                                        <input
                                             className="bg-white border-none text-xs rounded-lg px-3 py-2 w-28 focus:ring-1 focus:ring-orange-500 outline-none shadow-sm disabled:opacity-50"
                                             placeholder="Invite Code"
                                             value={inviteCode}
                                             disabled={isGroupLoading}
                                             onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                                             onKeyDown={(e) => e.key === 'Enter' && handleJoinGroup()}
+                                            data-testid="group-invite-input"
                                         />
-                                        <button 
-                                            onClick={handleJoinGroup} 
+                                        <button
+                                            onClick={handleJoinGroup}
                                             disabled={isGroupLoading}
-                                            className="p-2 hover:bg-stone-800 hover:text-white rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed" 
+                                            className="p-2 hover:bg-stone-800 hover:text-white rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                             title="Join Team"
+                                            data-testid="group-join-button"
                                         >
                                             <LogIn size={18} />
                                         </button>
                                     </div>
                                 </div>
                                 <div className="flex gap-1">
-                                    <input 
+                                    <input
                                         className="bg-white border-none text-xs rounded-lg px-3 py-2 w-28 focus:ring-1 focus:ring-orange-700 outline-none shadow-sm disabled:opacity-50"
                                         placeholder="New Team"
                                         value={newGroupName}
                                         disabled={isGroupLoading}
                                         onChange={(e) => setNewGroupName(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleCreateGroup()}
+                                        data-testid="group-name-input"
                                     />
-                                    <button 
-                                        onClick={handleCreateGroup} 
+                                    <button
+                                        onClick={handleCreateGroup}
                                         disabled={isGroupLoading}
-                                        className="p-2 hover:bg-orange-600 hover:text-white rounded-lg transition-colors text-orange-700 disabled:opacity-40 disabled:cursor-not-allowed" 
+                                        className="p-2 hover:bg-orange-600 hover:text-white rounded-lg transition-colors text-orange-700 disabled:opacity-40 disabled:cursor-not-allowed"
                                         title="Create Team"
+                                        data-testid="group-create-button"
                                     >
                                         <PlusCircle size={18} />
                                     </button>
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-4 px-4 py-1">
+                            <div className="flex items-center gap-4 px-4 py-1" data-testid="group-display">
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-bold text-stone-400 uppercase leading-none">Team</span>
-                                    <span className="text-sm font-black text-stone-700">{userStats.group.name}</span>
+                                    <span className="text-sm font-black text-stone-700" data-testid="group-name">{userStats.group.name}</span>
                                 </div>
                                 <div className="bg-orange-100 text-stone-600 px-3 py-1 rounded-lg">
                                     <span className="text-[10px] block opacity-70 leading-none">CODE</span>
-                                    <span className="text-xs font-mono font-bold">{userStats.group.invite_code}</span>
+                                    <span className="text-xs font-mono font-bold" data-testid="group-code">{userStats.group.invite_code}</span>
                                 </div>
                                 {userId === userStats.group.leader_id ? (
                                     <button
@@ -299,12 +303,13 @@ const Home = () => {
                         <p className="text-lg font-bold text-orange-600 mb-4">{createdGroupName}</p>
                         <p className="text-stone-600 mb-6">Share this code with your friends:</p>
                         
-                        <div 
+                        <div
                             className="bg-orange-50 border-2 border-orange-200 rounded-2xl p-6 mb-6 cursor-pointer hover:bg-orange-100 transition-colors relative"
                             onClick={handleCopyCode}
                             title="Click to copy"
+                            data-testid="group-invite-code-display"
                         >
-                            <span className="text-4xl font-mono font-black text-orange-600 tracking-widest block">
+                            <span className="text-4xl font-mono font-black text-orange-600 tracking-widest block" data-testid="group-invite-code">
                                 {createdGroupCode}
                             </span>
                             <div className="absolute top-2 right-2 text-orange-400">
@@ -315,9 +320,10 @@ const Home = () => {
                             )}
                         </div>
                         
-                        <button 
+                        <button
                             onClick={() => setShowInviteModal(false)}
                             className="bg-orange-600 text-white px-8 py-3 rounded-xl font-black text-lg hover:bg-orange-700 transition-colors"
+                            data-testid="group-modal-done"
                         >
                             Done!
                         </button>

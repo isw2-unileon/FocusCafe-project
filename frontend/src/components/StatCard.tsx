@@ -37,15 +37,15 @@ export const StatCard = ({ title, stats, color = "bg-white" }: StatCardProps) =>
             <div className="flex-1">
               <div className="flex justify-between items-end mb-1">
                 <p className="text-[11px] font-bold uppercase text-gray-500">{stat.label}</p>
-                <p className="text-sm font-black text-gray-800">
+                <p className="text-sm font-black text-gray-800" data-testid={`stat-${stat.label.toLowerCase().replace(/\s+/g, '-')}-value`}>
                   {stat.current} <span className="text-gray-400 font-medium">/ {stat.max}</span>
                 </p>
               </div>
-              
+
               {/* Barra de Progreso */}
-              <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full ${stat.barColor} transition-all duration-500`} 
+              <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden" data-testid={`stat-${stat.label.toLowerCase().replace(/\s+/g, '-')}-bar`}>
+                <div
+                  className={`h-full ${stat.barColor} transition-all duration-500`}
                   style={{ width: `${Math.min((stat.current) * 100, 100)}%` }}
                 />
               </div>
