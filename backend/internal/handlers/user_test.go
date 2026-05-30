@@ -84,13 +84,13 @@ func TestHandler_GetUserProfile(t *testing.T) {
 			expectedBody:   `"energy":500`, // We check for key fragments
 		},
 		{
-			name:            "Error: User not found returns 404",
+			name:            "Error: User not found returns 401",
 			userIDInContext: uuid.New(),
 			mockBehavior: func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error) {
 				return nil, errors.New("record not found")
 			},
-			wantStatusCode: http.StatusNotFound,
-			expectedBody:   `{"error":"user not found"}`,
+			wantStatusCode: http.StatusUnauthorized,
+			expectedBody:   `{"error":"unauthorized"}`,
 		},
 	}
 

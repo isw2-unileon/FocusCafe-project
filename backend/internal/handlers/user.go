@@ -46,7 +46,7 @@ func (h *Handler) GetUserProfile(c *gin.Context) {
 	// Obtain user profile from the service layer
 	user, err := h.UserService.GetUserProfile(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 	// Return user profile as JSON response
