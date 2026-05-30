@@ -3,6 +3,7 @@ package handlers
 import (
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/auth"
 	service "github.com/isw2-unileon/FocusCafe-project/backend/internal/services"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/ws"
 )
 
 // Handler defines the required dependencies for managing auth petitions
@@ -18,10 +19,11 @@ type Handler struct {
 	StudyService      service.StudyServiceInterface
 	AIService         service.AIServiceInterface
 	GroupService      service.GroupServiceInterface
+	WSHub             *ws.Hub
 }
 
 // NewHandler creates a new instance of Handler with the provided dependencies
-func NewHandler(url string, key string, serviceRoleKey string, clientURL string, auth auth.TokenValidator, userService *service.UserService, userOrdersService *service.UserOrdersService, studyService *service.StudyService, aiService service.AIServiceInterface, groupService service.GroupServiceInterface) *Handler {
+func NewHandler(url string, key string, serviceRoleKey string, clientURL string, auth auth.TokenValidator, userService *service.UserService, userOrdersService *service.UserOrdersService, studyService *service.StudyService, aiService service.AIServiceInterface, groupService service.GroupServiceInterface, wsHub *ws.Hub) *Handler {
 	return &Handler{
 		SupabaseURL:            url,
 		SupabaseKey:            key,
@@ -33,5 +35,6 @@ func NewHandler(url string, key string, serviceRoleKey string, clientURL string,
 		StudyService:           studyService,
 		AIService:              aiService,
 		GroupService:           groupService,
+		WSHub:                  wsHub,
 	}
 }
