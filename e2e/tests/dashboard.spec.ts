@@ -1,16 +1,15 @@
 import { test, expect } from "@playwright/test";
-import { loginAsUser } from "../lib/auth-helper";
+
+test.use({ storageState: "playwright/.auth/user.json" });
 
 test.describe("Dashboard view", () => {
   test("should display user profile data after login", async ({ page }) => {
-    // 1. Login as user
-    await loginAsUser(page);
-
-    // 2. Navigate to dashboard
+    // Navigate directly to dashboard (already authenticated via storageState)
     await page.goto("/dashboard");
     await expect(page).toHaveURL(/.*dashboard/);
 
-    // 3. Verify profile data is visible
+    // Verify profile data is visible
+    // Name
     await expect(page.getByText("Test User")).toBeVisible();
     // Username (strict mode fix: use .first() since @testuser appears twice)
     await expect(page.getByText("@testuser").first()).toBeVisible();

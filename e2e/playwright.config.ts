@@ -4,8 +4,9 @@ export default defineConfig({
   testDir: "./tests",
   timeout: 30_000,
   retries: process.env.CI ? 2 : 0,
-  workers: 1,
+  workers: process.env.CI ? 4 : 1,
   reporter: "html",
+  globalTeardown: require.resolve("./global-teardown"),
 
   use: {
     baseURL: "http://localhost:5173",
@@ -33,17 +34,21 @@ export default defineConfig({
   // ],
 
   projects: [
+    { name: "setup", testMatch: /.*\.setup\.ts/ },
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      dependencies: ["setup"],
     },
     {
       name: "firefox",
       use: { ...devices["Desktop Firefox"] },
+      dependencies: ["setup"],
     },
     {
       name: "webkit",
       use: { ...devices["Desktop Safari"] },
+      dependencies: ["setup"],
     },
   ],
 });
