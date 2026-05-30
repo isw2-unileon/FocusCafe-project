@@ -67,7 +67,7 @@ export const OrderList = ({ inGroup = false }: { inGroup?: boolean }) => {
     });
 
         return () => unsubscribe();
-    }, [subscribe, fetchOrders]);
+    }, [subscribe, fetchOrders, inGroup]);
 
     /*const removeOrderFromUI = useCallback((orderId: number) => {
     setOrders((currentOrders) => {
@@ -107,7 +107,6 @@ export const OrderList = ({ inGroup = false }: { inGroup?: boolean }) => {
             } else {
                 const remainingIndividualOrders = remainingOrders.filter(o => !o.group_id);
                 if (remainingIndividualOrders.length === 0) {
-                    console.log("¡Se han acabado los pedidos individuales! Recargando...");
                     await fetchOrders();
                 }
             }

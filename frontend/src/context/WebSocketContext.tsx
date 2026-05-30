@@ -3,8 +3,8 @@ import { useAuth } from './AuthContext';
 
 
 interface WebSocketContextType {
-    sendMessage: (msg: any) => void;
-    subscribe: (type: string, callback: (payload: any) => void) => () => void;
+    sendMessage: (msg: unknown) => void;
+    subscribe: (type: string, callback: (payload: Record<string, unknown>) => void) => () => void;
 }
 
 const WebSocketContext = createContext<WebSocketContextType | null>(null);
@@ -20,7 +20,7 @@ export const useWebSocket = () => {
 export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { isAuthenticated, userStats } = useAuth();
     const socketRef = useRef<WebSocket | null>(null);
-    const subscribersRef = useRef<{ [key: string]: ((payload: any) => void)[] }>({});
+    const subscribersRef = useRef<Record<string, ((payload: Record<string, unknown>) => void)[]>>({});
     
     // Captured group ID to trigger reconnection if it changes
     const groupID = userStats?.group?.id;
@@ -44,9 +44,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             socket.send(JSON.stringify({ type: 'AUTH', payload: token }));
         };
 
-        socket.onmessage = (event) => {
-            console.log("👉 ¡HA LLEGADO UN MENSAJE POR EL SOCKET!", event.data);
-            
+        socket.onmessage = (event) => {            
             const message = JSON.parse(event.data);
             const type = message.type;
             const payload = message.payload;
@@ -62,22 +60,22 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         };
 
         socketRef.current = socket;
-    }, [isAuthenticated, groupID]);
+    }, [isAuthenticated]);
 
     useEffect(() => {
         connect();
         return () => {
             socketRef.current?.close();
         };
-    }, [connect]);
+    }, [connect, groupID]);
 
-    const sendMessage = useCallback((msg: any) => {
+    const sendMessage = useCallback((msg: unknown) => {
         if (socketRef.current?.readyState === WebSocket.OPEN) {
             socketRef.current.send(JSON.stringify(msg));
         }
     }, []);
 
-    const subscribe = useCallback((type: string, callback: (payload: any) => void) => {
+    const subscribe = useCallback((type: string, callback: (payload: Record<string, unknown>) => void) => {
         if (!subscribersRef.current[type]) {
             subscribersRef.current[type] = [];
         }
