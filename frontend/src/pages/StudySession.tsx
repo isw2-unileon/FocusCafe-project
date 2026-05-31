@@ -89,8 +89,8 @@ const StudySession = () => {
         setState('STUDYING');
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error("Error 400 detallado:", errorMessage);
-        alert(`Error: ${errorMessage}. Revisa la consola.`);
+        console.error("Error 400 detailed:", errorMessage);
+        alert(`Error: ${errorMessage}.Check the console.`);
     }
     };
 
