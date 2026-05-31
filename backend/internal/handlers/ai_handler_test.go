@@ -4,13 +4,16 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/database"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/repository"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/services"
 	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -29,22 +32,26 @@ func (m *mockAIService) GenerateQuiz(pdfText string) (string, error) {
 
 // TestCreateQuizFromSession verifies that the handler correctly processes a session and attempts AI generation.
 func TestCreateQuizFromSession(t *testing.T) {
-	// 1. Setup Environment
 	gin.SetMode(gin.TestMode)
 	setupTestDB()
 
+	studyRepo := repository.NewStudyRepository(database.DB)
+	studyService := services.NewStudyService(studyRepo)
+
 	mockAI := &mockAIService{}
+
 	h := &Handler{
-		AIService: mockAI,
+		AIService:    mockAI,
+		StudyService: studyService,
 	}
 
 	router := gin.Default()
 	router.POST("/api/study/generate-quiz/:session_id", h.CreateQuizFromSession)
 
-	// 2. Seed Mock Data
 	userID := uuid.New()
 	material := models.StudyMaterial{
 		UserID:  userID,
+		Title:   "Software Engineering Notes",
 		Content: "This is a test content about Software Engineering.",
 	}
 	database.DB.Create(&material)
@@ -53,20 +60,16 @@ func TestCreateQuizFromSession(t *testing.T) {
 		ID:         1,
 		UserID:     userID,
 		MaterialID: material.ID,
+		Status:     "STUDYING",
+		StartTime:  time.Now(),
 	}
 	database.DB.Create(&session)
 
-	// 3. Execute Request
 	w := httptest.NewRecorder()
-	// Using the ID we just created
-	req, err := http.NewRequest("POST", "/api/study/generate-quiz/1", nil)
-	if err != nil {
-		t.Fatalf("failed to create request: %v", err)
-	}
+	req, _ := http.NewRequest("POST", "/api/study/generate-quiz/1", nil)
 
 	router.ServeHTTP(w, req)
 
-	// 4. Assertions
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "Test Quiz")
 }
