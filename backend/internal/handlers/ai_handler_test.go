@@ -24,8 +24,10 @@ func setupTestDB() {
 	database.DB = db
 }
 
+// mockAIService is a simple mock implementation of the AIServiceInterface for testing.
 type mockAIService struct{}
 
+// GenerateQuiz returns a fixed quiz JSON string for testing purposes.
 func (m *mockAIService) GenerateQuiz(pdfText string) (string, error) {
 	return `{"quiz_name": "Test Quiz", "questions": []}`, nil
 }

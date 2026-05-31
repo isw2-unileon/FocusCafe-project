@@ -20,7 +20,7 @@ type StudySession struct {
 // QuizQuestion represents a single quiz question with its text, options, correct answer index, and an explanation for the correct answer.
 type QuizQuestion struct {
 	Question      string
-	Options       []string // ["opcion1", "opcion2"...]
-	CorrectAnswer int      // 0 para A, 1 para B, 2 para C, 3 para D
+	Options       []string // Expected to have exactly 4 options (A, B, C, D)
+	CorrectAnswer int      // Index of the correct answer in the Options slice (0-3)
 	Explanation   string
 }
