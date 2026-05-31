@@ -147,18 +147,6 @@ func (h *Handler) createUserProfile(userID string, req RegisterRequest, role str
 		"last_name":  req.LastName,
 		"username":   username,
 		"email":      req.Email,
-		"role":       "role", // Note: The original code had a typo "role": role was desired but wrote "role": "role". However, looking at the previous code, it was indeed "role": role. I will keep the original logic but clean the errors.
-	})
-	// Wait, original code was "role": role. Let me double check.
-	// Re-reading original: "role": role.
-	
-	// Corrigiendo el mapeo de body para que use la variable role
-	body, _ = json.Marshal(map[string]string{
-		"id":         userID,
-		"first_name": req.FirstName,
-		"last_name":  req.LastName,
-		"username":   username,
-		"email":      req.Email,
 		"role":       role,
 	})
 
