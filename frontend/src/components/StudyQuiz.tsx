@@ -1,4 +1,4 @@
-import { Brain, CheckCircle2 } from 'lucide-react';
+import { Brain, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export interface QuizQuestion {
     question: string;
@@ -16,10 +16,12 @@ interface StudyQuizProps {
     state: 'QUIZ' | 'RESULTS';
     onReturn: () => void;
     earnedEnergy?: number;
+    hasError?: boolean;
+    onRetry?: () => void;
 }
 
 export const StudyQuiz = ({ 
-    quiz, isGenerating, userAnswers, setUserAnswers, onFinish, state, onReturn, earnedEnergy 
+    quiz, isGenerating, userAnswers, setUserAnswers, onFinish, state, onReturn, earnedEnergy, hasError, onRetry 
 }: StudyQuizProps) => {
     
     const score = userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correctAnswer).length;
@@ -29,6 +31,24 @@ export const StudyQuiz = ({
             <div className="text-center py-12 bg-white rounded-3xl shadow-sm">
                 <Brain className="mx-auto text-orange-600 animate-bounce mb-4" size={48} />
                 <h2 className="text-2xl font-black">AI is crafting your test...</h2>
+            </div>
+        );
+    }
+
+    if (hasError) {
+        return (
+            <div className="text-center py-12 bg-white rounded-3xl shadow-sm border-2 border-red-50">
+                <AlertCircle className="mx-auto text-red-500 mb-4" size={48} />
+                <h2 className="text-2xl font-black mb-2">AI is currently out of order</h2>
+                <p className="text-stone-500 mb-8">We're having trouble reaching the AI. Please try again in a moment.</p>
+                <div className="flex flex-col gap-3 max-w-xs mx-auto">
+                    <button onClick={onRetry} className="bg-stone-900 text-white py-4 rounded-xl font-bold hover:bg-orange-600 transition-colors">
+                        RETRY GENERATION
+                    </button>
+                    <button onClick={onReturn} className="text-stone-400 hover:text-stone-800 font-bold py-2">
+                        RETURN TO CAFETERIA
+                    </button>
+                </div>
             </div>
         );
     }

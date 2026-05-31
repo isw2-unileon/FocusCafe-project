@@ -56,6 +56,7 @@ const StudySession = () => {
     const [isGenerating, setIsGenerating] = useState(false);
     const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
     const [earnedEnergy, setEarnedEnergy] = useState<number>(0);
+    const [hasError, setHasError] = useState(false);
 
     useEffect(() => {
         if (!isAuthenticated) navigate('/');
@@ -98,6 +99,7 @@ const StudySession = () => {
     const handleStartQuiz = useCallback(async () => {
         if (!currentSessionId) return;
         setIsGenerating(true);
+        setHasError(false);
         setState('QUIZ');
 
         try {
@@ -114,7 +116,7 @@ const StudySession = () => {
             setQuiz(parsedQuiz);
         } catch (error) {
             console.error("Quiz error:", error);
-            setQuiz([{ question: "AI busy, try again.", options: ["Retry"], correctAnswer: 0 }]);
+            setHasError(true);
         } finally {
             setIsGenerating(false);
         }
@@ -198,6 +200,8 @@ const StudySession = () => {
                         state={state}
                         onReturn={() => navigate('/home')}
                         earnedEnergy={earnedEnergy}
+                        hasError={hasError}
+                        onRetry={handleStartQuiz}
                     />
                 )}
             </div>
