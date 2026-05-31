@@ -55,6 +55,8 @@ const StudySession = () => {
     const [userAnswers, setUserAnswers] = useState<number[]>([]);
     const [isGenerating, setIsGenerating] = useState(false);
     const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
+    const [earnedEnergy, setEarnedEnergy] = useState<number>(0);
+    const [hasError, setHasError] = useState(false);
 
     useEffect(() => {
         if (!isAuthenticated) navigate('/');
@@ -97,6 +99,7 @@ const StudySession = () => {
     const handleStartQuiz = useCallback(async () => {
         if (!currentSessionId) return;
         setIsGenerating(true);
+        setHasError(false);
         setState('QUIZ');
 
         try {
@@ -113,7 +116,7 @@ const StudySession = () => {
             setQuiz(parsedQuiz);
         } catch (error) {
             console.error("Quiz error:", error);
-            setQuiz([{ question: "AI busy, try again.", options: ["Retry"], correctAnswer: 0 }]);
+            setHasError(true);
         } finally {
             setIsGenerating(false);
         }
@@ -122,7 +125,10 @@ const StudySession = () => {
     const handleFinishQuiz = async () => {
         const score = userAnswers.filter((ans, i) => quiz[i] && ans === quiz[i].correctAnswer).length;
         try {
-            const data = await studyService.saveProgress(currentSessionId!, score) as { new_total?: number };
+            const data = await studyService.saveProgress(currentSessionId!, score) as { new_total?: number, energy_earned?: number };
+            if (data.energy_earned !== undefined) {
+                setEarnedEnergy(data.energy_earned);
+            }
             if (userStats && data.new_total !== undefined) {
                 setUserStats({ ...userStats, energy: data.new_total });
             }
@@ -193,6 +199,9 @@ const StudySession = () => {
                         onFinish={handleFinishQuiz}
                         state={state}
                         onReturn={() => navigate('/home')}
+                        earnedEnergy={earnedEnergy}
+                        hasError={hasError}
+                        onRetry={handleStartQuiz}
                     />
                 )}
             </div>
