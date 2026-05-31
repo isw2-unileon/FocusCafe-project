@@ -18,27 +18,27 @@ type StudyRepositoryInterface interface {
 	UpdateUserProgress(ctx context.Context, userID uuid.UUID, sessionID uint64, energy int) (int, error)
 }
 
-// StudyRepository provides data access for study sessions, materials, and quizzes.
+// StudyRepository provides methods to interact with the study-related database tables
 type StudyRepository struct {
 	db *gorm.DB
 }
 
-// NewStudyRepository creates a new StudyRepository with the given database connection.
+// NewStudyRepository creates a new instance of StudyRepository with the given gorm DB connection
 func NewStudyRepository(db *gorm.DB) *StudyRepository {
 	return &StudyRepository{db: db}
 }
 
-// CreateMaterial inserts a new study material into the database.
+// CreateMaterial inserts a new study material into the database and returns any error encountered
 func (r *StudyRepository) CreateMaterial(ctx context.Context, material *models.StudyMaterial) error {
 	return r.db.WithContext(ctx).Create(material).Error
 }
 
-// CreateSession inserts a new study session into the database.
+// CreateSession inserts a new study session into the database and returns any error encountered
 func (r *StudyRepository) CreateSession(ctx context.Context, session *models.StudySession) error {
 	return r.db.WithContext(ctx).Create(session).Error
 }
 
-// GetSessionWithMaterial retrieves a study session with its associated material preloaded.
+// GetSessionWithMaterial retrieves a study session along with its associated material based on the session ID and returns the session or any error encountered
 func (r *StudyRepository) GetSessionWithMaterial(ctx context.Context, sessionID uint64) (*models.StudySession, error) {
 	var session models.StudySession
 	if err := r.db.WithContext(ctx).Preload("Material").Where("id = ?", sessionID).First(&session).Error; err != nil {
@@ -47,7 +47,7 @@ func (r *StudyRepository) GetSessionWithMaterial(ctx context.Context, sessionID 
 	return &session, nil
 }
 
-// SaveFullQuiz creates a quiz and its questions within a database transaction.
+// SaveFullQuiz inserts a new quiz and its associated questions into the database within a transaction and returns any error encountered
 func (r *StudyRepository) SaveFullQuiz(ctx context.Context, sessionID uint64, quizName string, questions []models.Question) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		quizModel := models.Quiz{
@@ -67,7 +67,7 @@ func (r *StudyRepository) SaveFullQuiz(ctx context.Context, sessionID uint64, qu
 	})
 }
 
-// UpdateUserProgress increments a user's energy and returns the updated value.
+// UpdateUserProgress updates a user's progress in the database by adding energy points and returns the updated energy or any error encountered
 func (r *StudyRepository) UpdateUserProgress(ctx context.Context, userID uuid.UUID, sessionID uint64, energy int) (int, error) {
 	var session models.StudySession
 	if err := r.db.WithContext(ctx).Where("id = ? AND user_id = ?", sessionID, userID).First(&session).Error; err != nil {
