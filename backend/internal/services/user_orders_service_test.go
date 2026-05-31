@@ -3,6 +3,7 @@ package services_test
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/google/uuid"
@@ -67,6 +68,63 @@ func TestUserOrdersService_CompleteUserOrder(t *testing.T) {
 
 			if tt.wantErr && err.Error() != tt.expectedErr {
 				t.Errorf("CompleteUserOrder() error = %v, want %v", err, tt.expectedErr)
+			}
+		})
+	}
+}
+
+func TestUserOrdersService_GetUserOrders(t *testing.T) {
+	uID := uuid.New()
+
+	mockOrders := []domain.UserOrder{
+		{ID: 1, UserID: uID, Status: "pending"},
+		{ID: 2, UserID: uID, Status: "pending"},
+	}
+	tests := []struct {
+		name    string // description of this test case
+		repo    services.UserOrdersRepository
+		id      uuid.UUID
+		want    []domain.UserOrder
+		wantErr bool
+	}{
+		{
+			name: "Success: Returns orders from repository",
+			id:   uID,
+			repo: &mockUserOrdersRepository{
+				getUserOrdersFunc: func(ctx context.Context, id uuid.UUID) ([]domain.UserOrder, error) {
+					return mockOrders, nil
+				},
+			},
+			want:    mockOrders,
+			wantErr: false,
+		},
+		{
+			name: "Error: Repository fails",
+			id:   uID,
+			repo: &mockUserOrdersRepository{
+				getUserOrdersFunc: func(ctx context.Context, id uuid.UUID) ([]domain.UserOrder, error) {
+					return nil, errors.New("database connection lost")
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := services.NewUserOrdersService(tt.repo)
+			got, gotErr := s.GetUserOrders(context.Background(), tt.id)
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Errorf("GetUserOrders() failed: %v", gotErr)
+				}
+				return
+			}
+			if tt.wantErr {
+				t.Fatal("GetUserOrders() succeeded unexpectedly")
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetUserOrders() = %v, want %v", got, tt.want)
 			}
 		})
 	}

@@ -42,7 +42,7 @@ func setupOrdersTestDB(t *testing.T) *gorm.DB {
 		t.Fatalf("failed to connect to test database: %v", err)
 	}
 
-	err = db.AutoMigrate(&models.User{}, &models.CafeOrder{}, &models.UserOrder{}, &models.UserProgress{})
+	err = db.AutoMigrate(&models.User{}, &models.CafeOrder{}, &models.UserOrder{}, &models.UserProgress{}, &models.Group{})
 	if err != nil {
 		t.Fatalf("failed to migrate test database: %v", err)
 	}
@@ -67,8 +67,7 @@ func TestUserOrdersRepository_GetUserOrders(t *testing.T) {
 	repo := repository.NewUserOrdersRepository(db)
 	seedCafeOrders(db)
 
-	u1, u2, u3, u4 := uuid.New(), uuid.New(), uuid.New(), uuid.New()
-
+	u1, u2, u3, u4, u5, u6 := uuid.New(), uuid.New(), uuid.New(), uuid.New(), uuid.New(), uuid.New()
 	// Scenario Setup
 	db.Create(&models.UserOrder{UserID: u1, CafeOrderID: 1, Status: "pending"})
 	db.Create(&models.UserOrder{UserID: u1, CafeOrderID: 2, Status: "pending"})
@@ -78,17 +77,41 @@ func TestUserOrdersRepository_GetUserOrders(t *testing.T) {
 	db.Create(&models.UserProgress{UserID: u4, Level: 1})
 	db.Create(&models.UserOrder{UserID: u4, CafeOrderID: 1, Status: "completed"})
 
+	// User in DB but without group
+	db.Create(&models.User{ID: u6, GroupID: nil, FirstName: "Solo", LastName: "User", Username: "solouser", Email: "solo@test.com"})
+	db.Create(&models.UserOrder{UserID: u6, CafeOrderID: 1, Status: "pending"})
+
+	// Group Scenario Setup
+	groupID := int64(1)
+	db.Create(&models.Group{ID: groupID, Name: "Test Group", InviteCode: "TEST", LeaderID: u5})
+	db.Create(&models.User{ID: u5, GroupID: &groupID, FirstName: "Group", LastName: "User", Username: "groupuser", Email: "group@test.com"})
+	db.Create(&models.UserProgress{UserID: u5, Level: 1})
+
 	tests := []GetOrdersTC{
 		{"User 1: multiple pending orders", u1, 2, true, "Espresso", false},
 		{"User 2: single pending order", u2, 1, true, "Latte", false},
 		{"User 3: empty list -> auto-generate", u3, 3, false, "", false},
 		{"User 4: only completed -> generate new ones", u4, 3, false, "", false},
 		{"Non-existent user -> create progress and generate", uuid.New(), 3, false, "", false},
+		{"User 5: group member -> generate personal and group orders", u5, 6, false, "", false},
+
+		{"User 6: exists in DB but has no group", u6, 1, true, "Espresso", false},
+		{"Database Error: Cancelled context returns error", u1, 0, false, "", true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := repo.GetUserOrders(context.Background(), tt.userID)
+			ctx := context.Background()
+
+			// Timeout is forced only when test explicitly searches for an error in DB
+			if tt.wantErr && tt.name == "Database Error: Cancelled context returns error" {
+				var cancel context.CancelFunc
+				// GORM cancels queries
+				ctx, cancel = context.WithTimeout(context.Background(), 1)
+				defer cancel()
+			}
+
+			got, err := repo.GetUserOrders(ctx, tt.userID)
 			validateGetResults(t, got, err, tt)
 		})
 	}
@@ -136,6 +159,17 @@ func TestUserOrdersRepository_CompleteUserOrder(t *testing.T) {
 			validateCompletion(t, db, tt, err)
 		})
 	}
+
+	t.Run("Error: Personal order - no progress", func(t *testing.T) {
+		uNoprogress := uuid.New()
+		oNoProgress := models.UserOrder{UserID: uNoprogress, CafeOrderID: 1, Status: "pending"}
+		db.Create(&oNoProgress)
+
+		err := repo.CompleteUserOrder(context.Background(), uNoprogress, uint(oNoProgress.ID))
+		if err == nil {
+			t.Errorf("expected error when no progress exists, got nil")
+		}
+	})
 }
 
 func resetUserStats(db *gorm.DB, tt CompleteOrderTC) {
@@ -169,4 +203,94 @@ func validateCompletion(t *testing.T, db *gorm.DB, tt CompleteOrderTC, err error
 	if tt.checkLevelUp && p.Level <= tt.initialLevel {
 		t.Error("level up check failed")
 	}
+}
+
+func TestUserOrdersRepository_CompleteGroupOrder(t *testing.T) {
+	db := setupOrdersTestDB(t)
+	repo := repository.NewUserOrdersRepository(db)
+	seedCafeOrders(db)
+
+	u1, u2 := uuid.New(), uuid.New()
+	groupID := int64(2)
+	db.Create(&models.Group{ID: groupID, Name: "Group 2", InviteCode: "TEST2", LeaderID: u1})
+	db.Create(&models.User{ID: u1, GroupID: &groupID, FirstName: "L", LastName: "D", Username: "leader", Email: "l@t.com"})
+	db.Create(&models.User{ID: u2, GroupID: &groupID, FirstName: "M", LastName: "B", Username: "member", Email: "m@t.com"})
+	db.Create(&models.UserProgress{UserID: u1, Level: 1, XP: 0, Energy: 50})
+	db.Create(&models.UserProgress{UserID: u2, Level: 1, XP: 0, Energy: 50})
+
+	o1 := models.UserOrder{UserID: u1, CafeOrderID: 1, Status: "pending", GroupID: &groupID}
+	db.Create(&o1)
+
+	t.Run("Success: Complete group order", func(t *testing.T) {
+		err := repo.CompleteUserOrder(context.Background(), u2, uint(o1.ID))
+		if err != nil {
+			t.Fatalf("failed to complete group order: %v", err)
+		}
+
+		var p1, p2 models.UserProgress
+		db.Where("user_id = ?", u1).First(&p1)
+		db.Where("user_id = ?", u2).First(&p2)
+
+		// RewardXP for CafeOrder 1 is 5. 5 / 2 members = 2 XP each. Remainder 1 goes to completer (u2).
+		if p1.XP != 2 {
+			t.Errorf("expected leader to have 2 XP, got %d", p1.XP)
+		}
+		if p2.XP != 3 {
+			t.Errorf("expected completer to have 3 XP, got %d", p2.XP)
+		}
+		if p2.Energy != 40 {
+			t.Errorf("expected completer to have 40 energy, got %d", p2.Energy)
+		}
+
+		// Verify group orders regeneration
+		var remainingGroupOrders int64
+		db.Model(&models.UserOrder{}).Where("group_id = ? AND status = ?", groupID, "pending").Count(&remainingGroupOrders)
+		if remainingGroupOrders != 3 {
+			t.Errorf("expected 3 regenerated group orders, got %d", remainingGroupOrders)
+		}
+	})
+
+	t.Run("Error: Order already completed", func(t *testing.T) {
+		err := repo.CompleteUserOrder(context.Background(), u2, uint(o1.ID))
+		if err == nil || err.Error() != "order already completed" {
+			t.Errorf("expected 'order already completed' error, got %v", err)
+		}
+	})
+
+	t.Run("Error: Group has no members", func(t *testing.T) {
+		g3 := int64(3)
+		db.Create(&models.Group{ID: g3, Name: "No members", InviteCode: "NONE", LeaderID: u1})
+		oNoMembers := models.UserOrder{UserID: u1, CafeOrderID: 1, Status: "pending", GroupID: &g3}
+		db.Create(&oNoMembers)
+
+		err := repo.CompleteUserOrder(context.Background(), u1, uint(oNoMembers.ID))
+		if err == nil || err.Error() != "group has no members" {
+			t.Errorf("expected 'group has no members' error, got %v", err)
+		}
+	})
+
+	t.Run("Error: Group completer has no progress", func(t *testing.T) {
+		oNew := models.UserOrder{UserID: u1, CafeOrderID: 1, Status: "pending", GroupID: &groupID}
+		db.Create(&oNew)
+		uNoProg := uuid.New()
+
+		err := repo.CompleteUserOrder(context.Background(), uNoProg, uint(oNew.ID))
+		if err == nil {
+			t.Errorf("expected error when completer has no progress")
+		}
+	})
+
+	t.Run("Error: Group member has no progress", func(t *testing.T) {
+		u3 := uuid.New()
+		db.Create(&models.User{ID: u3, GroupID: &groupID, FirstName: "M2", LastName: "B2", Username: "member2", Email: "m2@t.com"})
+		// u3 has no progress entry
+
+		oNew2 := models.UserOrder{UserID: u1, CafeOrderID: 1, Status: "pending", GroupID: &groupID}
+		db.Create(&oNew2)
+
+		err := repo.CompleteUserOrder(context.Background(), u1, uint(oNew2.ID))
+		if err == nil {
+			t.Errorf("expected error when a group member has no progress")
+		}
+	})
 }

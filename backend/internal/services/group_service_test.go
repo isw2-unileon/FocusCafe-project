@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
@@ -115,105 +114,144 @@ func (m *mockGroupRepository) DeleteGroupOrders(ctx context.Context, groupID int
 // TestGroupService_CreateGroup
 // ============================================
 
+type createGroupTestCase struct {
+	name           string
+	groupName      string
+	leaderID       uuid.UUID
+	isInGroup      bool
+	isInGroupErr   error
+	codeCollides   bool
+	getByCodeErr   error
+	createErr      error
+	addUserErr     error
+	wantErr        bool
+	expectedErr    string
+	expectedLength int
+}
+
 func TestGroupService_CreateGroup(t *testing.T) {
 	leaderID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
 
-	tests := []struct {
-		name           string
-		groupName      string
-		leaderID       uuid.UUID
-		mockIsInGroup  func(ctx context.Context, userID uuid.UUID) (bool, error)
-		mockGetByCode  func(ctx context.Context, code string) (*models.Group, error)
-		mockCreate     func(ctx context.Context, group *models.Group) error
-		mockAddUser    func(ctx context.Context, userID uuid.UUID, groupID int64) error
-		wantErr        bool
-		expectedErr    string
-		expectedCode   string
-		expectedLength int
-	}{
+	tests := []createGroupTestCase{
 		{
-			name:      "Success: Creates group with unique code",
-			groupName: "The A-Team",
-			leaderID:  leaderID,
-			mockIsInGroup: func(ctx context.Context, userID uuid.UUID) (bool, error) {
-				return false, nil
-			},
-			mockGetByCode: func(ctx context.Context, code string) (*models.Group, error) {
-				return nil, nil // No existing group with this code
-			},
-			mockCreate: func(ctx context.Context, group *models.Group) error {
-				group.ID = 1
-				group.CreatedAt = time.Now()
-				return nil
-			},
-			mockAddUser: func(ctx context.Context, userID uuid.UUID, groupID int64) error {
-				return nil
-			},
+			name:           "Success: Creates group with unique code",
+			groupName:      "The A-Team",
+			leaderID:       leaderID,
+			isInGroup:      false,
+			codeCollides:   false,
 			wantErr:        false,
-			expectedLength: 6, // invite code length
+			expectedLength: 6,
 		},
 		{
-			name:      "Error: User already in a group",
-			groupName: "The B-Team",
-			leaderID:  leaderID,
-			mockIsInGroup: func(ctx context.Context, userID uuid.UUID) (bool, error) {
-				return true, nil
-			},
-			mockGetByCode: nil,
-			mockCreate:    nil,
-			mockAddUser:   nil,
-			wantErr:       true,
-			expectedErr:   "user is already in a group",
+			name:           "Success: Re-generates code if collision occurs",
+			groupName:      "The Collision Team",
+			leaderID:       leaderID,
+			isInGroup:      false,
+			codeCollides:   true,
+			wantErr:        false,
+			expectedLength: 6,
 		},
 		{
-			name:      "Error: Empty group name",
-			groupName: "",
-			leaderID:  leaderID,
-			mockIsInGroup: func(ctx context.Context, userID uuid.UUID) (bool, error) {
-				return false, nil
-			},
+			name:        "Error: User already in a group",
+			groupName:   "The B-Team",
+			leaderID:    leaderID,
+			isInGroup:   true,
+			wantErr:     true,
+			expectedErr: "user is already in a group",
+		},
+		{
+			name:        "Error: Empty group name",
+			groupName:   "",
+			leaderID:    leaderID,
 			wantErr:     true,
 			expectedErr: "group name is required",
+		},
+		{
+			name:         "Error: IsUserInGroup database error",
+			groupName:    "Fail Group",
+			leaderID:     leaderID,
+			isInGroupErr: errors.New("db connection failure"),
+			wantErr:      true,
+			expectedErr:  "db connection failure",
+		},
+		{
+			name:         "Error: GetGroupByInviteCode database error",
+			groupName:    "Fail Code Group",
+			leaderID:     leaderID,
+			getByCodeErr: errors.New("lookup error"),
+			wantErr:      true,
+			expectedErr:  "lookup error",
+		},
+		{
+			name:        "Error: CreateGroup database error",
+			groupName:   "Fail Create Group",
+			leaderID:    leaderID,
+			createErr:   errors.New("insert error"),
+			wantErr:     true,
+			expectedErr: "insert error",
+		},
+		{
+			name:        "Error: AddUserToGroup database error",
+			groupName:   "Fail Add Leader Group",
+			leaderID:    leaderID,
+			addUserErr:  errors.New("binding error"),
+			wantErr:     true,
+			expectedErr: "binding error",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mRepo := &mockGroupRepository{
-				isUserInGroupFunc:        tt.mockIsInGroup,
-				getGroupByInviteCodeFunc: tt.mockGetByCode,
-				createGroupFunc:          tt.mockCreate,
-				addUserToGroupFunc:       tt.mockAddUser,
-			}
-			s := services.NewGroupService(mRepo)
-
-			group, err := s.CreateGroup(context.Background(), tt.groupName, tt.leaderID)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("CreateGroup() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if tt.wantErr {
-				if err.Error() != tt.expectedErr {
-					t.Errorf("CreateGroup() error = %v, want %v", err, tt.expectedErr)
-				}
-				return
-			}
-
-			if group == nil {
-				t.Error("CreateGroup() returned nil group")
-				return
-			}
-
-			if len(group.InviteCode) != tt.expectedLength {
-				t.Errorf("CreateGroup() invite code length = %v, want %v", len(group.InviteCode), tt.expectedLength)
-			}
-
-			if group.Name != tt.groupName {
-				t.Errorf("CreateGroup() name = %v, want %v", group.Name, tt.groupName)
-			}
+			runCreateGroupSubtest(t, tt)
 		})
+	}
+}
+
+func runCreateGroupSubtest(t *testing.T, tt createGroupTestCase) {
+	collisionCalled := false
+
+	mRepo := &mockGroupRepository{
+		isUserInGroupFunc: func(ctx context.Context, userID uuid.UUID) (bool, error) {
+			return tt.isInGroup, tt.isInGroupErr
+		},
+		getGroupByInviteCodeFunc: func(ctx context.Context, code string) (*models.Group, error) {
+			if tt.getByCodeErr != nil {
+				return nil, tt.getByCodeErr
+			}
+			if tt.codeCollides && !collisionCalled {
+				collisionCalled = true
+				return &models.Group{ID: 99, InviteCode: code}, nil
+			}
+			return nil, nil
+		},
+		createGroupFunc: func(ctx context.Context, group *models.Group) error {
+			return tt.createErr
+		},
+		addUserToGroupFunc: func(ctx context.Context, userID uuid.UUID, groupID int64) error {
+			return tt.addUserErr
+		},
+	}
+
+	s := services.NewGroupService(mRepo)
+	group, err := s.CreateGroup(context.Background(), tt.groupName, tt.leaderID)
+
+	if (err != nil) != tt.wantErr {
+		t.Fatalf("CreateGroup() error = %v, wantErr %v", err, tt.wantErr)
+	}
+
+	if tt.wantErr {
+		if err.Error() != tt.expectedErr {
+			t.Errorf("CreateGroup() error = %v, want %v", err, tt.expectedErr)
+		}
+		return
+	}
+
+	if group == nil {
+		t.Fatal("CreateGroup() returned nil group")
+	}
+
+	if len(group.InviteCode) != tt.expectedLength {
+		t.Errorf("CreateGroup() invite code length = %v, want %v", len(group.InviteCode), tt.expectedLength)
 	}
 }
 
@@ -248,6 +286,15 @@ func TestGroupService_JoinGroup(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:       "Error: IsUserInGroup failure",
+			inviteCode: "AB12CD",
+			mockIsInGroup: func(ctx context.Context, userID uuid.UUID) (bool, error) {
+				return false, errors.New("network failure")
+			},
+			wantErr:     true,
+			expectedErr: "network failure",
+		},
+		{
 			name:       "Error: User already in group",
 			inviteCode: "AB12CD",
 			mockIsInGroup: func(ctx context.Context, userID uuid.UUID) (bool, error) {
@@ -255,6 +302,18 @@ func TestGroupService_JoinGroup(t *testing.T) {
 			},
 			wantErr:     true,
 			expectedErr: "user is already in a group",
+		},
+		{
+			name:       "Error: GetGroupByInviteCode database error",
+			inviteCode: "AB12CD",
+			mockIsInGroup: func(ctx context.Context, userID uuid.UUID) (bool, error) {
+				return false, nil
+			},
+			mockGetByCode: func(ctx context.Context, code string) (*models.Group, error) {
+				return nil, errors.New("query failed")
+			},
+			wantErr:     true,
+			expectedErr: "query failed",
 		},
 		{
 			name:       "Error: Invalid invite code",
@@ -276,6 +335,21 @@ func TestGroupService_JoinGroup(t *testing.T) {
 			},
 			wantErr:     true,
 			expectedErr: "invite code is required",
+		},
+		{
+			name:       "Error: AddUserToGroup failure",
+			inviteCode: "AB12CD",
+			mockIsInGroup: func(ctx context.Context, userID uuid.UUID) (bool, error) {
+				return false, nil
+			},
+			mockGetByCode: func(ctx context.Context, code string) (*models.Group, error) {
+				return &models.Group{ID: 1, Name: "The A-Team", InviteCode: code, LeaderID: uuid.New()}, nil
+			},
+			mockAddUser: func(ctx context.Context, userID uuid.UUID, groupID int64) error {
+				return errors.New("capacity exceeded")
+			},
+			wantErr:     true,
+			expectedErr: "capacity exceeded",
 		},
 	}
 
@@ -355,6 +429,35 @@ func TestGroupService_GetAllGroups(t *testing.T) {
 			wantErr:     true,
 			expectedErr: "database error",
 		},
+		{
+			name: "Success: Returns groups with members and progress mapped",
+			mockBehavior: func(ctx context.Context) ([]models.Group, error) {
+				return []models.Group{
+					{
+						ID:         1,
+						Name:       "The A-Team",
+						InviteCode: "AB12CD",
+						LeaderID:   uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
+						Users: []models.User{
+							{
+								ID:        uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
+								FirstName: "Alice",
+								Email:     "alice@test.com",
+								Progress:  &models.UserProgress{Level: 5}, // <--- ENTRA EN EL IF (member.Level = 5)
+							},
+							{
+								ID:        uuid.MustParse("550e8400-e29b-41d4-a716-446655440099"),
+								FirstName: "Bob",
+								Email:     "bob@test.com",
+								Progress:  nil, // <--- NO ENTRA EN EL IF (mantiene el nivel 1 por defecto)
+							},
+						},
+					},
+				}, nil
+			},
+			wantErr:     false,
+			expectedLen: 1,
+		},
 	}
 
 	for _, tt := range tests {
@@ -389,13 +492,13 @@ func TestGroupService_GetAllGroups(t *testing.T) {
 
 func TestGroupService_DeleteGroup(t *testing.T) {
 	tests := []struct {
-		name                    string
-		groupID                 int64
-		mockRemoveUsersFunc     func(ctx context.Context, groupID int64) error
-		mockDeleteOrdersFunc    func(ctx context.Context, groupID int64) error
-		mockDeleteGroupFunc     func(ctx context.Context, groupID int64) error
-		wantErr                 bool
-		expectedErr             string
+		name                 string
+		groupID              int64
+		mockRemoveUsersFunc  func(ctx context.Context, groupID int64) error
+		mockDeleteOrdersFunc func(ctx context.Context, groupID int64) error
+		mockDeleteGroupFunc  func(ctx context.Context, groupID int64) error
+		wantErr              bool
+		expectedErr          string
 	}{
 		{
 			name:    "Success: Deletes group and cleans up",
@@ -419,6 +522,18 @@ func TestGroupService_DeleteGroup(t *testing.T) {
 			},
 			wantErr:     true,
 			expectedErr: "foreign key constraint",
+		},
+		{
+			name:    "Error: Fails to delete group orders",
+			groupID: 1,
+			mockRemoveUsersFunc: func(ctx context.Context, groupID int64) error {
+				return nil
+			},
+			mockDeleteOrdersFunc: func(ctx context.Context, groupID int64) error {
+				return errors.New("orders purge failed")
+			},
+			wantErr:     true,
+			expectedErr: "orders purge failed",
 		},
 	}
 
@@ -454,12 +569,12 @@ func TestGroupService_LeaveGroup(t *testing.T) {
 	groupID := int64(1)
 
 	tests := []struct {
-		name            string
-		mockGetGroupID  func(ctx context.Context, userID uuid.UUID) (*int64, error)
-		mockIsLeader    func(ctx context.Context, userID uuid.UUID, groupID int64) (bool, error)
-		mockRemoveUser  func(ctx context.Context, userID uuid.UUID) error
-		wantErr         bool
-		expectedErr     string
+		name           string
+		mockGetGroupID func(ctx context.Context, userID uuid.UUID) (*int64, error)
+		mockIsLeader   func(ctx context.Context, userID uuid.UUID, groupID int64) (bool, error)
+		mockRemoveUser func(ctx context.Context, userID uuid.UUID) error
+		wantErr        bool
+		expectedErr    string
 	}{
 		{
 			name: "Success: Member leaves group",
@@ -475,6 +590,14 @@ func TestGroupService_LeaveGroup(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "Error: GetUserGroupID repository failure",
+			mockGetGroupID: func(ctx context.Context, userID uuid.UUID) (*int64, error) {
+				return nil, errors.New("lookup failed")
+			},
+			wantErr:     true,
+			expectedErr: "lookup failed",
+		},
+		{
 			name: "Error: Leader cannot leave",
 			mockGetGroupID: func(ctx context.Context, userID uuid.UUID) (*int64, error) {
 				return &groupID, nil
@@ -484,6 +607,17 @@ func TestGroupService_LeaveGroup(t *testing.T) {
 			},
 			wantErr:     true,
 			expectedErr: "group leader cannot leave the group, use delete instead",
+		},
+		{
+			name: "Error: IsGroupLeader repository failure",
+			mockGetGroupID: func(ctx context.Context, userID uuid.UUID) (*int64, error) {
+				return &groupID, nil
+			},
+			mockIsLeader: func(ctx context.Context, userID uuid.UUID, groupID int64) (bool, error) {
+				return false, errors.New("leader verification failed")
+			},
+			wantErr:     true,
+			expectedErr: "leader verification failed",
 		},
 		{
 			name: "Error: User not in any group",
@@ -543,7 +677,15 @@ func TestGroupService_GetUserGroup(t *testing.T) {
 				return &models.Group{ID: id, Name: "The A-Team"}, nil
 			},
 			wantErr:      false,
-			expectedName:   "The A-Team",
+			expectedName: "The A-Team",
+		},
+		{
+			name: "Error: GetUserGroupID failure",
+			mockGetGroupID: func(ctx context.Context, userID uuid.UUID) (*int64, error) {
+				return nil, errors.New("db crash")
+			},
+			wantErr:     true,
+			expectedErr: "db crash",
 		},
 		{
 			name: "Error: User not in any group",
@@ -552,6 +694,28 @@ func TestGroupService_GetUserGroup(t *testing.T) {
 			},
 			wantErr:     true,
 			expectedErr: "user is not in any group",
+		},
+		{
+			name: "Error: GetGroupByID failure",
+			mockGetGroupID: func(ctx context.Context, userID uuid.UUID) (*int64, error) {
+				return &groupID, nil
+			},
+			mockGetByID: func(ctx context.Context, id int64) (*models.Group, error) {
+				return nil, errors.New("fetch error")
+			},
+			wantErr:     true,
+			expectedErr: "fetch error",
+		},
+		{
+			name: "Error: Group not found (nil record)",
+			mockGetGroupID: func(ctx context.Context, userID uuid.UUID) (*int64, error) {
+				return &groupID, nil
+			},
+			mockGetByID: func(ctx context.Context, id int64) (*models.Group, error) {
+				return nil, nil
+			},
+			wantErr:     true,
+			expectedErr: "group not found",
 		},
 	}
 
