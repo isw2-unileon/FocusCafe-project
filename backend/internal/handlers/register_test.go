@@ -237,6 +237,20 @@ func TestRegister_AuthUser_TableDriven(t *testing.T) {
 			expectedError:  "User already registered",
 		},
 		{
+			name:           "Supabase Auth returns non-200 with message field",
+			authStatus:     http.StatusUnprocessableEntity,
+			authBody:       map[string]interface{}{"message": "User already registered (message variant)"},
+			expectedStatus: http.StatusConflict,
+			expectedError:  "User already registered (message variant)",
+		},
+		{
+			name:           "Supabase Auth returns non-200 with error_description field",
+			authStatus:     http.StatusBadRequest,
+			authBody:       map[string]interface{}{"error_description": "Invalid login credentials"},
+			expectedStatus: http.StatusConflict,
+			expectedError:  "Invalid login credentials",
+		},
+		{
 			name:           "Supabase Auth returns non-200 without msg",
 			authStatus:     http.StatusInternalServerError,
 			authBody:       map[string]interface{}{},
@@ -345,6 +359,15 @@ func TestRegister_UserProfileAndProgress_TableDriven(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 			expectedError:  "error saving profile (status 500)", // CORREGIDO
 		},
+		{
+			name:           "Profile insertion fails without message field",
+			profileStatus:  http.StatusInternalServerError,
+			profileBody:    map[string]interface{}{"other": "field"},
+			progressStatus: http.StatusCreated,
+			progressBody:   []interface{}{},
+			expectedStatus: http.StatusInternalServerError,
+			expectedError:  "failed to save profile",
+		},
 
 		{
 			name:           "Progress insertion fails",
@@ -354,6 +377,15 @@ func TestRegister_UserProfileAndProgress_TableDriven(t *testing.T) {
 			progressBody:   map[string]interface{}{"message": "db error"},
 			expectedStatus: http.StatusInternalServerError,
 			expectedError:  "database error: db error", // CORREGIDO
+		},
+		{
+			name:           "Progress insertion fails without message field",
+			profileStatus:  http.StatusCreated,
+			profileBody:    successProfileBody,
+			progressStatus: http.StatusInternalServerError,
+			progressBody:   map[string]interface{}{"other": "field"},
+			expectedStatus: http.StatusInternalServerError,
+			expectedError:  "failed to save initial progress",
 		},
 		{
 			name:           "Progress insertion returns corrupt JSON error",
@@ -470,7 +502,7 @@ func TestRegister_Success(t *testing.T) {
 // Direct Unit Tests (For isolated blocks)
 // ─────────────────────────────────────────────
 
-// TestCreateUserProfile_EmptyRole ejecuta directamente el método para cubrir el bloque `if role == ""`
+// TestCreateUserProfile_EmptyRole ejecuta directamente el método para cubrir el bloque `if role == ""` (línea 140)
 func TestCreateUserProfile_EmptyRole(t *testing.T) {
 	stub := supabaseMultiStub(t,
 		http.StatusOK, successAuthBody,
@@ -488,4 +520,23 @@ func TestCreateUserProfile_EmptyRole(t *testing.T) {
 	// Pasamos rol vacío "" para forzar la asignación por defecto `role = "user"`
 	err := h.createUserProfile("uuid-ada-001", req, "")
 	assert.NoError(t, err)
+}
+
+// TestCreateUserProfile_ConnectionError cubre la línea 165 (error de conexión directo)
+func TestCreateUserProfile_ConnectionError(t *testing.T) {
+	h := newHandler("http://localhost:9999") // URL que no existe
+
+	req := RegisterRequest{Email: "test@test.com"}
+	err := h.createUserProfile("uuid", req, "user")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "connection error while saving user profile")
+}
+
+// TestCreateUserProgress_ConnectionError cubre la línea 205 (error de conexión directo en progreso)
+func TestCreateUserProgress_ConnectionError(t *testing.T) {
+	h := newHandler("http://localhost:9999")
+
+	err := h.createUserProgress("uuid")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "connection error while saving user progress")
 }
