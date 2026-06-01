@@ -3,9 +3,13 @@ package integration
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -14,12 +18,32 @@ import (
 	"gorm.io/gorm"
 )
 
+// MockAIService implements AIServiceInterface for testing
+type MockAIService struct{}
+
+func (m *MockAIService) GenerateQuiz(content string) (string, error) {
+	return `{"quiz": "test quiz from mock"}`, nil
+}
+
 func TestStudy_Integration(t *testing.T) {
 	db, h := setupTestApp()
+	h.AIService = &MockAIService{}
+
+	t.Run("Start Study Session - Success", func(t *testing.T) {
+		userID := uuid.New()
+		seedUserProgressData(db, userID)
+		testStartStudySessionSuccess(t, db, h, userID)
+	})
+
+	t.Run("Create Quiz from Session - Success", func(t *testing.T) {
+		userID := uuid.New()
+		sessionID := seedStudyTestData(db, userID)
+		testCreateQuizSuccess(t, h, userID, sessionID)
+	})
 
 	t.Run("Update Progress - Success", func(t *testing.T) {
 		userID := uuid.New()
-		sessionID := seedStudyTestData(db, userID, 100)
+		sessionID := seedStudyTestData(db, userID)
 
 		router := setupStudyRouter(h, userID)
 		testUpdateProgressSuccess(t, router, db, userID, sessionID)
@@ -27,7 +51,7 @@ func TestStudy_Integration(t *testing.T) {
 
 	t.Run("Update Progress - Invalid Session ID", func(t *testing.T) {
 		userID := uuid.New()
-		_ = seedStudyTestData(db, userID, 100)
+		_ = seedStudyTestData(db, userID)
 
 		router := setupStudyRouter(h, userID)
 		testUpdateProgressInvalidSession(t, router)
@@ -35,11 +59,82 @@ func TestStudy_Integration(t *testing.T) {
 
 	t.Run("Update Progress - Missing Body Fields", func(t *testing.T) {
 		userID := uuid.New()
-		_ = seedStudyTestData(db, userID, 100)
+		_ = seedStudyTestData(db, userID)
 
 		router := setupStudyRouter(h, userID)
 		testUpdateProgressMissingFields(t, router)
 	})
+}
+
+func seedUserProgressData(db *gorm.DB, userID uuid.UUID) {
+	db.Create(&models.UserProgress{
+		UserID: userID,
+		Level:  1,
+		Energy: 100,
+		XP:     0,
+	})
+}
+
+func testStartStudySessionSuccess(t *testing.T, db *gorm.DB, h *handlers.Handler, userID uuid.UUID) {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, _ := writer.CreateFormFile("pdf", "test.pdf")
+	_, _ = part.Write([]byte("%PDF-1.4 test content"))
+	_ = writer.WriteField("subject_name", "Math")
+	writer.Close()
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/study/start", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	c, _ := setupSubtestContext(w, req, userID)
+	h.StartStudySessionHandler(c)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected status 201, got %d. Body: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to unmarshal study quiz content: %v", err)
+	}
+	sessionID := uint64(resp["session_id"].(float64))
+
+	// Verify DB
+	var session models.StudySession
+	if err := db.Preload("Material").First(&session, sessionID).Error; err != nil {
+		t.Fatalf("failed to find session in DB: %v", err)
+	}
+	if session.UserID != userID {
+		t.Errorf("expected userID %s, got %s", userID, session.UserID)
+	}
+}
+
+func testCreateQuizSuccess(t *testing.T, h *handlers.Handler, userID uuid.UUID, sessionID uint64) {
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", fmt.Sprintf("/api/study/generate-quiz/%d", sessionID), nil)
+
+	c, _ := setupSubtestContext(w, req, userID)
+	c.Params = []gin.Param{{Key: "session_id", Value: fmt.Sprintf("%d", sessionID)}}
+	h.CreateQuizFromSession(c)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d. Body: %s", w.Code, w.Body.String())
+	}
+
+	var responseBody map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &responseBody); err != nil {
+		t.Fatalf("failed to unmarshal generated quiz response payload: %v", err)
+	}
+
+	quizContent, exists := responseBody["quiz"]
+	if !exists {
+		if !strings.Contains(w.Body.String(), "test quiz from mock") {
+			t.Errorf("expected quiz content in response, got %s", w.Body.String())
+		}
+	} else if !strings.Contains(fmt.Sprintf("%v", quizContent), "test quiz from mock") {
+		t.Errorf("expected quiz content inside verified JSON, got %v", quizContent)
+	}
 }
 
 func setupStudyRouter(h *handlers.Handler, userID uuid.UUID) *gin.Engine {
@@ -54,17 +149,28 @@ func setupStudyRouter(h *handlers.Handler, userID uuid.UUID) *gin.Engine {
 	return r
 }
 
-func seedStudyTestData(db *gorm.DB, userID uuid.UUID, initialEnergy int) uint64 {
+func seedStudyTestData(db *gorm.DB, userID uuid.UUID) uint64 {
 	db.Create(&models.UserProgress{
 		UserID: userID,
 		Level:  1,
-		Energy: initialEnergy,
+		Energy: 100,
 		XP:     0,
 	})
 
+	material := models.StudyMaterial{
+		UserID:      userID,
+		Title:       "Test Material",
+		SubjectName: "Math",
+		Content:     "Some PDF text content",
+		UploadDate:  time.Now(),
+	}
+	db.Create(&material)
+
 	session := models.StudySession{
-		UserID: userID,
-		Status: "active",
+		UserID:     userID,
+		MaterialID: material.ID,
+		Status:     "active",
+		StartTime:  time.Now(),
 	}
 	db.Create(&session)
 

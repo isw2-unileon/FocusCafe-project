@@ -60,6 +60,23 @@ func TestAdmin_Integration(t *testing.T) {
 
 		testAdminCreateUserSuccess(t, db, h, adminID)
 	})
+
+	t.Run("GetAllGroups - Access as Admin", func(t *testing.T) {
+		adminID := uuid.New()
+		seedAdminUserMock(db, adminID, "admin_groups", "admin_groups@test.com")
+
+		testGetAllGroupsAsAdmin(t, db, h, adminID)
+	})
+
+	t.Run("AdminDeleteUser - Success", func(t *testing.T) {
+		adminID := uuid.New()
+		targetUserID := uuid.New()
+
+		seedAdminUserMock(db, adminID, "admin_destroyer", "destroyer@test.com")
+		seedNormalUserMock(db, targetUserID, "user_to_delete", "delete_me@test.com")
+
+		testAdminDeleteUserSuccess(t, db, h, adminID, targetUserID)
+	})
 }
 
 func testGetAllUsersAsAdmin(t *testing.T, h *handlers.Handler, adminID uuid.UUID) {
@@ -203,6 +220,77 @@ func testAdminCreateUserSuccess(t *testing.T, db *gorm.DB, h *handlers.Handler, 
 	}
 }
 
+func testGetAllGroupsAsAdmin(t *testing.T, db *gorm.DB, h *handlers.Handler, adminID uuid.UUID) {
+	expectedGroupID := int64(uuid.New().ID())
+	expectedGroupName := "Focus Cafe Testing Group"
+
+	db.Create(&models.Group{
+		ID:         expectedGroupID,
+		Name:       expectedGroupName,
+		InviteCode: "TEST12",
+		LeaderID:   adminID,
+	})
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/admin/groups", nil)
+
+	setupRouterWithAuth(h, adminID).ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d. Body: %s", w.Code, w.Body.String())
+	}
+
+	// Verify DB
+	var groups []map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &groups); err != nil {
+		t.Fatalf("failed to unmarshal groups response payload: %v", err)
+	}
+
+	if len(groups) < 1 {
+		t.Errorf("expected at least 1 group in DB, got %d", len(groups))
+	}
+
+	if groups[0]["name"] != expectedGroupName {
+		t.Errorf("expected group name to be '%s', got '%v'", expectedGroupName, groups[0]["name"])
+	}
+}
+
+func testAdminDeleteUserSuccess(t *testing.T, db *gorm.DB, h *handlers.Handler, adminID, targetUserID uuid.UUID) {
+	// 1. Setup Mock Supabase Server that also writes to a local test DB
+	srv := setupMockSupabaseServer(targetUserID)
+	defer srv.Close()
+
+	// Temporarily point handler to mock server
+	oldURL := h.SupabaseURL
+	oldKey := h.SupabaseServiceRoleKey
+
+	h.SupabaseURL = srv.URL
+	h.SupabaseServiceRoleKey = "mock-service-role-key-for-testing"
+
+	defer func() {
+		h.SupabaseURL = oldURL
+		h.SupabaseServiceRoleKey = oldKey
+	}()
+
+	w := httptest.NewRecorder()
+	url := fmt.Sprintf("/api/admin/users/%s", targetUserID.String())
+	req, _ := http.NewRequest("DELETE", url, nil)
+
+	setupRouterWithAuth(h, adminID).ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status 200 OK, got %d. Body: %s", w.Code, w.Body.String())
+	}
+
+	// Verify DB
+	var count int64
+	db.Model(&models.User{}).Where("id = ?", targetUserID).Count(&count)
+
+	if count != 0 {
+		t.Errorf("expected target user %s to be deleted from database, but it still exists", targetUserID)
+	}
+}
+
 func seedAdminUserMock(db *gorm.DB, id uuid.UUID, username, email string) {
 	db.Create(&models.User{ID: id, Role: "admin", Username: username, Email: email, FirstName: "Admin", LastName: "User"})
 }
@@ -236,6 +324,13 @@ func setupMockSupabaseServer(mockSupabaseID uuid.UUID) *httptest.Server {
 			fmt.Fprintf(w, `[{"id": "%s", "user_id": "%s", "email": "admin_created_dynamic@test.com"}]`, mockSupabaseID.String(), mockSupabaseID.String())
 			return
 		}
+
+		// Simulate Supabase Database API Responses in deleting users
+		if strings.Contains(r.URL.Path, "/admin/users/") && r.Method == http.MethodDelete {
+			w.WriteHeader(http.StatusOK)
+			fmt.Fprintf(w, `{"message": "user successfully deleted from auth provider"}`)
+			return
+		}
 		w.WriteHeader(http.StatusNotFound)
 	}))
 }
@@ -250,6 +345,7 @@ func setupRouterWithAuth(h *handlers.Handler, userID uuid.UUID) *gin.Engine {
 	api.GET("/users", h.GetAllUsers)
 	api.POST("/users", h.AdminCreateUser)
 	api.GET("/users/search", h.GetUserByEmail)
+	api.DELETE("/users/:id", h.DeleteUser)
 	api.GET("/groups", h.GetAllGroups)
 	api.DELETE("/groups/:id", h.AdminDeleteGroup)
 

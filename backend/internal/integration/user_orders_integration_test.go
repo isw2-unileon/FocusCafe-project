@@ -23,7 +23,7 @@ func TestUserOrders_Integration(t *testing.T) {
 
 	t.Run("GetOrders - Auto Generates 3 Orders If Empty", func(t *testing.T) {
 		userID := uuid.New()
-		seedUserProgressMock(db, userID, 50, 0)
+		seedUserProgressMock(db, userID, 50)
 		router := setupOrdersRouter(h, userID)
 
 		testGetOrdersAutoGeneration(t, router)
@@ -31,7 +31,7 @@ func TestUserOrders_Integration(t *testing.T) {
 
 	t.Run("CompleteOrder - Updates State Properties Mutably", func(t *testing.T) {
 		userID := uuid.New()
-		seedUserProgressMock(db, userID, 50, 0)
+		seedUserProgressMock(db, userID, 50)
 		router := setupOrdersRouter(h, userID)
 
 		testCompleteOrderSuccess(t, router, db, userID)
@@ -39,7 +39,7 @@ func TestUserOrders_Integration(t *testing.T) {
 
 	t.Run("CompleteOrder - Fails On Insufficient Energy Pool", func(t *testing.T) {
 		userID := uuid.New()
-		seedUserProgressMock(db, userID, 0, 0)
+		seedUserProgressMock(db, userID, 0)
 		router := setupOrdersRouter(h, userID)
 
 		testCompleteOrderInsufficientEnergy(t, router, db, userID)
@@ -75,7 +75,7 @@ func setupOrdersRouter(h *handlers.Handler, userID uuid.UUID) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
 
-	api := r.Group("/api")
+	api := r.Group("/api/users/me")
 	api.Use(mockAuthMiddleware(userID))
 	api.GET("/orders", h.GetUserOrders)
 	api.POST("/orders/:id/complete", h.CompleteUserOrder)
@@ -97,8 +97,8 @@ func seedGroupCafeCatalog(db *gorm.DB) {
 	db.Create(&models.CafeOrder{ID: 12, Name: "Group Pasta", EnergyCost: 30, RewardXP: 20, RequiredLevel: 1})
 }
 
-func seedUserProgressMock(db *gorm.DB, id uuid.UUID, energy int, xp int) {
-	db.Create(&models.UserProgress{UserID: id, Level: 1, Energy: energy, XP: xp})
+func seedUserProgressMock(db *gorm.DB, id uuid.UUID, energy int) {
+	db.Create(&models.UserProgress{UserID: id, Level: 1, Energy: energy, XP: 0})
 }
 
 func seedGroupIntegrationContext(db *gorm.DB) (uuid.UUID, uuid.UUID, int64) {
@@ -133,8 +133,8 @@ func seedGroupIntegrationContext(db *gorm.DB) (uuid.UUID, uuid.UUID, int64) {
 	}
 	db.Create(&user2)
 
-	seedUserProgressMock(db, u1, 50, 0)
-	seedUserProgressMock(db, u2, 50, 0)
+	seedUserProgressMock(db, u1, 50)
+	seedUserProgressMock(db, u2, 50)
 
 	return u1, u2, groupID
 }
@@ -143,7 +143,7 @@ func seedGroupIntegrationContext(db *gorm.DB) (uuid.UUID, uuid.UUID, int64) {
 
 func testGetOrdersAutoGeneration(t *testing.T, r *gin.Engine) {
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/api/orders", nil)
+	req, _ := http.NewRequest("GET", "/api/users/me/orders", nil)
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -161,7 +161,7 @@ func testGetOrdersAutoGeneration(t *testing.T, r *gin.Engine) {
 
 func testCompleteOrderSuccess(t *testing.T, r *gin.Engine, db *gorm.DB, userID uuid.UUID) {
 	wGet := httptest.NewRecorder()
-	reqGet, _ := http.NewRequest("GET", "/api/orders", nil)
+	reqGet, _ := http.NewRequest("GET", "/api/users/me/orders", nil)
 	r.ServeHTTP(wGet, reqGet)
 
 	var order models.UserOrder
@@ -170,7 +170,7 @@ func testCompleteOrderSuccess(t *testing.T, r *gin.Engine, db *gorm.DB, userID u
 	}
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", fmt.Sprintf("/api/orders/%d/complete", order.ID), nil)
+	req, _ := http.NewRequest("POST", fmt.Sprintf("/api/users/me/orders/%d/complete", order.ID), nil)
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -195,7 +195,7 @@ func testCompleteOrderSuccess(t *testing.T, r *gin.Engine, db *gorm.DB, userID u
 
 func testCompleteOrderInsufficientEnergy(t *testing.T, r *gin.Engine, db *gorm.DB, userID uuid.UUID) {
 	wGet := httptest.NewRecorder()
-	reqGet, _ := http.NewRequest("GET", "/api/orders", nil)
+	reqGet, _ := http.NewRequest("GET", "/api/users/me/orders", nil)
 	r.ServeHTTP(wGet, reqGet)
 
 	var nextOrder models.UserOrder
@@ -204,7 +204,7 @@ func testCompleteOrderInsufficientEnergy(t *testing.T, r *gin.Engine, db *gorm.D
 	}
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", fmt.Sprintf("/api/orders/%d/complete", nextOrder.ID), nil)
+	req, _ := http.NewRequest("POST", fmt.Sprintf("/api/users/me/orders/%d/complete", nextOrder.ID), nil)
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusBadRequest {
@@ -219,7 +219,7 @@ func testCompleteOrderInsufficientEnergy(t *testing.T, r *gin.Engine, db *gorm.D
 
 func testGroupGetOrdersAggregation(t *testing.T, r *gin.Engine) {
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/api/orders", nil)
+	req, _ := http.NewRequest("GET", "/api/users/me/orders", nil)
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
@@ -237,7 +237,7 @@ func testGroupGetOrdersAggregation(t *testing.T, r *gin.Engine) {
 
 func testGroupCompleteOrderXpSharing(t *testing.T, r *gin.Engine, db *gorm.DB, groupID int64, u1, u2 uuid.UUID) {
 	wGet := httptest.NewRecorder()
-	reqGet, _ := http.NewRequest("GET", "/api/orders", nil)
+	reqGet, _ := http.NewRequest("GET", "/api/users/me/orders", nil)
 	r.ServeHTTP(wGet, reqGet)
 
 	var groupOrder models.UserOrder
@@ -246,7 +246,7 @@ func testGroupCompleteOrderXpSharing(t *testing.T, r *gin.Engine, db *gorm.DB, g
 	}
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", fmt.Sprintf("/api/orders/%d/complete", groupOrder.ID), nil)
+	req, _ := http.NewRequest("POST", fmt.Sprintf("/api/users/me/orders/%d/complete", groupOrder.ID), nil)
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {

@@ -33,7 +33,7 @@ func setupTestApp() (*gorm.DB, *handlers.Handler) {
 	}
 
 	// 2. Migrate models
-	if err := db.AutoMigrate(&models.User{}, &models.CafeOrder{}, &models.UserOrder{}, &models.UserProgress{}, &models.Group{}, &models.StudySession{}, &models.StudyMaterial{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.CafeOrder{}, &models.UserOrder{}, &models.UserProgress{}, &models.Group{}, &models.StudySession{}, &models.StudyMaterial{}, &models.Quiz{}, &models.Question{}); err != nil {
 		panic("failed to migrate test database schema: " + err.Error())
 	}
 
