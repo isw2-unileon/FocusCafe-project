@@ -53,6 +53,14 @@ func (m *adminMockUserService) DeleteUser(ctx context.Context, id uuid.UUID) err
 	return nil
 }
 
+func (m *adminMockUserService) GetLeaderboard(ctx context.Context, limit int) ([]domain.UserProfile, error) {
+	return nil, nil
+}
+
+func (m *adminMockUserService) GetUserLeaderboard(ctx context.Context, userID uuid.UUID) (int, *domain.UserProfile, error) {
+	return 0, nil, nil
+}
+
 // ============================================
 // TestHandler_GetAllUsers
 // ============================================

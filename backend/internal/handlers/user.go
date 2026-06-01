@@ -59,6 +59,42 @@ type UpdateProfileRequest struct {
 	LastName  string `json:"last_name"`
 }
 
+// GetLeaderboard returns the top 5 users ordered by experience (XP) descending.
+func (h *Handler) GetLeaderboard(c *gin.Context) {
+	// Verify the user is authenticated (middleware guarantees this, but we check for safety)
+	if _, err := h.getUserID(c); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	profiles, err := h.UserService.GetLeaderboard(c.Request.Context(), 5)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch leaderboard"})
+		return
+	}
+	c.JSON(http.StatusOK, profiles)
+}
+
+// GetUserLeaderboardRank returns the current user's global rank and profile.
+func (h *Handler) GetUserLeaderboardRank(c *gin.Context) {
+	uid, err := h.getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	rank, profile, err := h.UserService.GetUserLeaderboard(c.Request.Context(), uid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch user rank"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"rank":  rank,
+		"user":  profile,
+	})
+}
+
 // UpdateUserProfile actualiza el perfil del usuario autenticado
 // Solo permite actualizar FirstName y LastName
 func (h *Handler) UpdateUserProfile(c *gin.Context) {

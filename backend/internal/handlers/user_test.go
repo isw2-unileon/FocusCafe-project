@@ -40,6 +40,14 @@ func (m *mockUserService) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
+func (m *mockUserService) GetLeaderboard(ctx context.Context, limit int) ([]domain.UserProfile, error) {
+	return nil, nil
+}
+
+func (m *mockUserService) GetUserLeaderboard(ctx context.Context, userID uuid.UUID) (int, *domain.UserProfile, error) {
+	return 0, nil, nil
+}
+
 func TestHandler_GetUserProfile(t *testing.T) {
 	// Set Gin to Test Mode to keep logs clean
 	gin.SetMode(gin.TestMode)

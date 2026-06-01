@@ -97,3 +97,41 @@ func (r *UserRepository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 func (r *UserRepository) CreateUser(ctx context.Context, user *models.User) error {
 	return r.db.WithContext(ctx).Create(user).Error
 }
+
+// GetLeaderboard retrieves the top N users ordered by experience (XP) descending, excluding admins
+func (r *UserRepository) GetLeaderboard(ctx context.Context, limit int) ([]models.User, error) {
+	var users []models.User
+	err := r.db.WithContext(ctx).
+		Joins("JOIN user_progress ON user_progress.user_id = users.id").
+		Where("users.role = ?", "user").
+		Order("user_progress.xp DESC").
+		Limit(limit).
+		Preload("Progress").
+		Find(&users).Error
+	return users, err
+}
+
+// GetUserRank calculates the global rank of a user based on XP, excluding admins.
+// Returns 1-based rank (1 = highest XP).
+func (r *UserRepository) GetUserRank(ctx context.Context, userID uuid.UUID) (int, error) {
+	// Get the user's current XP
+	var userProgress models.UserProgress
+	err := r.db.WithContext(ctx).Where("user_id = ?", userID).First(&userProgress).Error
+	if err != nil {
+		return 0, err
+	}
+
+	// Count how many non-admin users have strictly higher XP
+	var count int64
+	err = r.db.WithContext(ctx).
+		Model(&models.User{}).
+		Joins("JOIN user_progress ON user_progress.user_id = users.id").
+		Where("users.role = ?", "user").
+		Where("user_progress.xp > ?", userProgress.XP).
+		Count(&count).Error
+	if err != nil {
+		return 0, err
+	}
+
+	return int(count) + 1, nil
+}

@@ -115,6 +115,8 @@ func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userServic
 	protected.PUT("/users/me", h.UpdateUserProfile)
 	protected.GET("/users/me/orders", h.GetUserOrders)
 	protected.POST("/users/me/orders/:id/complete", h.CompleteUserOrder)
+	protected.GET("/leaderboard", h.GetLeaderboard)
+	protected.GET("/leaderboard/me", h.GetUserLeaderboardRank)
 	protected.GET("/hello", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "Hello from the API"})
 	})
