@@ -1,33 +1,41 @@
 package integration
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 
 	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/auth"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/handlers"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/repository"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/services"
-	"github.com/golang-jwt/jwt/v5"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 // setupTestApp initializes the entire application stack for integration testing.
-func setupTestApp() (*gin.Engine, *gorm.DB, *handlers.Handler) {
-	gin.SetMode(gin.TestMode)
-
+func setupTestApp() (*gorm.DB, *handlers.Handler) {
 	// 1. Setup In-Memory SQLite database
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	bytes := make([]byte, 8)
+	_, _ = rand.Read(bytes)
+	dbName := hex.EncodeToString(bytes)
+	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", dbName)
+
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{})
 	if err != nil {
 		panic("failed to connect to test database")
 	}
 
 	// 2. Migrate models
-	db.AutoMigrate(&models.User{}, &models.CafeOrder{}, &models.UserOrder{}, &models.UserProgress{}, &models.Group{}, &models.StudySession{}, &models.StudyMaterial{})
+	if err := db.AutoMigrate(&models.User{}, &models.CafeOrder{}, &models.UserOrder{}, &models.UserProgress{}, &models.Group{}, &models.StudySession{}, &models.StudyMaterial{}); err != nil {
+		panic("failed to migrate test database schema: " + err.Error())
+	}
 
 	// 3. Initialize Repositories
 	userRepo := repository.NewUserRepository(db)
@@ -40,7 +48,6 @@ func setupTestApp() (*gin.Engine, *gorm.DB, *handlers.Handler) {
 	userOrderService := services.NewUserOrdersService(userOrderRepo)
 	groupService := services.NewGroupService(groupRepo)
 	studyService := services.NewStudyService(studyRepo)
-	// AIService can be nil or mocked if needed for specific tests
 
 	// 5. Initialize Handler
 	h := &handlers.Handler{
@@ -50,11 +57,7 @@ func setupTestApp() (*gin.Engine, *gorm.DB, *handlers.Handler) {
 		StudyService:      studyService,
 	}
 
-	// 6. Setup Router
-	r := gin.New()
-	r.Use(gin.Recovery())
-
-	return r, db, h
+	return db, h
 }
 
 // mockAuthMiddleware injects a test user into the Gin context.
@@ -74,7 +77,7 @@ func mockAuthMiddleware(userID uuid.UUID) gin.HandlerFunc {
 func setupSubtestContext(w *httptest.ResponseRecorder, req *http.Request, userID uuid.UUID) (*gin.Context, *gin.Engine) {
 	c, r := gin.CreateTestContext(w)
 	c.Request = req
-	
+
 	if userID != uuid.Nil {
 		claims := &auth.UserClaims{
 			RegisteredClaims: jwt.RegisteredClaims{
@@ -83,6 +86,6 @@ func setupSubtestContext(w *httptest.ResponseRecorder, req *http.Request, userID
 		}
 		c.Set("user", claims)
 	}
-	
+
 	return c, r
 }
