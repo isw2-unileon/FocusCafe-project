@@ -8,6 +8,7 @@ import (
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/domain"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // UserOrdersRepository provides methods to interact with the database for user-related operations
@@ -177,8 +178,12 @@ func (r *UserOrdersRepository) CompleteUserOrder(ctx context.Context, userID uui
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// 1. Obtain order data and cafe order
 		var userOrder models.UserOrder
-		if err := tx.Preload("CafeOrder").First(&userOrder, orderID).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Preload("CafeOrder").First(&userOrder, orderID).Error; err != nil {
 			return err
+		}
+
+		if userOrder.Status == "completed" {
+			return errors.New("order already completed")
 		}
 
 		// 2. Handle group order vs personal order
