@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 )
 
 // ─────────────────────────────────────────────
@@ -120,11 +120,15 @@ func TestSyncUser_Auth_TableDriven(t *testing.T) {
 			}
 			r.ServeHTTP(w, req)
 
-			assert.Equal(t, tt.expectedStatus, w.Code)
+			if w.Code != tt.expectedStatus {
+				t.Errorf("[%s] expected status %d, got %d", tt.name, tt.expectedStatus, w.Code)
+			}
 
 			var body map[string]interface{}
 			_ = json.Unmarshal(w.Body.Bytes(), &body)
-			assert.Equal(t, tt.expectedError, body["error"])
+			if body["error"] != tt.expectedError {
+				t.Errorf("[%s] expected error %q, got %q", tt.name, tt.expectedError, body["error"])
+			}
 		})
 	}
 }
@@ -194,12 +198,16 @@ func TestSyncUser_ExtractUserData_TableDriven(t *testing.T) {
 			req.Header.Set("Authorization", "Bearer valid-token")
 			r.ServeHTTP(w, req)
 
-			assert.Equal(t, tt.expectedStatus, w.Code)
+			if w.Code != tt.expectedStatus {
+				t.Errorf("[%s] expected status %d, got %d", tt.name, tt.expectedStatus, w.Code)
+			}
 
 			if tt.expectedError != "" {
 				var body map[string]interface{}
 				_ = json.Unmarshal(w.Body.Bytes(), &body)
-				assert.Equal(t, tt.expectedError, body["error"])
+				if body["error"] != tt.expectedError {
+					t.Errorf("[%s] expected error %q, got %q", tt.name, tt.expectedError, body["error"])
+				}
 			}
 		})
 	}
@@ -226,12 +234,18 @@ func TestSyncUser_UserAlreadyExists(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer valid-token")
 	r.ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusOK, w.Code)
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status 200, got %d", w.Code)
+	}
 
 	var body map[string]interface{}
 	_ = json.Unmarshal(w.Body.Bytes(), &body)
-	assert.Equal(t, false, body["synced"])
-	assert.Equal(t, "usuario ya existe", body["message"])
+	if body["synced"] != false {
+		t.Errorf("expected synced=false, got %v", body["synced"])
+	}
+	if body["message"] != "usuario ya existe" {
+		t.Errorf("expected message %q, got %q", "usuario ya existe", body["message"])
+	}
 }
 
 // ─────────────────────────────────────────────
@@ -310,10 +324,15 @@ func TestSyncUser_Failures_TableDriven(t *testing.T) {
 			req.Header.Set("Authorization", "Bearer valid-token")
 			r.ServeHTTP(w, req)
 
-			assert.Equal(t, tt.expectedStatus, w.Code)
+			if w.Code != tt.expectedStatus {
+				t.Errorf("[%s] expected status %d, got %d", tt.name, tt.expectedStatus, w.Code)
+			}
 			var body map[string]interface{}
 			_ = json.Unmarshal(w.Body.Bytes(), &body)
-			assert.Contains(t, body["error"].(string), tt.expectedError)
+			errStr, _ := body["error"].(string)
+			if !strings.Contains(errStr, tt.expectedError) {
+				t.Errorf("[%s] expected error to contain %q, got %q", tt.name, tt.expectedError, errStr)
+			}
 		})
 	}
 }
@@ -327,8 +346,11 @@ func TestCreateUserProfileSync_FallbackError(t *testing.T) {
 	defer stub.Close()
 	h := newSyncHandler(stub.URL)
 	err := h.createUserProfileSync("uuid", "test@test.com", "First", "Last")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to create profile (status 400)")
+	if err == nil {
+		t.Error("expected error, got nil")
+	} else if !strings.Contains(err.Error(), "failed to create profile (status 400)") {
+		t.Errorf("expected fallback error, got %v", err)
+	}
 }
 
 // ─────────────────────────────────────────────
@@ -369,9 +391,15 @@ func TestExtractUserData_EdgeCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, _, fn, ln, err := extractUserData(tt.userData)
-			assert.NoError(t, err)
-			assert.Equal(t, tt.expectedFirstName, fn)
-			assert.Equal(t, tt.expectedLastName, ln)
+			if err != nil {
+				t.Errorf("unexpected error: %v", err)
+			}
+			if fn != tt.expectedFirstName {
+				t.Errorf("expected first name %q, got %q", tt.expectedFirstName, fn)
+			}
+			if ln != tt.expectedLastName {
+				t.Errorf("expected last name %q, got %q", tt.expectedLastName, ln)
+			}
 		})
 	}
 }
@@ -384,8 +412,11 @@ func TestFetchSupabaseUser_Errors(t *testing.T) {
 	t.Run("Connection Error", func(t *testing.T) {
 		h := newSyncHandler("http://localhost:9999") // invalid URL
 		_, err := h.fetchSupabaseUser("token")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "error connecting to auth service")
+		if err == nil {
+			t.Error("expected error, got nil")
+		} else if !strings.Contains(err.Error(), "error connecting to auth service") {
+			t.Errorf("expected connection error, got %v", err)
+		}
 	})
 
 	t.Run("Decoding Error", func(t *testing.T) {
@@ -396,8 +427,11 @@ func TestFetchSupabaseUser_Errors(t *testing.T) {
 		defer stub.Close()
 		h := newSyncHandler(stub.URL)
 		_, err := h.fetchSupabaseUser("token")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "error decoding user data")
+		if err == nil {
+			t.Error("expected error, got nil")
+		} else if !strings.Contains(err.Error(), "error decoding user data") {
+			t.Errorf("expected decoding error, got %v", err)
+		}
 	})
 }
 
@@ -405,8 +439,11 @@ func TestUserExists_Errors(t *testing.T) {
 	t.Run("Connection Error", func(t *testing.T) {
 		h := newSyncHandler("http://localhost:9999")
 		_, err := h.userExists("uuid")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "error connecting to database")
+		if err == nil {
+			t.Error("expected error, got nil")
+		} else if !strings.Contains(err.Error(), "error connecting to database") {
+			t.Errorf("expected connection error, got %v", err)
+		}
 	})
 
 	t.Run("Non-200 Status", func(t *testing.T) {
@@ -416,8 +453,11 @@ func TestUserExists_Errors(t *testing.T) {
 		defer stub.Close()
 		h := newSyncHandler(stub.URL)
 		_, err := h.userExists("uuid")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "error verifying user existence")
+		if err == nil {
+			t.Error("expected error, got nil")
+		} else if !strings.Contains(err.Error(), "error verifying user existence") {
+			t.Errorf("expected status error, got %v", err)
+		}
 	})
 
 	t.Run("Decoding Error", func(t *testing.T) {
@@ -428,8 +468,11 @@ func TestUserExists_Errors(t *testing.T) {
 		defer stub.Close()
 		h := newSyncHandler(stub.URL)
 		_, err := h.userExists("uuid")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "error decoding database response")
+		if err == nil {
+			t.Error("expected error, got nil")
+		} else if !strings.Contains(err.Error(), "error decoding database response") {
+			t.Errorf("expected decoding error, got %v", err)
+		}
 	})
 }
 
@@ -437,8 +480,11 @@ func TestCreateUserProfileSync_Errors(t *testing.T) {
 	t.Run("Network Error", func(t *testing.T) {
 		h := newSyncHandler("http://localhost:9999")
 		err := h.createUserProfileSync("uuid", "test@test.com", "First", "Last")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "network error while creating profile")
+		if err == nil {
+			t.Error("expected error, got nil")
+		} else if !strings.Contains(err.Error(), "network error while creating profile") {
+			t.Errorf("expected network error, got %v", err)
+		}
 	})
 
 	t.Run("Duplicate Error (23505)", func(t *testing.T) {
@@ -449,7 +495,9 @@ func TestCreateUserProfileSync_Errors(t *testing.T) {
 		defer stub.Close()
 		h := newSyncHandler(stub.URL)
 		err := h.createUserProfileSync("uuid", "test@test.com", "First", "Last")
-		assert.NoError(t, err) // Should return nil for duplicate
+		if err != nil {
+			t.Errorf("expected no error for duplicate, got %v", err)
+		}
 	})
 
 	t.Run("Database Error with Message", func(t *testing.T) {
@@ -460,8 +508,11 @@ func TestCreateUserProfileSync_Errors(t *testing.T) {
 		defer stub.Close()
 		h := newSyncHandler(stub.URL)
 		err := h.createUserProfileSync("uuid", "test@test.com", "First", "Last")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "database error: custom error")
+		if err == nil {
+			t.Error("expected error, got nil")
+		} else if !strings.Contains(err.Error(), "database error: custom error") {
+			t.Errorf("expected custom error message, got %v", err)
+		}
 	})
 
 	t.Run("Decoding error message fails", func(t *testing.T) {
@@ -472,8 +523,11 @@ func TestCreateUserProfileSync_Errors(t *testing.T) {
 		defer stub.Close()
 		h := newSyncHandler(stub.URL)
 		err := h.createUserProfileSync("uuid", "test@test.com", "First", "Last")
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to create profile (status 400)")
+		if err == nil {
+			t.Error("expected error, got nil")
+		} else if !strings.Contains(err.Error(), "failed to create profile (status 400)") {
+			t.Errorf("expected fallback error, got %v", err)
+		}
 	})
 }
 
@@ -494,14 +548,26 @@ func TestSyncUser_Success(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer valid-token")
 	r.ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusCreated, w.Code)
+	if w.Code != http.StatusCreated {
+		t.Errorf("expected status 201, got %d", w.Code)
+	}
 
 	var body map[string]interface{}
 	_ = json.Unmarshal(w.Body.Bytes(), &body)
 
-	assert.Equal(t, true, body["synced"])
-	assert.Equal(t, "uuid-001", body["id"])
-	assert.Equal(t, "ada@focus.com", body["email"])
-	assert.Equal(t, "Ada", body["first_name"])
-	assert.Equal(t, "Lovelace", body["last_name"])
+	if body["synced"] != true {
+		t.Errorf("expected synced=true, got %v", body["synced"])
+	}
+	if body["id"] != "uuid-001" {
+		t.Errorf("expected id %q, got %q", "uuid-001", body["id"])
+	}
+	if body["email"] != "ada@focus.com" {
+		t.Errorf("expected email %q, got %q", "ada@focus.com", body["email"])
+	}
+	if body["first_name"] != "Ada" {
+		t.Errorf("expected first_name %q, got %q", "Ada", body["first_name"])
+	}
+	if body["last_name"] != "Lovelace" {
+		t.Errorf("expected last_name %q, got %q", "Lovelace", body["last_name"])
+	}
 }

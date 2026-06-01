@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 )
 
 // ─────────────────────────────────────────────
@@ -85,8 +85,12 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseResponse: successBody,
 			expectedStatus:   http.StatusOK,
 			checkBody: func(t *testing.T, body map[string]interface{}) {
-				assert.Equal(t, "jwt-token-abc123", body["token"])
-				assert.NotNil(t, body["user"])
+				if body["token"] != "jwt-token-abc123" {
+					t.Errorf("expected token %q, got %q", "jwt-token-abc123", body["token"])
+				}
+				if body["user"] == nil {
+					t.Error("expected user to be not nil")
+				}
 			},
 		},
 		{
@@ -96,7 +100,9 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseResponse: badCredsBody,
 			expectedStatus:   http.StatusUnauthorized,
 			checkBody: func(t *testing.T, body map[string]interface{}) {
-				assert.Equal(t, "Invalid login credentials", body["error"])
+				if body["error"] != "Invalid login credentials" {
+					t.Errorf("expected error %q, got %q", "Invalid login credentials", body["error"])
+				}
 			},
 		},
 		{
@@ -106,7 +112,9 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseResponse: successBody,
 			expectedStatus:   http.StatusBadRequest,
 			checkBody: func(t *testing.T, body map[string]interface{}) {
-				assert.Equal(t, "invalid request body", body["error"])
+				if body["error"] != "invalid request body" {
+					t.Errorf("expected error %q, got %q", "invalid request body", body["error"])
+				}
 			},
 		},
 		{
@@ -116,7 +124,9 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseResponse: badCredsBody,
 			expectedStatus:   http.StatusUnauthorized,
 			checkBody: func(t *testing.T, body map[string]interface{}) {
-				assert.Equal(t, "Invalid login credentials", body["error"])
+				if body["error"] != "Invalid login credentials" {
+					t.Errorf("expected error %q, got %q", "Invalid login credentials", body["error"])
+				}
 			},
 		},
 		{
@@ -126,7 +136,9 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseResponse: map[string]interface{}{"msg": "Specific error message from msg field"},
 			expectedStatus:   http.StatusUnauthorized,
 			checkBody: func(t *testing.T, body map[string]interface{}) {
-				assert.Equal(t, "Specific error message from msg field", body["error"])
+				if body["error"] != "Specific error message from msg field" {
+					t.Errorf("expected error %q, got %q", "Specific error message from msg field", body["error"])
+				}
 			},
 		},
 		{
@@ -136,7 +148,9 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseResponse: map[string]interface{}{"message": "Specific error message from message field"},
 			expectedStatus:   http.StatusUnauthorized,
 			checkBody: func(t *testing.T, body map[string]interface{}) {
-				assert.Equal(t, "Specific error message from message field", body["error"])
+				if body["error"] != "Specific error message from message field" {
+					t.Errorf("expected error %q, got %q", "Specific error message from message field", body["error"])
+				}
 			},
 		},
 		{
@@ -146,7 +160,9 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseResponse: map[string]interface{}{"error": "unknown"},
 			expectedStatus:   http.StatusUnauthorized,
 			checkBody: func(t *testing.T, body map[string]interface{}) {
-				assert.Equal(t, "invalid credentials", body["error"])
+				if body["error"] != "invalid credentials" {
+					t.Errorf("expected error %q, got %q", "invalid credentials", body["error"])
+				}
 			},
 		},
 		{
@@ -156,7 +172,10 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseResponse: "{bad-json-corrupt-data",
 			expectedStatus:   http.StatusUnauthorized,
 			checkBody: func(t *testing.T, body map[string]interface{}) {
-				assert.Contains(t, body["error"].(string), "error processing auth response")
+				errStr, _ := body["error"].(string)
+				if !strings.Contains(errStr, "error processing auth response") {
+					t.Errorf("expected error to contain %q, got %q", "error processing auth response", errStr)
+				}
 			},
 		},
 		{
@@ -167,7 +186,9 @@ func TestLogin_TableDriven(t *testing.T) {
 			closeServer:      true,
 			expectedStatus:   http.StatusUnauthorized,
 			checkBody: func(t *testing.T, body map[string]interface{}) {
-				assert.Equal(t, "connection error: could not reach auth service", body["error"])
+				if body["error"] != "connection error: could not reach auth service" {
+					t.Errorf("expected error %q, got %q", "connection error: could not reach auth service", body["error"])
+				}
 			},
 		},
 	}
@@ -249,7 +270,9 @@ func TestGoogleAuth_TableDriven(t *testing.T) {
 			}
 
 			location := w.Header().Get("Location")
-			assert.Equal(t, tt.expectedLocation, location, "[%s] unexpected redirect URL", tt.name)
+			if location != tt.expectedLocation {
+				t.Errorf("expected location %q, got %q", tt.expectedLocation, location)
+			}
 		})
 	}
 }
@@ -275,8 +298,12 @@ func TestLogin_ParseAuthResponse_MissingToken(t *testing.T) {
 	var body map[string]interface{}
 	_ = json.Unmarshal(w.Body.Bytes(), &body)
 
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Equal(t, "authentication token not found", body["error"])
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected status 401, got %d", w.Code)
+	}
+	if body["error"] != "authentication token not found" {
+		t.Errorf("expected error %q, got %q", "authentication token not found", body["error"])
+	}
 }
 
 // ─────────────────────────────────────────────
@@ -288,5 +315,7 @@ func TestCallSupabaseAuth_InvalidMethod(t *testing.T) {
 
 	h.SupabaseURL = "http://[::1]:abcd" // URL inválida para forzar que falle el request interno
 	_, err := h.callSupabaseAuth([]byte(`{}`))
-	assert.Error(t, err)
+	if err == nil {
+		t.Error("expected error, got nil")
+	}
 }

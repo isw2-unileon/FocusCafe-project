@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	"github.com/stretchr/testify/assert"
 )
 
 // ─────────────────────────────────────────────
@@ -17,7 +17,6 @@ import (
 
 // supabaseMultiStub starts an httptest.Server that routes requests to
 // /auth/v1/signup, /rest/v1/users and /rest/v1/user_progress.
-// Si un body es un string directo (ej: "{bad-json"), se escribe directamente en la respuesta.
 func supabaseMultiStub(
 	t *testing.T,
 	authStatus int, authBody interface{},
@@ -205,11 +204,13 @@ func TestRegister_Validation_TableDriven(t *testing.T) {
 				t.Errorf("[%s] expected status %d, got %d", tt.name, tt.expectedStatus, w.Code)
 			}
 
-			var body map[string]interface{}
-			if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+			var respBody map[string]interface{}
+			if err := json.Unmarshal(w.Body.Bytes(), &respBody); err != nil {
 				t.Fatalf("[%s] could not parse response body: %v", tt.name, err)
 			}
-			assert.Equal(t, tt.expectedError, body["error"], "[%s] unexpected error message", tt.name)
+			if respBody["error"] != tt.expectedError {
+				t.Errorf("[%s] expected error %q, got %q", tt.name, tt.expectedError, respBody["error"])
+			}
 		})
 	}
 }
@@ -255,28 +256,28 @@ func TestRegister_AuthUser_TableDriven(t *testing.T) {
 			authStatus:     http.StatusInternalServerError,
 			authBody:       map[string]interface{}{},
 			expectedStatus: http.StatusConflict,
-			expectedError:  "could not create user (status 500)", // CORREGIDO
+			expectedError:  "could not create user (status 500)",
 		},
 		{
 			name:           "Supabase Auth returns 200 but missing user field",
 			authStatus:     http.StatusOK,
 			authBody:       map[string]interface{}{"something": "unexpected"},
 			expectedStatus: http.StatusConflict,
-			expectedError:  "unexpected response format from auth service", // CORREGIDO
+			expectedError:  "unexpected response format from auth service",
 		},
 		{
 			name:           "Supabase Auth returns 200 but user has no id",
 			authStatus:     http.StatusOK,
 			authBody:       map[string]interface{}{"user": map[string]interface{}{"email": "ada@focus.com"}},
 			expectedStatus: http.StatusConflict,
-			expectedError:  "user ID not found in auth response", // CORREGIDO
+			expectedError:  "user ID not found in auth response",
 		},
 		{
 			name:           "Supabase Auth returns corrupt JSON",
 			authStatus:     http.StatusOK,
 			authBody:       "{invalid-json-corrupt",
 			expectedStatus: http.StatusConflict,
-			expectedError:  "error processing auth service response", // CORREGIDO
+			expectedError:  "error processing auth service response",
 		},
 		{
 			name:           "Supabase Auth network connection error",
@@ -284,7 +285,7 @@ func TestRegister_AuthUser_TableDriven(t *testing.T) {
 			authBody:       successAuthBody,
 			closeServer:    true,
 			expectedStatus: http.StatusConflict,
-			expectedError:  "connection error while creating user", // CORREGIDO
+			expectedError:  "connection error while creating user",
 		},
 	}
 
@@ -315,11 +316,14 @@ func TestRegister_AuthUser_TableDriven(t *testing.T) {
 				t.Errorf("[%s] expected status %d, got %d", tt.name, tt.expectedStatus, w.Code)
 			}
 
-			var body map[string]interface{}
-			if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+			var respBody map[string]interface{}
+			if err := json.Unmarshal(w.Body.Bytes(), &respBody); err != nil {
 				t.Fatalf("[%s] could not parse response body: %v", tt.name, err)
 			}
-			assert.Contains(t, body["error"].(string), tt.expectedError, "[%s] unexpected error message", tt.name)
+			errStr, _ := respBody["error"].(string)
+			if !strings.Contains(errStr, tt.expectedError) {
+				t.Errorf("[%s] expected error to contain %q, got %q", tt.name, tt.expectedError, errStr)
+			}
 		})
 	}
 }
@@ -348,7 +352,7 @@ func TestRegister_UserProfileAndProgress_TableDriven(t *testing.T) {
 			progressStatus: http.StatusCreated,
 			progressBody:   []interface{}{},
 			expectedStatus: http.StatusInternalServerError,
-			expectedError:  "database error: db error", // CORREGIDO
+			expectedError:  "database error: db error",
 		},
 		{
 			name:           "Profile insertion returns corrupt JSON error",
@@ -357,7 +361,7 @@ func TestRegister_UserProfileAndProgress_TableDriven(t *testing.T) {
 			progressStatus: http.StatusCreated,
 			progressBody:   []interface{}{},
 			expectedStatus: http.StatusInternalServerError,
-			expectedError:  "error saving profile (status 500)", // CORREGIDO
+			expectedError:  "error saving profile (status 500)",
 		},
 		{
 			name:           "Profile insertion fails without message field",
@@ -376,7 +380,7 @@ func TestRegister_UserProfileAndProgress_TableDriven(t *testing.T) {
 			progressStatus: http.StatusInternalServerError,
 			progressBody:   map[string]interface{}{"message": "db error"},
 			expectedStatus: http.StatusInternalServerError,
-			expectedError:  "database error: db error", // CORREGIDO
+			expectedError:  "database error: db error",
 		},
 		{
 			name:           "Progress insertion fails without message field",
@@ -394,7 +398,7 @@ func TestRegister_UserProfileAndProgress_TableDriven(t *testing.T) {
 			progressStatus: http.StatusInternalServerError,
 			progressBody:   "{corrupt-json",
 			expectedStatus: http.StatusInternalServerError,
-			expectedError:  "error saving progress (status 500)", // CORREGIDO
+			expectedError:  "error saving progress (status 500)",
 		},
 	}
 
@@ -409,7 +413,6 @@ func TestRegister_UserProfileAndProgress_TableDriven(t *testing.T) {
 			h := newHandler(stub.URL)
 
 			if tt.closeServer {
-				// Para simular caída de red justo en el perfil, destruimos el stub
 				stub.Close()
 			}
 
@@ -426,11 +429,14 @@ func TestRegister_UserProfileAndProgress_TableDriven(t *testing.T) {
 				t.Errorf("[%s] expected status %d, got %d", tt.name, tt.expectedStatus, w.Code)
 			}
 
-			var body map[string]interface{}
-			if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+			var respBody map[string]interface{}
+			if err := json.Unmarshal(w.Body.Bytes(), &respBody); err != nil {
 				t.Fatalf("[%s] could not parse response body: %v", tt.name, err)
 			}
-			assert.Contains(t, body["error"].(string), tt.expectedError, "[%s] unexpected error message", tt.name)
+			errStr, _ := respBody["error"].(string)
+			if !strings.Contains(errStr, tt.expectedError) {
+				t.Errorf("[%s] expected error to contain %q, got %q", tt.name, tt.expectedError, errStr)
+			}
 		})
 	}
 }
@@ -442,9 +448,6 @@ func TestRegister_UserProfileAndProgress_TableDriven(t *testing.T) {
 func TestRegister_ProgressNetworkError(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// Stub que simula éxito inicial en Auth. No podemos cerrar el stub completo
-	// porque mataría el flujo del perfil. Así que usaremos un truco: una URL rota para progreso modificando el handler.
-	// Pero más directo: interceptamos el flujo llamando al método directamente.
 	stub := supabaseMultiStub(t,
 		http.StatusOK, successAuthBody,
 		http.StatusCreated, successProfileBody,
@@ -452,12 +455,14 @@ func TestRegister_ProgressNetworkError(t *testing.T) {
 	)
 	h := newHandler(stub.URL)
 
-	// Cambiamos la URL a algo inválido justo antes de ejecutar para simular caída de red en progreso
-	h.SupabaseURL = "http://localhost:9999" // URL inexistente
+	h.SupabaseURL = "http://localhost:9999"
 
 	err := h.createUserProgress("uuid-test")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection error while saving user progress") // CORREGIDO
+	if err == nil {
+		t.Errorf("expected error, got nil")
+	} else if !strings.Contains(err.Error(), "connection error while saving user progress") {
+		t.Errorf("expected connection error, got %v", err)
+	}
 }
 
 // ─────────────────────────────────────────────
@@ -487,22 +492,29 @@ func TestRegister_Success(t *testing.T) {
 		t.Errorf("expected status 201, got %d — body: %s", w.Code, w.Body.String())
 	}
 
-	var body map[string]interface{}
-	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+	var respBody map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &respBody); err != nil {
 		t.Fatalf("could not parse response body: %v", err)
 	}
 
-	assert.Equal(t, "uuid-ada-001", body["id"])
-	assert.Equal(t, "ada@focus.com", body["email"])
-	assert.Equal(t, "Ada", body["first_name"])
-	assert.Equal(t, "Lovelace", body["last_name"])
+	if respBody["id"] != "uuid-ada-001" {
+		t.Errorf("expected id %q, got %q", "uuid-ada-001", respBody["id"])
+	}
+	if respBody["email"] != "ada@focus.com" {
+		t.Errorf("expected email %q, got %q", "ada@focus.com", respBody["email"])
+	}
+	if respBody["first_name"] != "Ada" {
+		t.Errorf("expected first_name %q, got %q", "Ada", respBody["first_name"])
+	}
+	if respBody["last_name"] != "Lovelace" {
+		t.Errorf("expected last_name %q, got %q", "Lovelace", respBody["last_name"])
+	}
 }
 
 // ─────────────────────────────────────────────
 // Direct Unit Tests (For isolated blocks)
 // ─────────────────────────────────────────────
 
-// TestCreateUserProfile_EmptyRole ejecuta directamente el método para cubrir el bloque `if role == ""` (línea 140)
 func TestCreateUserProfile_EmptyRole(t *testing.T) {
 	stub := supabaseMultiStub(t,
 		http.StatusOK, successAuthBody,
@@ -517,26 +529,31 @@ func TestCreateUserProfile_EmptyRole(t *testing.T) {
 		Email:     "ada@focus.com",
 	}
 
-	// Pasamos rol vacío "" para forzar la asignación por defecto `role = "user"`
 	err := h.createUserProfile("uuid-ada-001", req, "")
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
 }
 
-// TestCreateUserProfile_ConnectionError cubre la línea 165 (error de conexión directo)
 func TestCreateUserProfile_ConnectionError(t *testing.T) {
-	h := newHandler("http://localhost:9999") // URL que no existe
+	h := newHandler("http://localhost:9999")
 
 	req := RegisterRequest{Email: "test@test.com"}
 	err := h.createUserProfile("uuid", req, "user")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection error while saving user profile")
+	if err == nil {
+		t.Errorf("expected error, got nil")
+	} else if !strings.Contains(err.Error(), "connection error while saving user profile") {
+		t.Errorf("expected connection error, got %v", err)
+	}
 }
 
-// TestCreateUserProgress_ConnectionError cubre la línea 205 (error de conexión directo en progreso)
 func TestCreateUserProgress_ConnectionError(t *testing.T) {
 	h := newHandler("http://localhost:9999")
 
 	err := h.createUserProgress("uuid")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "connection error while saving user progress")
+	if err == nil {
+		t.Errorf("expected error, got nil")
+	} else if !strings.Contains(err.Error(), "connection error while saving user progress") {
+		t.Errorf("expected connection error, got %v", err)
+	}
 }
