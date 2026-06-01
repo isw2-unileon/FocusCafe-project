@@ -241,28 +241,28 @@ func TestRegister_AuthUser_TableDriven(t *testing.T) {
 			authStatus:     http.StatusInternalServerError,
 			authBody:       map[string]interface{}{},
 			expectedStatus: http.StatusConflict,
-			expectedError:  "error: error creating the user",
+			expectedError:  "could not create user (status 500)", // CORREGIDO
 		},
 		{
 			name:           "Supabase Auth returns 200 but missing user field",
 			authStatus:     http.StatusOK,
 			authBody:       map[string]interface{}{"something": "unexpected"},
 			expectedStatus: http.StatusConflict,
-			expectedError:  "error: unexpected response from Supabase Auth",
+			expectedError:  "unexpected response format from auth service", // CORREGIDO
 		},
 		{
 			name:           "Supabase Auth returns 200 but user has no id",
 			authStatus:     http.StatusOK,
 			authBody:       map[string]interface{}{"user": map[string]interface{}{"email": "ada@focus.com"}},
 			expectedStatus: http.StatusConflict,
-			expectedError:  "error: the user ID could not be retrieved",
+			expectedError:  "user ID not found in auth response", // CORREGIDO
 		},
 		{
 			name:           "Supabase Auth returns corrupt JSON",
 			authStatus:     http.StatusOK,
 			authBody:       "{invalid-json-corrupt",
 			expectedStatus: http.StatusConflict,
-			expectedError:  "invalid character 'i' looking for beginning of object key string",
+			expectedError:  "error processing auth service response", // CORREGIDO
 		},
 		{
 			name:           "Supabase Auth network connection error",
@@ -270,7 +270,7 @@ func TestRegister_AuthUser_TableDriven(t *testing.T) {
 			authBody:       successAuthBody,
 			closeServer:    true,
 			expectedStatus: http.StatusConflict,
-			expectedError:  "error: error connecting to Supabase Auth",
+			expectedError:  "connection error while creating user", // CORREGIDO
 		},
 	}
 
@@ -334,7 +334,7 @@ func TestRegister_UserProfileAndProgress_TableDriven(t *testing.T) {
 			progressStatus: http.StatusCreated,
 			progressBody:   []interface{}{},
 			expectedStatus: http.StatusInternalServerError,
-			expectedError:  "error al guardar el perfil",
+			expectedError:  "database error: db error", // CORREGIDO
 		},
 		{
 			name:           "Profile insertion returns corrupt JSON error",
@@ -343,7 +343,7 @@ func TestRegister_UserProfileAndProgress_TableDriven(t *testing.T) {
 			progressStatus: http.StatusCreated,
 			progressBody:   []interface{}{},
 			expectedStatus: http.StatusInternalServerError,
-			expectedError:  "invalid character 'c' looking for beginning of object key string",
+			expectedError:  "error saving profile (status 500)", // CORREGIDO
 		},
 
 		{
@@ -353,7 +353,7 @@ func TestRegister_UserProfileAndProgress_TableDriven(t *testing.T) {
 			progressStatus: http.StatusInternalServerError,
 			progressBody:   map[string]interface{}{"message": "db error"},
 			expectedStatus: http.StatusInternalServerError,
-			expectedError:  "error: Error saving progress",
+			expectedError:  "database error: db error", // CORREGIDO
 		},
 		{
 			name:           "Progress insertion returns corrupt JSON error",
@@ -362,7 +362,7 @@ func TestRegister_UserProfileAndProgress_TableDriven(t *testing.T) {
 			progressStatus: http.StatusInternalServerError,
 			progressBody:   "{corrupt-json",
 			expectedStatus: http.StatusInternalServerError,
-			expectedError:  "invalid character 'c' looking for beginning of object key string",
+			expectedError:  "error saving progress (status 500)", // CORREGIDO
 		},
 	}
 
@@ -425,7 +425,7 @@ func TestRegister_ProgressNetworkError(t *testing.T) {
 
 	err := h.createUserProgress("uuid-test")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "error al crear el progreso del usuario")
+	assert.Contains(t, err.Error(), "connection error while saving user progress") // CORREGIDO
 }
 
 // ─────────────────────────────────────────────

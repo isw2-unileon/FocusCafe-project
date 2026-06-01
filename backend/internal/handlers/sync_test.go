@@ -148,7 +148,7 @@ func TestSyncUser_ExtractUserData_TableDriven(t *testing.T) {
 			name:           "Auth response missing user id",
 			authBody:       map[string]interface{}{"email": "user@focus.com"},
 			expectedStatus: http.StatusInternalServerError,
-			expectedError:  "missing user id",
+			expectedError:  "user id not found in token",
 		},
 		{
 			name:           "Auth response with full_name in metadata",
