@@ -120,6 +120,26 @@ func TestLogin_TableDriven(t *testing.T) {
 			},
 		},
 		{
+			name:             "Unauthorized - msg field in Supabase response",
+			requestBody:      map[string]string{"email": "user@focus.com", "password": "wrong"},
+			supabaseStatus:   http.StatusBadRequest,
+			supabaseResponse: map[string]interface{}{"msg": "Specific error message from msg field"},
+			expectedStatus:   http.StatusUnauthorized,
+			checkBody: func(t *testing.T, body map[string]interface{}) {
+				assert.Equal(t, "Specific error message from msg field", body["error"])
+			},
+		},
+		{
+			name:             "Unauthorized - message field in Supabase response",
+			requestBody:      map[string]string{"email": "user@focus.com", "password": "wrong"},
+			supabaseStatus:   http.StatusBadRequest,
+			supabaseResponse: map[string]interface{}{"message": "Specific error message from message field"},
+			expectedStatus:   http.StatusUnauthorized,
+			checkBody: func(t *testing.T, body map[string]interface{}) {
+				assert.Equal(t, "Specific error message from message field", body["error"])
+			},
+		},
+		{
 			name:             "Unauthorized - missing error_description in Supabase response",
 			requestBody:      map[string]string{"email": "user@focus.com", "password": "wrong"},
 			supabaseStatus:   http.StatusBadRequest,
