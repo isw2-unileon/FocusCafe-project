@@ -45,14 +45,9 @@ jobs:
           # 2. Initialize and start the local cluster
           supabase start
 
-      # Seed the local Postgres container with your coffee menu
-      - name: Run Database Seed
-        env:
-          PGSSLMODE: disable
-        run: |
-          echo "Loading initial coffee menu data into the LOCAL database..."
-          sudo apt-get update && sudo apt-get install -y postgresql-client
-          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable" -f supabase/seed.sql
+          # 3. Force seed
+          echo "Injecting data..."
+          supabase db query -f supabase/seed.sql
 
       # Dynamically build the .env files using LOCAL credentials only
       - name: Create Local .env Files
