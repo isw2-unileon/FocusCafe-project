@@ -25,7 +25,6 @@ func (h *Handler) Login(c *gin.Context) {
 
 	token, user, err := h.authenticateUser(req.Email, req.Password)
 	if err != nil {
-		// Aquí nos aseguramos de que el error siempre se envíe como un string limpio
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
@@ -94,7 +93,6 @@ func parseAuthResponse(resp *http.Response) (string, interface{}, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		// Intentamos extraer el mensaje de error de varios campos posibles en Supabase
 		if errMsg, ok := result["error_description"].(string); ok && errMsg != "" {
 			return "", nil, fmt.Errorf("%s", errMsg)
 		}

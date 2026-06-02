@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// SyncUser sincroniza el usuario de Google con public.users y user_progress
+// SyncUser synchronizes the Google user with public.users and user_progress
 func (h *Handler) SyncUser(c *gin.Context) {
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
@@ -179,7 +179,7 @@ func (h *Handler) createUserProfileSync(userID, email, firstName, lastName strin
 			return fmt.Errorf("failed to create profile (status %d)", resp.StatusCode)
 		}
 
-		// Si es un error de duplicado (Postgres code 23505)
+		// If it's a duplicate error (Postgres code 23505)
 		if code, ok := errBody["code"].(string); ok && code == "23505" {
 			return nil
 		}

@@ -19,7 +19,7 @@ type RegisterRequest struct {
 	ConfirmPassword string `json:"confirm_password"`
 }
 
-// Register es el handler principal, solo orquesta
+// Register is the main handler
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -56,7 +56,7 @@ func (h *Handler) Register(c *gin.Context) {
 	})
 }
 
-// validateRegisterRequest valida los campos del formulario
+// validateRegisterRequest validates form data
 func validateRegisterRequest(req *RegisterRequest) error {
 	req.FirstName = strings.TrimSpace(req.FirstName)
 	req.LastName = strings.TrimSpace(req.LastName)
@@ -77,7 +77,7 @@ func validateRegisterRequest(req *RegisterRequest) error {
 	return nil
 }
 
-// createAuthUser crea el usuario en Supabase Auth y devuelve su UUID
+// createAuthUser creates the user in Supabase Auth and return its UUID
 func (h *Handler) createAuthUser(email, password string) (string, error) {
 	body, _ := json.Marshal(map[string]string{
 		"email":    email,
@@ -103,7 +103,6 @@ func (h *Handler) createAuthUser(email, password string) (string, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		// Intentamos extraer el mensaje de error de varios campos posibles
 		if msg, ok := data["msg"].(string); ok && msg != "" {
 			return "", fmt.Errorf("%s", msg)
 		}
@@ -119,7 +118,7 @@ func (h *Handler) createAuthUser(email, password string) (string, error) {
 	return extractUserID(data)
 }
 
-// extractUserID extrae el UUID del usuario de la respuesta de Supabase
+// extractUserID extracts the user's UUID from the Supabase response
 func extractUserID(data map[string]any) (string, error) {
 	userMap, ok := data["user"].(map[string]any)
 	if !ok {
@@ -134,7 +133,7 @@ func extractUserID(data map[string]any) (string, error) {
 	return userID, nil
 }
 
-// createUserProfile inserta el perfil del usuario en la tabla public.users
+// createUserProfile inserts the user profile into the public.users table
 func (h *Handler) createUserProfile(userID string, req RegisterRequest, role string) error {
 	if role == "" {
 		role = "user"
@@ -171,7 +170,7 @@ func (h *Handler) createUserProfile(userID string, req RegisterRequest, role str
 		if err := json.NewDecoder(resp.Body).Decode(&profileErr); err != nil {
 			return fmt.Errorf("error saving profile (status %d)", resp.StatusCode)
 		}
-		
+
 		if msg, ok := profileErr["message"].(string); ok && msg != "" {
 			return fmt.Errorf("database error: %s", msg)
 		}
@@ -181,7 +180,7 @@ func (h *Handler) createUserProfile(userID string, req RegisterRequest, role str
 	return nil
 }
 
-// createUserProgress inserta el progreso inicial del usuario en public.user_progress
+// createUserProgress inserts the user's initial progress into public.user_progress
 func (h *Handler) createUserProgress(userID string) error {
 	body, _ := json.Marshal(map[string]any{
 		"user_id": userID,
