@@ -135,7 +135,7 @@ func (c *Client) WritePump() {
 		if err != nil {
 			return
 		}
-		_, _ = w.Write(message) // Explicitly ignore error to satisfy errcheck
+		_, _ = w.Write(message)
 
 		if err := w.Close(); err != nil {
 			return
@@ -169,8 +169,6 @@ func (c *Client) ReadPump(validator auth.TokenValidator, userService service.Use
 			}
 			continue
 		}
-
-		// Handle other messages from client if needed
 	}
 }
 
