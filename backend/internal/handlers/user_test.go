@@ -17,13 +17,13 @@ import (
 )
 
 type mockUserService struct {
-	getUserProfileFunc      func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error)
-	updateUserProfileFunc   func(ctx context.Context, id uuid.UUID, firstName, lastName string) error
-	getAllUsersFunc         func(ctx context.Context) ([]domain.UserProfile, error)
-	getUserByEmailFunc      func(ctx context.Context, email string) (*domain.UserProfile, error)
-	deleteUserFunc          func(ctx context.Context, id uuid.UUID) error
-	getLeaderboardFunc      func(ctx context.Context, limit int) ([]domain.UserProfile, error)
-	getUserLeaderboardFunc  func(ctx context.Context, userID uuid.UUID) (int, *domain.UserProfile, error)
+	getUserProfileFunc     func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error)
+	updateUserProfileFunc  func(ctx context.Context, id uuid.UUID, firstName, lastName string) error
+	getAllUsersFunc        func(ctx context.Context) ([]domain.UserProfile, error)
+	getUserByEmailFunc     func(ctx context.Context, email string) (*domain.UserProfile, error)
+	deleteUserFunc         func(ctx context.Context, id uuid.UUID) error
+	getLeaderboardFunc     func(ctx context.Context, limit int) ([]domain.UserProfile, error)
+	getUserLeaderboardFunc func(ctx context.Context, userID uuid.UUID) (int, *domain.UserProfile, error)
 }
 
 func (m *mockUserService) GetUserProfile(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error) {
@@ -84,7 +84,7 @@ func TestHandler_GetUserProfile(t *testing.T) {
 		{
 			name:            "Error: User not found returns 401",
 			userIDInContext: uuid.New(),
-			mockBehavior: func(_ context.Context, id uuid.UUID) (*domain.UserProfile, error) {
+			mockBehavior: func(_ context.Context, _ uuid.UUID) (*domain.UserProfile, error) {
 				return nil, errors.New("record not found")
 			},
 			wantStatusCode: http.StatusUnauthorized,
@@ -145,10 +145,10 @@ func TestHandler_UpdateUserProfile(t *testing.T) {
 			name:            "Success: Returns 200 and Updated Profile",
 			userIDInContext: uuid.New().String(),
 			requestBody:     `{"first_name": "John", "last_name": "Doe"}`,
-			mockUpdateBehavior: func(_ context.Context, id uuid.UUID, fn, ln string) error {
+			mockUpdateBehavior: func(_ context.Context, _ uuid.UUID, _, _ string) error {
 				return nil
 			},
-			mockGetProfileBehavior: func(_ context.Context, id uuid.UUID) (*domain.UserProfile, error) {
+			mockGetProfileBehavior: func(_ context.Context, _ uuid.UUID) (*domain.UserProfile, error) {
 				return &domain.UserProfile{FirstName: "John", LastName: "Doe"}, nil
 			},
 			wantStatusCode: http.StatusOK,
@@ -179,24 +179,24 @@ func TestHandler_UpdateUserProfile(t *testing.T) {
 			name:            "Error: Internal Server Error on update failure",
 			userIDInContext: uuid.New().String(),
 			requestBody:     `{"first_name": "John", "last_name": "Doe"}`,
-			mockUpdateBehavior: func(_ context.Context, id uuid.UUID, fn, ln string) error {
+			mockUpdateBehavior: func(_ context.Context, _ uuid.UUID, _, _ string) error {
 				return errors.New("update error")
 			},
 			wantStatusCode: http.StatusInternalServerError,
-			expectedBody:    `{"error":"failed to update profile"}`,
+			expectedBody:   `{"error":"failed to update profile"}`,
 		},
 		{
 			name:            "Error: Internal Server Error on fetch failure",
 			userIDInContext: uuid.New().String(),
 			requestBody:     `{"first_name": "John", "last_name": "Doe"}`,
-			mockUpdateBehavior: func(_ context.Context, id uuid.UUID, fn, ln string) error {
+			mockUpdateBehavior: func(_ context.Context, _ uuid.UUID, _, _ string) error {
 				return nil
 			},
-			mockGetProfileBehavior: func(_ context.Context, id uuid.UUID) (*domain.UserProfile, error) {
+			mockGetProfileBehavior: func(_ context.Context, _ uuid.UUID) (*domain.UserProfile, error) {
 				return nil, errors.New("fetch error")
 			},
 			wantStatusCode: http.StatusInternalServerError,
-			expectedBody:    `{"error":"failed to fetch updated profile"}`,
+			expectedBody:   `{"error":"failed to fetch updated profile"}`,
 		},
 	}
 
@@ -274,7 +274,7 @@ func TestHandler_GetUserID_EdgeCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mService := &mockUserService{
-				getUserProfileFunc: func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error) {
+				getUserProfileFunc: func(_ context.Context, _ uuid.UUID) (*domain.UserProfile, error) {
 					return nil, errors.New("unauthorized")
 				},
 			}
