@@ -1,329 +1,313 @@
-package services_test
+package services
 
 import (
 	"context"
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
-	"github.com/isw2-unileon/FocusCafe-project/backend/internal/services"
 )
 
-// mockStudyRepository is a test double for the StudyRepository.
+// mockStudyRepository implements the StudyRepository interface for testing purposes.
 type mockStudyRepository struct {
-	createMaterialFunc         func(ctx context.Context, material *models.StudyMaterial) error
-	createSessionFunc          func(ctx context.Context, session *models.StudySession) error
-	getSessionWithMaterialFunc func(ctx context.Context, sessionID uint64) (*models.StudySession, error)
-	saveFullQuizFunc           func(ctx context.Context, sessionID uint64, quizName string, questions []models.Question) error
-	updateUserProgressFunc     func(ctx context.Context, userID uuid.UUID, sessionID uint64, energy int) (int, error)
+	createMaterialErr error
+	createSessionErr  error
+	getSessionErr     error
+	saveFullQuizErr   error
+	updateProgressErr error
+
+	capturedMaterial  *models.StudyMaterial
+	capturedSession   *models.StudySession
+	capturedQuizName  string
+	capturedQuestions []models.Question
+	capturedEnergy    int
+
+	mockSessionResult *models.StudySession
+	mockProgressValue int
 }
 
 func (m *mockStudyRepository) CreateMaterial(ctx context.Context, material *models.StudyMaterial) error {
-	if m.createMaterialFunc != nil {
-		return m.createMaterialFunc(ctx, material)
+	if m.createMaterialErr != nil {
+		return m.createMaterialErr
 	}
-	return errors.New("createMaterial not mocked")
+	material.ID = 42 // Mocked database ID assignment
+	m.capturedMaterial = material
+	return nil
 }
 
 func (m *mockStudyRepository) CreateSession(ctx context.Context, session *models.StudySession) error {
-	if m.createSessionFunc != nil {
-		return m.createSessionFunc(ctx, session)
+	if m.createSessionErr != nil {
+		return m.createSessionErr
 	}
-	return errors.New("createSession not mocked")
+	session.ID = 100 // Mocked database ID assignment
+	m.capturedSession = session
+	return nil
 }
 
 func (m *mockStudyRepository) GetSessionWithMaterial(ctx context.Context, sessionID uint64) (*models.StudySession, error) {
-	if m.getSessionWithMaterialFunc != nil {
-		return m.getSessionWithMaterialFunc(ctx, sessionID)
+	if m.getSessionErr != nil {
+		return nil, m.getSessionErr
 	}
-	return nil, errors.New("getSessionWithMaterial not mocked")
+	if m.mockSessionResult != nil {
+		return m.mockSessionResult, nil
+	}
+	return &models.StudySession{ID: sessionID}, nil
 }
 
 func (m *mockStudyRepository) SaveFullQuiz(ctx context.Context, sessionID uint64, quizName string, questions []models.Question) error {
-	if m.saveFullQuizFunc != nil {
-		return m.saveFullQuizFunc(ctx, sessionID, quizName, questions)
+	if m.saveFullQuizErr != nil {
+		return m.saveFullQuizErr
 	}
-	return errors.New("saveFullQuiz not mocked")
+	m.capturedQuizName = quizName
+	m.capturedQuestions = questions
+	return nil
 }
 
 func (m *mockStudyRepository) UpdateUserProgress(ctx context.Context, userID uuid.UUID, sessionID uint64, energy int) (int, error) {
-	if m.updateUserProgressFunc != nil {
-		return m.updateUserProgressFunc(ctx, userID, sessionID, energy)
+	if m.updateProgressErr != nil {
+		return 0, m.updateProgressErr
 	}
-	return 0, errors.New("updateUserProgress not mocked")
+	m.capturedEnergy = energy
+	return m.mockProgressValue, nil
 }
 
-// ============================================
-// TestStudyService_StartStudySession
-// ============================================
+func TestStartStudySession_Success(t *testing.T) {
+	repo := &mockStudyRepository{}
+	service := NewStudyService(repo)
 
-func TestStudyService_StartStudySession(t *testing.T) {
-	testUUID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
+	userID := uuid.New()
+	fileName := "operating_systems.pdf"
+	subjectName := "Computer Science"
+	filePath := "/uploads/operating_systems.pdf"
+	content := "This is the parsed content of the operating systems book."
 
-	tests := []struct {
-		name             string
-		mockMaterialFunc func(ctx context.Context, material *models.StudyMaterial) error
-		mockSessionFunc  func(ctx context.Context, session *models.StudySession) error
-		wantErr          bool
-		wantMaterialID   uint64
-		wantStatus       string
-	}{
-		{
-			name: "Success: Creates material and session",
-			mockMaterialFunc: func(ctx context.Context, material *models.StudyMaterial) error {
-				material.ID = 42 // Simulate DB auto-increment
-				return nil
-			},
-			mockSessionFunc: func(ctx context.Context, session *models.StudySession) error {
-				session.ID = 7 // Simulate DB auto-increment
-				return nil
-			},
-			wantErr:        false,
-			wantMaterialID: 42,
-			wantStatus:     "STUDYING",
-		},
-		{
-			name: "Error: CreateMaterial fails",
-			mockMaterialFunc: func(ctx context.Context, material *models.StudyMaterial) error {
-				return errors.New("database connection lost")
-			},
-			mockSessionFunc: nil,
-			wantErr:         true,
-		},
-		{
-			name: "Error: CreateSession fails",
-			mockMaterialFunc: func(ctx context.Context, material *models.StudyMaterial) error {
-				material.ID = 1
-				return nil
-			},
-			mockSessionFunc: func(ctx context.Context, session *models.StudySession) error {
-				return errors.New("session insert failed")
-			},
-			wantErr: true,
-		},
+	ctx := context.Background()
+	session, materialID, err := service.StartStudySession(ctx, userID, fileName, subjectName, filePath, content)
+	if err != nil {
+		t.Fatalf("Unexpected error starting session: %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mRepo := &mockStudyRepository{
-				createMaterialFunc: tt.mockMaterialFunc,
-				createSessionFunc:  tt.mockSessionFunc,
-			}
-			s := services.NewStudyService(mRepo)
+	if materialID != 42 {
+		t.Errorf("Expected material ID to be 42, got %d", materialID)
+	}
 
-			session, materialID, err := s.StartStudySession(context.Background(), testUUID, "notes.pdf", "Math", "/uploads/notes.pdf", "content")
+	if session.ID != 100 {
+		t.Errorf("Expected session ID to be 100, got %d", session.ID)
+	}
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("StartStudySession() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+	if session.UserID != userID {
+		t.Errorf("Expected user ID %s, got %s", userID, session.UserID)
+	}
 
-			if tt.wantErr {
-				return
-			}
+	if repo.capturedMaterial == nil || repo.capturedMaterial.Title != fileName {
+		t.Errorf("Material properties were not set or persisted correctly")
+	}
 
-			if materialID != tt.wantMaterialID {
-				t.Errorf("StartStudySession() materialID = %d, want %d", materialID, tt.wantMaterialID)
-			}
-			if session.Status != tt.wantStatus {
-				t.Errorf("StartStudySession() status = %v, want %v", session.Status, tt.wantStatus)
-			}
-			if session.UserID != testUUID {
-				t.Errorf("StartStudySession() userID = %v, want %v", session.UserID, testUUID)
-			}
-		})
+	if repo.capturedSession == nil || repo.capturedSession.Status != "STUDYING" {
+		t.Errorf("Session state properties were not initialized correctly")
 	}
 }
 
-// ============================================
-// TestStudyService_GetSessionWithMaterial
-// ============================================
+func TestStartStudySession_CreateMaterialFailure(t *testing.T) {
+	expectedErr := errors.New("database connection failed on material insert")
+	repo := &mockStudyRepository{
+		createMaterialErr: expectedErr,
+	}
+	service := NewStudyService(repo)
 
-func TestStudyService_GetSessionWithMaterial(t *testing.T) {
+	ctx := context.Background()
+	_, _, err := service.StartStudySession(ctx, uuid.New(), "file.pdf", "Subject", "path", "content")
+
+	if err == nil {
+		t.Fatal("Expected an error during material insertion, but got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Errorf("Expected error %v, got %v", expectedErr, err)
+	}
+}
+
+func TestStartStudySession_CreateSessionFailure(t *testing.T) {
+	expectedErr := errors.New("database connection failed on session insert")
+	repo := &mockStudyRepository{
+		createSessionErr: expectedErr,
+	}
+	service := NewStudyService(repo)
+
+	ctx := context.Background()
+	_, _, err := service.StartStudySession(ctx, uuid.New(), "file.pdf", "Subject", "path", "content")
+
+	if err == nil {
+		t.Fatal("Expected an error during session insertion, but got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Errorf("Expected error %v, got %v", expectedErr, err)
+	}
+}
+
+func TestGetSessionWithMaterial_Success(t *testing.T) {
 	expectedSession := &models.StudySession{
-		ID:         1,
-		UserID:     uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
-		MaterialID: 42,
-		Status:     "STUDYING",
-	}
-
-	tests := []struct {
-		name         string
-		mockBehavior func(ctx context.Context, sessionID uint64) (*models.StudySession, error)
-		wantErr      bool
-		want         *models.StudySession
-	}{
-		{
-			name: "Success: Returns session",
-			mockBehavior: func(ctx context.Context, sessionID uint64) (*models.StudySession, error) {
-				return expectedSession, nil
-			},
-			wantErr: false,
-			want:    expectedSession,
-		},
-		{
-			name: "Error: Session not found",
-			mockBehavior: func(ctx context.Context, sessionID uint64) (*models.StudySession, error) {
-				return nil, errors.New("record not found")
-			},
-			wantErr: true,
-			want:    nil,
+		ID: 55,
+		Material: models.StudyMaterial{
+			Title: "algorithms.pdf",
 		},
 	}
+	repo := &mockStudyRepository{
+		mockSessionResult: expectedSession,
+	}
+	service := NewStudyService(repo)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mRepo := &mockStudyRepository{getSessionWithMaterialFunc: tt.mockBehavior}
-			s := services.NewStudyService(mRepo)
+	ctx := context.Background()
+	result, err := service.GetSessionWithMaterial(ctx, 55)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 
-			got, err := s.GetSessionWithMaterial(context.Background(), 1)
+	if result.ID != 55 {
+		t.Errorf("Expected session ID 55, got %d", result.ID)
+	}
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("GetSessionWithMaterial() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetSessionWithMaterial() = %v, want %v", got, tt.want)
-			}
-		})
+	if result.Material.Title != "algorithms.pdf" {
+		t.Errorf("Expected preloaded material title 'algorithms.pdf', got %s", result.Material.Title)
 	}
 }
 
-// ============================================
-// TestStudyService_SaveQuiz
-// ============================================
+func TestGetSessionWithMaterial_Failure(t *testing.T) {
+	expectedErr := errors.New("session not found")
+	repo := &mockStudyRepository{
+		getSessionErr: expectedErr,
+	}
+	service := NewStudyService(repo)
 
-func TestStudyService_SaveQuiz(t *testing.T) {
-	validQuizJSON := `{"quiz_name":"Math Quiz","questions":[{"question_text":"2+2?","option_a":"3","option_b":"4","option_c":"5","option_d":"6","correct_answer":"B","explanation":"Basic addition."}]}`
+	ctx := context.Background()
+	_, err := service.GetSessionWithMaterial(ctx, 999)
 
-	tests := []struct {
-		name         string
-		quizJSON     string
-		mockBehavior func(ctx context.Context, sessionID uint64, quizName string, questions []models.Question) error
-		wantErr      bool
-		expectedErr  string
-	}{
-		{
-			name:     "Success: Parses and saves quiz",
-			quizJSON: validQuizJSON,
-			mockBehavior: func(ctx context.Context, sessionID uint64, quizName string, questions []models.Question) error {
-				if quizName != "Math Quiz" {
-					t.Errorf("SaveQuiz() quizName = %v, want Math Quiz", quizName)
-				}
-				if len(questions) != 1 {
-					t.Errorf("SaveQuiz() questions len = %d, want 1", len(questions))
-				}
-				if questions[0].CorrectAnswer != "B" {
-					t.Errorf("SaveQuiz() correctAnswer = %v, want B", questions[0].CorrectAnswer)
-				}
-				return nil
-			},
-			wantErr: false,
-		},
-		{
-			name:     "Error: Invalid JSON",
-			quizJSON: `{invalid json`,
-			mockBehavior: nil,
-			wantErr:      true,
-			expectedErr:  "invalid character",
-		},
-		{
-			name:     "Error: Repository fails",
-			quizJSON: validQuizJSON,
-			mockBehavior: func(ctx context.Context, sessionID uint64, quizName string, questions []models.Question) error {
-				return errors.New("database error")
-			},
-			wantErr:     true,
-			expectedErr: "database error",
-		},
+	if err == nil {
+		t.Fatal("Expected error when fetching missing session, got nil")
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mRepo := &mockStudyRepository{saveFullQuizFunc: tt.mockBehavior}
-			s := services.NewStudyService(mRepo)
-
-			err := s.SaveQuiz(context.Background(), 1, tt.quizJSON)
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("SaveQuiz() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			if tt.wantErr && tt.expectedErr != "" && err != nil {
-				if !contains(err.Error(), tt.expectedErr) {
-					t.Errorf("SaveQuiz() error = %v, want containing %v", err, tt.expectedErr)
-				}
-			}
-		})
+	if !errors.Is(err, expectedErr) {
+		t.Errorf("Expected error %v, got %v", expectedErr, err)
 	}
 }
 
-// ============================================
-// TestStudyService_UpdateUserProgress
-// ============================================
+func TestSaveQuiz_Success(t *testing.T) {
+	repo := &mockStudyRepository{}
+	service := NewStudyService(repo)
 
-func TestStudyService_UpdateUserProgress(t *testing.T) {
-	testUUID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
+	quizJSON := `{
+		"quiz_name": "Go Basics Quiz",
+		"questions": [
+			{
+				"question_text": "What is a goroutine?",
+				"option_a": "A thread",
+				"option_b": "A lightweight thread managed by Go runtime",
+				"option_c": "A compiler directive",
+				"option_d": "A package",
+				"correct_answer": "B",
+				"explanation": "Goroutines are multiplexed onto operating system threads."
+			}
+		]
+	}`
 
-	tests := []struct {
-		name         string
-		energy       int
-		mockBehavior func(ctx context.Context, userID uuid.UUID, sessionID uint64, energy int) (int, error)
-		want         int
-		wantErr      bool
-	}{
-		{
-			name:   "Success: Returns new energy total",
-			energy: 60,
-			mockBehavior: func(ctx context.Context, userID uuid.UUID, sessionID uint64, energy int) (int, error) {
-				return 560, nil
-			},
-			want:    560,
-			wantErr: false,
-		},
-		{
-			name:   "Error: Repository fails",
-			energy: 60,
-			mockBehavior: func(ctx context.Context, userID uuid.UUID, sessionID uint64, energy int) (int, error) {
-				return 0, errors.New("progress update failed")
-			},
-			want:    0,
-			wantErr: true,
-		},
+	ctx := context.Background()
+	err := service.SaveQuiz(ctx, 100, quizJSON)
+	if err != nil {
+		t.Fatalf("Unexpected error saving quiz: %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			mRepo := &mockStudyRepository{updateUserProgressFunc: tt.mockBehavior}
-			s := services.NewStudyService(mRepo)
+	if repo.capturedQuizName != "Go Basics Quiz" {
+		t.Errorf("Expected quiz name 'Go Basics Quiz', got %s", repo.capturedQuizName)
+	}
 
-			got, err := s.UpdateUserProgress(context.Background(), testUUID, 1, tt.energy)
+	if len(repo.capturedQuestions) != 1 {
+		t.Fatalf("Expected 1 question parsed, got %d", len(repo.capturedQuestions))
+	}
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("UpdateUserProgress() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+	q := repo.capturedQuestions[0]
+	if q.QuestionText != "What is a goroutine?" {
+		t.Errorf("Unexpected question text parsed: %s", q.QuestionText)
+	}
 
-			if got != tt.want {
-				t.Errorf("UpdateUserProgress() = %d, want %d", got, tt.want)
-			}
-		})
+	if q.CorrectAnswer != "B" {
+		t.Errorf("Expected correct option B, got %s", q.CorrectAnswer)
 	}
 }
 
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && len(substr) > 0 && findSubstr(s, substr))
+func TestSaveQuiz_InvalidJSON(t *testing.T) {
+	repo := &mockStudyRepository{}
+	service := NewStudyService(repo)
+
+	// Sending malformed JSON payload
+	invalidJSON := `{"quiz_name": "Broken Quiz", "questions": [`
+
+	ctx := context.Background()
+	err := service.SaveQuiz(ctx, 100, invalidJSON)
+
+	if err == nil {
+		t.Fatal("Expected unmarshaling parsing error, got nil")
+	}
 }
 
-func findSubstr(s, substr string) bool {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
+func TestSaveQuiz_RepoFailure(t *testing.T) {
+	expectedErr := errors.New("failed to write quiz questions transaction")
+	repo := &mockStudyRepository{
+		saveFullQuizErr: expectedErr,
 	}
-	return false
+	service := NewStudyService(repo)
+
+	validJSON := `{"quiz_name": "Go Basics Quiz", "questions": []}`
+
+	ctx := context.Background()
+	err := service.SaveQuiz(ctx, 100, validJSON)
+
+	if err == nil {
+		t.Fatal("Expected database storage failure propagation, got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Errorf("Expected error %v, got %v", expectedErr, err)
+	}
+}
+
+func TestUpdateUserProgress_Success(t *testing.T) {
+	repo := &mockStudyRepository{
+		mockProgressValue: 250,
+	}
+	service := NewStudyService(repo)
+
+	ctx := context.Background()
+	energyGain, err := service.UpdateUserProgress(ctx, uuid.New(), 100, 10)
+	if err != nil {
+		t.Fatalf("Unexpected progress update error: %v", err)
+	}
+
+	if energyGain != 250 {
+		t.Errorf("Expected resulting reward value 250, got %d", energyGain)
+	}
+
+	if repo.capturedEnergy != 10 {
+		t.Errorf("Expected parameter passing level to match 10, got %d", repo.capturedEnergy)
+	}
+}
+
+func TestUpdateUserProgress_Failure(t *testing.T) {
+	expectedErr := errors.New("transaction rollbacked on progress limit validation")
+	repo := &mockStudyRepository{
+		updateProgressErr: expectedErr,
+	}
+	service := NewStudyService(repo)
+
+	ctx := context.Background()
+	_, err := service.UpdateUserProgress(ctx, uuid.New(), 100, 10)
+
+	if err == nil {
+		t.Fatal("Expected transaction error to bubble up, got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Errorf("Expected error %v, got %v", expectedErr, err)
+	}
 }
