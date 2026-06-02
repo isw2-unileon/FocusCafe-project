@@ -36,9 +36,6 @@ jobs:
       - name: Install dependencies
         run: make install-e2e
 
-      - name: Build frontend
-        run: make build-frontend
-
       # Spin up the official local Supabase ecosystem (including Auth on 54321 and DB on 54322)
       - name: Start Supabase Local Ecosystem
         run: |
@@ -86,6 +83,12 @@ jobs:
           echo "VITE_API_URL=http://localhost:8080/api" >> frontend/.env
           echo "VITE_SUPABASE_URL=$LOCAL_SUPABASE_URL" >> frontend/.env
           echo "VITE_SUPABASE_ANON_KEY=$LOCAL_ANON_KEY" >> frontend/.env
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm install
+          npm run build
 
       # Playwright turns on frontend and backend automatically
       - name: Run E2E tests

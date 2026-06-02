@@ -32,7 +32,7 @@ export default defineConfig({
       env: {
         DATABASE_URL: "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable",
         SUPABASE_URL: "http://127.0.0.1:54321",
-        SUPABASE_KEY: process.env.SUPABASE_KEY || "",
+        SUPABASE_KEY: process.env.SUPABASE_KEY || "sb_publishable_local_development_key_mock_value_for_testing_purposes",
         PORT: process.env.PORT || "8080",
         GIN_MODE: "debug",
       }
@@ -44,6 +44,7 @@ export default defineConfig({
       port: 5173,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
+      stdout: "pipe",
     },
   ],
 
