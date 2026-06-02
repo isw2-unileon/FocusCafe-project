@@ -315,10 +315,10 @@ ALTER TABLE "public"."user_orders" ENABLE ROW LEVEL SECURITY;
 
 
 
-ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
+--ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
 
 
-ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."user_orders";
+--ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."user_orders";
 
 
 
