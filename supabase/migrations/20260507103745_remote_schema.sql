@@ -228,111 +228,111 @@ ALTER TABLE "public"."user_orders" ENABLE ROW LEVEL SECURITY;
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
 ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."user_orders";
 
-GRANT USAGE ON SCHEMA "public" TO "postgres";
-GRANT USAGE ON SCHEMA "public" TO "anon";
-GRANT USAGE ON SCHEMA "public" TO "authenticated";
-GRANT USAGE ON SCHEMA "public" TO "service_role";
+-- GRANT USAGE ON SCHEMA "public" TO "postgres";
+-- GRANT USAGE ON SCHEMA "public" TO "anon";
+-- GRANT USAGE ON SCHEMA "public" TO "authenticated";
+-- GRANT USAGE ON SCHEMA "public" TO "service_role";
 
 
-GRANT ALL ON TABLE "public"."cafe_orders" TO "anon";
-GRANT ALL ON TABLE "public"."cafe_orders" TO "authenticated";
-GRANT ALL ON TABLE "public"."cafe_orders" TO "service_role";
-
-
-
-GRANT ALL ON SEQUENCE "public"."cafe_orders_id_seq" TO "anon";
-GRANT ALL ON SEQUENCE "public"."cafe_orders_id_seq" TO "authenticated";
-GRANT ALL ON SEQUENCE "public"."cafe_orders_id_seq" TO "service_role";
+-- GRANT ALL ON TABLE "public"."cafe_orders" TO "anon";
+-- GRANT ALL ON TABLE "public"."cafe_orders" TO "authenticated";
+-- GRANT ALL ON TABLE "public"."cafe_orders" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."questions" TO "anon";
-GRANT ALL ON TABLE "public"."questions" TO "authenticated";
-GRANT ALL ON TABLE "public"."questions" TO "service_role";
+-- GRANT ALL ON SEQUENCE "public"."cafe_orders_id_seq" TO "anon";
+-- GRANT ALL ON SEQUENCE "public"."cafe_orders_id_seq" TO "authenticated";
+-- GRANT ALL ON SEQUENCE "public"."cafe_orders_id_seq" TO "service_role";
 
 
 
-GRANT ALL ON SEQUENCE "public"."questions_id_seq" TO "anon";
-GRANT ALL ON SEQUENCE "public"."questions_id_seq" TO "authenticated";
-GRANT ALL ON SEQUENCE "public"."questions_id_seq" TO "service_role";
+-- GRANT ALL ON TABLE "public"."questions" TO "anon";
+-- GRANT ALL ON TABLE "public"."questions" TO "authenticated";
+-- GRANT ALL ON TABLE "public"."questions" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."quizzes" TO "anon";
-GRANT ALL ON TABLE "public"."quizzes" TO "authenticated";
-GRANT ALL ON TABLE "public"."quizzes" TO "service_role";
+-- GRANT ALL ON SEQUENCE "public"."questions_id_seq" TO "anon";
+-- GRANT ALL ON SEQUENCE "public"."questions_id_seq" TO "authenticated";
+-- GRANT ALL ON SEQUENCE "public"."questions_id_seq" TO "service_role";
 
 
 
-GRANT ALL ON SEQUENCE "public"."quizzes_id_seq" TO "anon";
-GRANT ALL ON SEQUENCE "public"."quizzes_id_seq" TO "authenticated";
-GRANT ALL ON SEQUENCE "public"."quizzes_id_seq" TO "service_role";
+-- GRANT ALL ON TABLE "public"."quizzes" TO "anon";
+-- GRANT ALL ON TABLE "public"."quizzes" TO "authenticated";
+-- GRANT ALL ON TABLE "public"."quizzes" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."study_materials" TO "anon";
-GRANT ALL ON TABLE "public"."study_materials" TO "authenticated";
-GRANT ALL ON TABLE "public"."study_materials" TO "service_role";
+-- GRANT ALL ON SEQUENCE "public"."quizzes_id_seq" TO "anon";
+-- GRANT ALL ON SEQUENCE "public"."quizzes_id_seq" TO "authenticated";
+-- GRANT ALL ON SEQUENCE "public"."quizzes_id_seq" TO "service_role";
 
 
 
-GRANT ALL ON SEQUENCE "public"."study_materials_id_seq" TO "anon";
-GRANT ALL ON SEQUENCE "public"."study_materials_id_seq" TO "authenticated";
-GRANT ALL ON SEQUENCE "public"."study_materials_id_seq" TO "service_role";
+-- GRANT ALL ON TABLE "public"."study_materials" TO "anon";
+-- GRANT ALL ON TABLE "public"."study_materials" TO "authenticated";
+-- GRANT ALL ON TABLE "public"."study_materials" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."study_sessions" TO "anon";
-GRANT ALL ON TABLE "public"."study_sessions" TO "authenticated";
-GRANT ALL ON TABLE "public"."study_sessions" TO "service_role";
+-- GRANT ALL ON SEQUENCE "public"."study_materials_id_seq" TO "anon";
+-- GRANT ALL ON SEQUENCE "public"."study_materials_id_seq" TO "authenticated";
+-- GRANT ALL ON SEQUENCE "public"."study_materials_id_seq" TO "service_role";
 
 
 
-GRANT ALL ON SEQUENCE "public"."study_sessions_id_seq" TO "anon";
-GRANT ALL ON SEQUENCE "public"."study_sessions_id_seq" TO "authenticated";
-GRANT ALL ON SEQUENCE "public"."study_sessions_id_seq" TO "service_role";
+-- GRANT ALL ON TABLE "public"."study_sessions" TO "anon";
+-- GRANT ALL ON TABLE "public"."study_sessions" TO "authenticated";
+-- GRANT ALL ON TABLE "public"."study_sessions" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."user_orders" TO "anon";
-GRANT ALL ON TABLE "public"."user_orders" TO "authenticated";
-GRANT ALL ON TABLE "public"."user_orders" TO "service_role";
+-- GRANT ALL ON SEQUENCE "public"."study_sessions_id_seq" TO "anon";
+-- GRANT ALL ON SEQUENCE "public"."study_sessions_id_seq" TO "authenticated";
+-- GRANT ALL ON SEQUENCE "public"."study_sessions_id_seq" TO "service_role";
 
 
 
-GRANT ALL ON SEQUENCE "public"."user_orders_id_seq" TO "anon";
-GRANT ALL ON SEQUENCE "public"."user_orders_id_seq" TO "authenticated";
-GRANT ALL ON SEQUENCE "public"."user_orders_id_seq" TO "service_role";
+-- GRANT ALL ON TABLE "public"."user_orders" TO "anon";
+-- GRANT ALL ON TABLE "public"."user_orders" TO "authenticated";
+-- GRANT ALL ON TABLE "public"."user_orders" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."user_progress" TO "anon";
-GRANT ALL ON TABLE "public"."user_progress" TO "authenticated";
-GRANT ALL ON TABLE "public"."user_progress" TO "service_role";
+-- GRANT ALL ON SEQUENCE "public"."user_orders_id_seq" TO "anon";
+-- GRANT ALL ON SEQUENCE "public"."user_orders_id_seq" TO "authenticated";
+-- GRANT ALL ON SEQUENCE "public"."user_orders_id_seq" TO "service_role";
 
 
 
-GRANT ALL ON TABLE "public"."users" TO "anon";
-GRANT ALL ON TABLE "public"."users" TO "authenticated";
-GRANT ALL ON TABLE "public"."users" TO "service_role";
+-- GRANT ALL ON TABLE "public"."user_progress" TO "anon";
+-- GRANT ALL ON TABLE "public"."user_progress" TO "authenticated";
+-- GRANT ALL ON TABLE "public"."user_progress" TO "service_role";
 
 
 
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "postgres";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "anon";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "authenticated";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "service_role";
+-- GRANT ALL ON TABLE "public"."users" TO "anon";
+-- GRANT ALL ON TABLE "public"."users" TO "authenticated";
+-- GRANT ALL ON TABLE "public"."users" TO "service_role";
 
 
 
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "postgres";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "anon";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "authenticated";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "service_role";
+-- ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "postgres";
+-- ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "anon";
+-- ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "authenticated";
+-- ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES TO "service_role";
 
 
 
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "postgres";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
-ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
+-- ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "postgres";
+-- ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "anon";
+-- ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "authenticated";
+-- ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS TO "service_role";
+
+
+
+-- ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "postgres";
+-- ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
+-- ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
+-- ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";

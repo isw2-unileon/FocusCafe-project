@@ -14,7 +14,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    # Simulates a local postgres db
+    #Simutates a local supabase db
     services:
       postgres:
         image: postgres:15-alpine
@@ -61,27 +61,22 @@ jobs:
           # 1. Install Supabase CLI
           npm install -g supabase
 
-          # 2. Create extensions and auth schemas with dummy users table
+          # 2. Create extensions and auth schemas with dumy users table
           echo "Creating extensions schema..."
           supabase db query "CREATE SCHEMA IF NOT EXISTS extensions;" --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
 
-          # 3. Create auth schema
           echo "Creating auth schema..."
           supabase db query "CREATE SCHEMA IF NOT EXISTS auth;" --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
 
           echo "Creating dummy auth.users table..."
           supabase db query "CREATE TABLE IF NOT EXISTS auth.users (id UUID PRIMARY KEY);" --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
 
-          echo "Creating mock supabase_realtime publication..."
-          supabase db query "CREATE PUBLICATION supabase_realtime;" --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
-
-          # 4. Push database migrations
+          # 3. Push database migrations (Adding --accept-all to bypass the [Y/n] prompt)
           echo "Pushing database migrations..."
           yes | supabase db push --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
 
-          # 5. Inject seed.sql file
+          # 4. Inject seed.sql file
           echo "Loading initial coffee menu data (seed.sql)..."
-          sudo apt-get install -y postgresql-client
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable" -f supabase/seed.sql
 
       - name: Create .env file securely
