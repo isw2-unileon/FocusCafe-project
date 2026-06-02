@@ -90,6 +90,10 @@ jobs:
           npm install
           npm run build
 
+      # Install Browsers
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
       # Playwright turns on frontend and backend automatically
       - name: Run E2E tests
         run: make e2e
