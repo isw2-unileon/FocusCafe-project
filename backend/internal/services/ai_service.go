@@ -26,11 +26,17 @@ type AIServiceInterface interface {
 // AIService implements the AIServiceInterface and provides methods to interact with the Google Gemini API for quiz generation.
 type AIService struct {
 	apiKey string
+	client *http.Client // Optional: injected for testing
 }
 
 // NewAIService creates a new instance of AIService with the provided API key for authentication with the Google Gemini API.
 func NewAIService(apiKey string) *AIService {
 	return &AIService{apiKey: apiKey}
+}
+
+// SetHTTPClient allows injection of a custom HTTP client, primarily for testing.
+func (s *AIService) SetHTTPClient(client *http.Client) {
+	s.client = client
 }
 
 // GenerateQuiz processes the provided text via Google Gemini API to produce a study quiz in JSON format.
@@ -67,7 +73,10 @@ func (s *AIService) GenerateQuiz(pdfText string) (string, error) {
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
 	// 3. Execute the request using a standard HTTP client.
-	client := &http.Client{}
+	client := s.client
+	if client == nil {
+		client = http.DefaultClient
+	}
 	// #nosec G704 -- Request is sent to a trusted endpoint.
 	resp, err := client.Do(req)
 	if err != nil {

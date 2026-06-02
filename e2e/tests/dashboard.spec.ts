@@ -1,31 +1,44 @@
 import { test, expect } from "@playwright/test";
-
-test.use({ storageState: "playwright/.auth/user.json" });
+import { loginAsUser } from "../lib/auth-helper";
 
 test.describe("Dashboard view", () => {
-  test("should display user profile data after login", async ({ page }) => {
-    // Navigate directly to dashboard (already authenticated via storageState)
-    await page.goto("/dashboard");
+  test("should display user profile data after navigating from Home", async ({ page }) => {
+    // 1. Login
+    await loginAsUser(page);
+
+    // 2. Should be on Home after login
+    await expect(page).toHaveURL(/.*home/);
+
+    // 3. Navigate to Dashboard by clicking the avatar icon in header
+    await page.getByTestId("nav-dashboard").click();
+
+    // 4. Verify we're on Dashboard
     await expect(page).toHaveURL(/.*dashboard/);
 
-    // Verify profile data is visible
-    // Name
-    await expect(page.getByText("Test User")).toBeVisible();
-    // Username (strict mode fix: use .first() since @testuser appears twice)
-    await expect(page.getByText("@testuser").first()).toBeVisible();
-    // Level badge
-    await expect(page.getByText(/Level\s+5/)).toBeVisible();
-    // Rank badge (level 5 = Focus Apprentice)
-    await expect(page.getByText("Focus Apprentice")).toBeVisible();
-    // Energy
-    await expect(page.getByText(/Energy/)).toBeVisible();
-    await expect(page.getByText(/300/)).toBeVisible();
-    // Experience
-    await expect(page.getByText(/Experience/)).toBeVisible();
-    await expect(page.getByText(/2500/)).toBeVisible();
-    // Email
-    await expect(page.getByText("user@user.com")).toBeVisible();
-    // Member Since
-    await expect(page.getByText(/Member Since/)).toBeVisible();
+    // 5. Verify profile data is visible
+    await expect(page.getByTestId("profile-full-name")).toBeVisible();
+    await expect(page.getByTestId("profile-username")).toBeVisible();
+    await expect(page.getByTestId("profile-level")).toBeVisible();
+    await expect(page.getByTestId("profile-rank")).toBeVisible();
+    await expect(page.getByTestId("stat-energy-value")).toBeVisible();
+    await expect(page.getByTestId("stat-experience-value")).toBeVisible();
+    await expect(page.getByTestId("profile-email")).toBeVisible();
+    await expect(page.getByTestId("profile-member-since")).toBeVisible();
+  });
+
+  test("should navigate back to Home from Dashboard", async ({ page }) => {
+    // 1. Login
+    await loginAsUser(page);
+
+    // 2. Go to Dashboard
+    await page.getByTestId("nav-dashboard").click();
+    await expect(page).toHaveURL(/.*dashboard/);
+
+    // 3. Click back button (ArrowLeft)
+    await page.locator("button").filter({ has: page.locator("svg") }).first().click();
+
+    // 4. Should be back on Home
+    await expect(page).toHaveURL(/.*home/);
+    await expect(page.getByRole('heading', { name: 'Player Stats' })).toBeVisible();
   });
 });

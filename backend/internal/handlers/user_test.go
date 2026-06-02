@@ -17,11 +17,7 @@ import (
 )
 
 type mockUserService struct {
-	getUserProfileFunc    func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error)
-	updateUserProfileFunc func(ctx context.Context, id uuid.UUID, firstName, lastName string) error
-	getAllUsersFunc       func(ctx context.Context) ([]domain.UserProfile, error)
-	getUserByEmailFunc    func(ctx context.Context, email string) (*domain.UserProfile, error)
-	deleteUserFunc        func(ctx context.Context, id uuid.UUID) error
+	getUserProfileFunc func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error)
 }
 
 func (m *mockUserService) GetUserProfile(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error) {
@@ -29,31 +25,27 @@ func (m *mockUserService) GetUserProfile(ctx context.Context, id uuid.UUID) (*do
 }
 
 func (m *mockUserService) UpdateUserProfile(ctx context.Context, id uuid.UUID, firstName, lastName string) error {
-	if m.updateUserProfileFunc != nil {
-		return m.updateUserProfileFunc(ctx, id, firstName, lastName)
-	}
 	return nil
 }
 
 func (m *mockUserService) GetAllUsers(ctx context.Context) ([]domain.UserProfile, error) {
-	if m.getAllUsersFunc != nil {
-		return m.getAllUsersFunc(ctx)
-	}
 	return nil, nil
 }
 
 func (m *mockUserService) GetUserByEmail(ctx context.Context, email string) (*domain.UserProfile, error) {
-	if m.getUserByEmailFunc != nil {
-		return m.getUserByEmailFunc(ctx, email)
-	}
 	return nil, nil
 }
 
 func (m *mockUserService) DeleteUser(ctx context.Context, id uuid.UUID) error {
-	if m.deleteUserFunc != nil {
-		return m.deleteUserFunc(ctx, id)
-	}
 	return nil
+}
+
+func (m *mockUserService) GetLeaderboard(ctx context.Context, limit int) ([]domain.UserProfile, error) {
+	return nil, nil
+}
+
+func (m *mockUserService) GetUserLeaderboard(ctx context.Context, userID uuid.UUID) (int, *domain.UserProfile, error) {
+	return 0, nil, nil
 }
 
 func TestHandler_GetUserProfile(t *testing.T) {

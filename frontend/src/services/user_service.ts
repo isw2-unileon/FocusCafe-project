@@ -49,3 +49,13 @@ export async function deleteUser(id: string): Promise<void> {
         method: 'DELETE',
     });
 }
+
+// Fetch global leaderboard top 5
+export async function getLeaderboard(): Promise<UserProfile[]> {
+    return apiFetch('/leaderboard');
+}
+
+// Fetch current user's global rank and profile
+export async function getLeaderboardMe(): Promise<{ rank: number; user: UserProfile }> {
+    return apiFetch('/leaderboard/me');
+}

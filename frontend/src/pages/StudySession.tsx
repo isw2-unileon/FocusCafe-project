@@ -167,23 +167,23 @@ const StudySession = () => {
                             <div className="bg-white rounded-3xl p-8 shadow-sm border border-stone-200">
                                 <h2 className="text-xl font-bold mb-6">Prepare your Session</h2>
                                 <div className="space-y-6">
-                                    <div className="border-2 border-dashed border-stone-200 rounded-2xl p-8 text-center relative hover:bg-stone-50 transition-colors">
-                                        <input type="file" accept=".pdf" onChange={(e) => setFiles(e.target.files)} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                    <div className="border-2 border-dashed border-stone-200 rounded-2xl p-8 text-center relative hover:bg-stone-50 transition-colors" data-testid="study-file-upload">
+                                        <input type="file" accept=".pdf" onChange={(e) => setFiles(e.target.files)} className="absolute inset-0 opacity-0 cursor-pointer" data-testid="study-file-input" />
                                         <Upload className="mx-auto text-stone-400 mb-2" />
-                                        <p className="text-stone-600">{files && files.length > 0 ? files[0]?.name : "Upload your PDF"}</p>
+                                        <p className="text-stone-600" data-testid="study-file-name">{files && files.length > 0 ? files[0]?.name : "Upload your PDF"}</p>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-sm font-bold text-stone-500 uppercase">Study Time (min)</label>
                                         <input type="number" value={studyMinutes} onChange={(e) => setStudyMinutes(Number(e.target.value))} className="w-full bg-stone-50 border rounded-xl p-4 font-bold focus:ring-2 ring-orange-500 outline-none" />
                                     </div>
-                                    <button onClick={handleStartStudy} className="w-full bg-stone-900 text-white py-6 rounded-2xl font-black hover:bg-orange-600 transition-all shadow-lg shadow-stone-200">START BREWING</button>
+                                    <button onClick={handleStartStudy} className="w-full bg-stone-900 text-white py-6 rounded-2xl font-black hover:bg-orange-600 transition-all shadow-lg shadow-stone-200" data-testid="study-start-button">START BREWING</button>
                                 </div>
                             </div>
                         ) : (
                             <div className="text-center py-20 bg-white rounded-[3rem] shadow-xl border-8 border-orange-50">
-                                <h2 className="text-7xl font-black text-stone-800 tracking-tighter">{formatTime(timeLeft)}</h2>
+                                <h2 className="text-7xl font-black text-stone-800 tracking-tighter" data-testid="study-timer">{formatTime(timeLeft)}</h2>
                                 <p className="text-stone-500 mt-8 italic text-lg">Brewing knowledge... stay focused!</p>
-                                <button onClick={() => setTimeLeft(0)} className="mt-12 text-xs text-stone-300 hover:text-orange-500 uppercase font-bold tracking-widest transition-colors">Skip to Quiz</button>
+                                <button onClick={() => setTimeLeft(0)} className="mt-12 text-xs text-stone-300 hover:text-orange-500 uppercase font-bold tracking-widest transition-colors" data-testid="study-skip-quiz">Skip to Quiz</button>
                             </div>
                         )}
                     </div>

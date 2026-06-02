@@ -22,7 +22,8 @@ export async function apiFetch<T>(endpoint: string, options: RequestInit = {}): 
     });
 
     if (response.status === 401) {
-        throw new Error("Session expired");
+        localStorage.removeItem('token');
+        throw new Error("Session expired.");
     }
 
     if (!response.ok) {

@@ -92,7 +92,7 @@ const Dashboard = () => {
             </button>
             <h1 className="text-3xl font-black text-stone-800 flex items-center gap-3">
               ☕ My Profile
-              <span className="text-sm font-medium bg-white px-3 py-1 rounded-full border">
+              <span className="text-sm font-medium bg-white px-3 py-1 rounded-full border" data-testid="profile-level">
                 Level {profile.level}
               </span>
             </h1>
@@ -117,11 +117,11 @@ const Dashboard = () => {
               </div>
 
               {/* Name */}
-              <h2 className="text-3xl font-black text-stone-800 mb-1">
+              <h2 className="text-3xl font-black text-stone-800 mb-1" data-testid="profile-full-name">
                 {profile.first_name} {profile.last_name}
               </h2>
               {/* Username */}
-              <p className="text-lg text-orange-600/80 font-semibold mb-4">
+              <p className="text-lg text-orange-600/80 font-semibold mb-4" data-testid="profile-username">
                 @{profile.username}
               </p>
 
@@ -129,7 +129,7 @@ const Dashboard = () => {
               {(() => {
                 const rank = getRankInfo(profile.level || 1);
                 return (
-                  <span className={`px-4 py-1.5 ${rank.color} text-white rounded-full text-sm font-bold shadow-sm`}>
+                  <span className={`px-4 py-1.5 ${rank.color} text-white rounded-full text-sm font-bold shadow-sm`} data-testid="profile-rank">
                     {rank.title}
                   </span>
                 );
@@ -157,12 +157,12 @@ const Dashboard = () => {
                     <div className="flex-1">
                       <div className="flex justify-between items-end mb-1">
                         <p className="text-[11px] font-bold uppercase text-gray-500">Energy</p>
-                        <p className="text-sm font-black text-gray-800">
+                        <p className="text-sm font-black text-gray-800" data-testid="stat-energy-value">
                           {profile.progress?.energy ?? profile.energy ?? 0}{' '}
                           <span className="text-gray-400 font-medium">/ 500</span>
                         </p>
                       </div>
-                      <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden" data-testid="stat-energy-bar">
                         <div
                           className="h-full bg-yellow-500 transition-all duration-500"
                           style={{
@@ -181,23 +181,11 @@ const Dashboard = () => {
                       <Award className="text-blue-500" size={20} />
                     </div>
                     <div className="flex-1">
-                      <div className="flex justify-between items-end mb-1">
+                      <div className="flex justify-between items-center">
                         <p className="text-[11px] font-bold uppercase text-gray-500">Experience</p>
-                        <p className="text-sm font-black text-gray-800">
-                           {profile.xp ?? 0}{' '}
-                          <span className="text-gray-400 font-medium">/ {(profile.level || 1) * 100}</span>
+                        <p className="text-sm font-black text-gray-800" data-testid="stat-experience-value">
+                          {profile.xp ?? 0} <span className="text-gray-400 font-medium">XP</span>
                         </p>
-                      </div>
-                      <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-blue-500 transition-all duration-500"
-                          style={{
-                            width: `${Math.min(
-                              (((profile.xp ?? 0) / ((profile.level || 1) * 100)) * 100),
-                              100
-                            )}%`,
-                          }}
-                        />
                       </div>
                     </div>
                   </div>
@@ -212,7 +200,7 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <p className="text-xs font-bold uppercase text-gray-400 tracking-tight">Email</p>
-                    <p className="text-base font-semibold text-stone-800">{profile.email}</p>
+                    <p className="text-base font-semibold text-stone-800" data-testid="profile-email">{profile.email}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4 p-3 bg-white rounded-2xl shadow-sm">
@@ -221,7 +209,7 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <p className="text-xs font-bold uppercase text-gray-400 tracking-tight">Username</p>
-                    <p className="text-base font-semibold text-stone-800">@{profile.username}</p>
+                    <p className="text-base font-semibold text-stone-800" data-testid="profile-username-card">@{profile.username}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-4 p-3 bg-white rounded-2xl shadow-sm">
@@ -230,7 +218,7 @@ const Dashboard = () => {
                   </div>
                   <div>
                     <p className="text-xs font-bold uppercase text-gray-400 tracking-tight">Member Since</p>
-                    <p className="text-base font-semibold text-stone-800">{formatDate(profile.created_at)}</p>
+                    <p className="text-base font-semibold text-stone-800" data-testid="profile-member-since">{formatDate(profile.created_at)}</p>
                   </div>
                 </div>
               </div>

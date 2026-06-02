@@ -2,6 +2,7 @@ package repository_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -13,13 +14,13 @@ import (
 )
 
 func setupTestDB(t *testing.T) *gorm.DB {
-	// Create a connection to an in-memory SQLite database for testing
-	db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	// Create a unique in-memory SQLite database per test to avoid cross-test contamination
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name())), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("failed to connect to test database: %v", err)
 	}
 
-	// AutoMigrate to creat the necessary tables
+	// AutoMigrate to create the necessary tables
 	err = db.AutoMigrate(
 		&models.User{},
 		&models.UserProgress{},

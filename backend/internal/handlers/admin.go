@@ -13,11 +13,12 @@ import (
 
 // AdminCreateUserRequest defines the data needed by an admin to create a new user
 type AdminCreateUserRequest struct {
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Email     string `json:"email"`
-	Password  string `json:"password"`
-	Role      string `json:"role"`
+	FirstName       string `json:"first_name"`
+	LastName        string `json:"last_name"`
+	Email           string `json:"email"`
+	Password        string `json:"password"`
+	ConfirmPassword string `json:"confirm_password"`
+	Role            string `json:"role"`
 }
 
 // GetAllUsers returns a list of all registered users
@@ -72,6 +73,10 @@ func (h *Handler) AdminCreateUser(c *gin.Context) {
 	}
 	if len(req.Password) < 6 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "password must be at least 6 characters long"})
+		return
+	}
+	if req.Password != req.ConfirmPassword {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "passwords do not match"})
 		return
 	}
 	if req.Role != "user" && req.Role != "admin" {

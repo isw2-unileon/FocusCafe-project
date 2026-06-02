@@ -21,6 +21,10 @@ test.describe('Authentication Flow', () => {
     await page.waitForURL(/.*login/);
     await expect(page).toHaveURL(/.*login/);
 
+    // Wait for login form to fully render (especially important in WebKit)
+    await expect(page.getByPlaceholder('Email')).toBeVisible();
+    await expect(page.getByPlaceholder('Password', { exact: true })).toBeVisible();
+
     // Fill login form (using mock or existing credentials if applicable)
     await page.getByPlaceholder('Email').fill(validEmail);
     await page.getByPlaceholder('Password', {exact: true}).fill(validPassword);
@@ -29,7 +33,7 @@ test.describe('Authentication Flow', () => {
     await page.getByRole('button', { name: 'Enter the Café' }).click();
     // Verify redirection to home/dashboard
     // According to App.tsx, successful login should lead to a protected route like /home
-    await page.waitForURL(/.*home/);
+    await page.waitForURL(/.*home/, { timeout: 15000 });
     await expect(page).toHaveURL(/.*home/);
   });
 

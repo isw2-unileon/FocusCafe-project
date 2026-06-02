@@ -10,25 +10,25 @@ import (
 )
 
 // UserServiceInterface defines the methods that the UserService must implement
-//
-//nolint:dupl
 type UserServiceInterface interface {
 	GetUserProfile(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error)
 	UpdateUserProfile(ctx context.Context, id uuid.UUID, firstName, lastName string) error
 	GetAllUsers(ctx context.Context) ([]domain.UserProfile, error)
 	GetUserByEmail(ctx context.Context, email string) (*domain.UserProfile, error)
 	DeleteUser(ctx context.Context, id uuid.UUID) error
+	GetLeaderboard(ctx context.Context, limit int) ([]domain.UserProfile, error)
+	GetUserLeaderboard(ctx context.Context, userID uuid.UUID) (int, *domain.UserProfile, error)
 }
 
 // UserRepository defines the interface for user-related data operations
-//
-//nolint:dupl
 type UserRepository interface {
 	GetUserProfile(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error)
 	UpdateUserProfile(ctx context.Context, id uuid.UUID, firstName, lastName string) error
 	GetAllUsers(ctx context.Context) ([]models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
 	DeleteUser(ctx context.Context, id uuid.UUID) error
+	GetLeaderboard(ctx context.Context, limit int) ([]models.User, error)
+	GetUserRank(ctx context.Context, userID uuid.UUID) (int, error)
 }
 
 // UserService provides methods to handle user-related business logic
@@ -117,4 +117,33 @@ func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*domain
 // DeleteUser deletes a user by ID
 func (s *UserService) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	return s.repo.DeleteUser(ctx, id)
+}
+
+// GetLeaderboard retrieves the top N users by experience and maps them to domain profiles
+func (s *UserService) GetLeaderboard(ctx context.Context, limit int) ([]domain.UserProfile, error) {
+	users, err := s.repo.GetLeaderboard(ctx, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	profiles := make([]domain.UserProfile, 0, len(users))
+	for _, u := range users {
+		profiles = append(profiles, mapUserToProfile(u))
+	}
+	return profiles, nil
+}
+
+// GetUserLeaderboard returns the user's global rank and profile for the leaderboard
+func (s *UserService) GetUserLeaderboard(ctx context.Context, userID uuid.UUID) (int, *domain.UserProfile, error) {
+	profile, err := s.GetUserProfile(ctx, userID)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	rank, err := s.repo.GetUserRank(ctx, userID)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	return rank, profile, nil
 }
