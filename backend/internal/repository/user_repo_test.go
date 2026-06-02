@@ -24,7 +24,7 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	err = db.AutoMigrate(
 		&models.User{},
 		&models.UserProgress{},
-		&models.StudyMaterial{})
+		&models.Group{})
 	if err != nil {
 		t.Fatalf("failed to migrate test database: %v", err)
 	}
@@ -33,52 +33,79 @@ func setupTestDB(t *testing.T) *gorm.DB {
 }
 
 // seedTestData handles the creation of initial database records for testing.
-// This keeps the main test function clean and reusable.
-func seedTestData(t *testing.T, db *gorm.DB, id uuid.UUID) {
+func seedTestData(t *testing.T, db *gorm.DB, id uuid.UUID, email string, progress *models.UserProgress, groupID *int64) {
 	t.Helper() // Marks this function as a test helper
 
 	user := models.User{
-		ID:    id,
-		Email: "test@focus.com",
+		ID:        id,
+		Email:     email,
+		FirstName: "Test",
+		LastName:  "User",
+		Username:  "testuser",
+		GroupID:   groupID,
 	}
 	if err := db.Create(&user).Error; err != nil {
 		t.Fatalf("Failed to create seed user: %v", err)
 	}
 
-	progress := models.UserProgress{
-		UserID: id,
-		Energy: 500,
-		XP:     100,
-	}
-	if err := db.Create(&progress).Error; err != nil {
-		t.Fatalf("Failed to create seed progress: %v", err)
+	if progress != nil {
+		progress.UserID = id
+		if err := db.Create(progress).Error; err != nil {
+			t.Fatalf("Failed to create seed progress: %v", err)
+		}
 	}
 }
 
-// TestUserRepository_GetUserProfile is now clean and easy to read,
-// satisfying the gocognit linter requirements.
 func TestUserRepository_GetUserProfile(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewUserRepository(db)
-	testID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
 
 	// Populate the in-memory database with test data
-	seedTestData(t, db, testID)
+	uNormal := uuid.New()
+	uWithGroup := uuid.New()
+	uWoProgress := uuid.New()
+
+	groupID := int64(99)
+	db.Create(&models.Group{ID: groupID, Name: "Cafesss", InviteCode: "CAFE12"})
+
+	seedTestData(t, db, uNormal, "normal@focus.com", &models.UserProgress{Energy: 300, XP: 150, Level: 4}, nil)
+	seedTestData(t, db, uWithGroup, "group@focus.com", &models.UserProgress{Energy: 100, XP: 10, Level: 1}, &groupID)
+	seedTestData(t, db, uWoProgress, "worogress@focus.com", nil, nil)
 
 	tests := []struct {
-		name    string
-		id      uuid.UUID
-		wantErr bool
+		name         string
+		id           uuid.UUID
+		wantErr      bool
+		expectGroup  bool
+		expectEnergy int
 	}{
 		{
-			name:    "Success: User profile found",
-			id:      testID,
-			wantErr: false,
+			name:         "Success: User profile found",
+			id:           uNormal,
+			wantErr:      false,
+			expectGroup:  false,
+			expectEnergy: 300,
 		},
 		{
-			name:    "Error: User ID does not exist",
-			id:      uuid.New(),
-			wantErr: true,
+			name:         "Error: User ID does not exist",
+			id:           uuid.New(),
+			wantErr:      true,
+			expectGroup:  false,
+			expectEnergy: 0,
+		},
+		{
+			name:         "Success: User with Group",
+			id:           uWithGroup,
+			wantErr:      false,
+			expectGroup:  true,
+			expectEnergy: 100,
+		},
+		{
+			name:         "Success: User Without Progress",
+			id:           uWoProgress,
+			wantErr:      false,
+			expectGroup:  false,
+			expectEnergy: 0,
 		},
 	}
 
@@ -108,158 +135,111 @@ func runProfileTest(t *testing.T, repo services.UserRepository, id uuid.UUID, wa
 	}
 }
 
-// TestUserRepository_GetLeaderboard verifies that only non-admin users are returned,
-// ordered by XP descending.
-func TestUserRepository_GetLeaderboard(t *testing.T) {
+func TestUserRepository_UpdateUserProfile(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewUserRepository(db)
+	id := uuid.New()
+
+	seedTestData(t, db, id, "update@test.com", nil, nil)
+
+	t.Run("Success: Update fields", func(t *testing.T) {
+		err := repo.UpdateUserProfile(context.Background(), id, "NEw", "Surname")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		var updated models.User
+		db.First(&updated, id)
+		if updated.FirstName != "NEw" || updated.LastName != "Surname" {
+			t.Errorf("profile updates were not saved correctly: %v", updated)
+		}
+	})
+}
+
+func TestUserRepository_GetAllUsers(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewUserRepository(db)
 
-	userID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440001")
-	adminID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440002")
+	seedTestData(t, db, uuid.New(), "all1@test.com", nil, nil)
+	seedTestData(t, db, uuid.New(), "all2@test.com", nil, nil)
 
-	// Create a regular user with progress
-	user := models.User{
-		ID:        userID,
-		Email:     "user@focus.com",
-		FirstName: "Alice",
-		Username:  "alice",
-		Role:      "user",
-	}
-	if err := db.Create(&user).Error; err != nil {
-		t.Fatalf("Failed to create user: %v", err)
-	}
-	userProgress := models.UserProgress{
-		UserID: userID,
-		Energy: 300,
-		XP:     1500,
-		Level:  5,
-	}
-	if err := db.Create(&userProgress).Error; err != nil {
-		t.Fatalf("Failed to create user progress: %v", err)
-	}
-
-	// Create an admin with higher XP
-	admin := models.User{
-		ID:        adminID,
-		Email:     "admin@focus.com",
-		FirstName: "Admin",
-		Username:  "admin",
-		Role:      "admin",
-	}
-	if err := db.Create(&admin).Error; err != nil {
-		t.Fatalf("Failed to create admin: %v", err)
-	}
-	adminProgress := models.UserProgress{
-		UserID: adminID,
-		Energy: 500,
-		XP:     5000,
-		Level:  10,
-	}
-	if err := db.Create(&adminProgress).Error; err != nil {
-		t.Fatalf("Failed to create admin progress: %v", err)
-	}
-
-	// Call the leaderboard
-	leaderboard, err := repo.GetLeaderboard(context.Background(), 10)
-	if err != nil {
-		t.Fatalf("GetLeaderboard() unexpected error: %v", err)
-	}
-
-	// Should return exactly 1 user (the regular user, not the admin)
-	if len(leaderboard) != 1 {
-		t.Errorf("GetLeaderboard() returned %d users, want 1", len(leaderboard))
-	}
-
-	if len(leaderboard) > 0 {
-		if leaderboard[0].ID != userID {
-			t.Errorf("GetLeaderboard() first user ID = %v, want %v", leaderboard[0].ID, userID)
+	t.Run("Success: Retrieve all users", func(t *testing.T) {
+		users, err := repo.GetAllUsers(context.Background())
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
 		}
-		if leaderboard[0].FirstName != "Alice" {
-			t.Errorf("GetLeaderboard() first user name = %v, want Alice", leaderboard[0].FirstName)
+		if len(users) < 2 {
+			t.Errorf("expected at least 2 users, got %d", len(users))
 		}
+	})
+}
+
+func TestUserRepository_GetUserByEmail(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewUserRepository(db)
+	targetEmail := "find_me@focus.com"
+	id := uuid.New()
+
+	seedTestData(t, db, id, targetEmail, nil, nil)
+
+	var existingUser models.User
+	db.Preload("Progress").Preload("Group").First(&existingUser, id)
+
+	tests := []struct {
+		name    string // description of this test case
+		email   string
+		want    *models.User
+		wantErr bool
+	}{
+		{"Success: Existing email", targetEmail, &existingUser, false},
+		{"Error: Non-existing email", "fake@focus.com", nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := repo.GetUserByEmail(context.Background(), tt.email)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("GetUserByEmail() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !tt.wantErr && got.Email != tt.email {
+				t.Errorf("expected email %s, got %s", tt.email, got.Email)
+			}
+		})
 	}
 }
 
-// TestUserRepository_GetUserRank verifies the 1-based rank calculation.
-func TestUserRepository_GetUserRank(t *testing.T) {
+func TestUserRepository_CreateAndDeleteUser(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewUserRepository(db)
+	id := uuid.New()
 
-	aliceID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440010")
-	bobID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440011")
-	charlieID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440012")
+	newUser := &models.User{
+		ID:        id,
+		FirstName: "Juan",
+		Email:     "juan@focus.com",
+	}
 
-	createUserWithProgress := func(id uuid.UUID, name string, role string, xp int) {
-		u := models.User{
-			ID:        id,
-			Email:     name + "@focus.com",
-			FirstName: name,
-			Username:  name,
-			Role:      role,
+	t.Run("Success: Create user", func(t *testing.T) {
+		err := repo.CreateUser(context.Background(), newUser)
+		if err != nil {
+			t.Fatalf("failed to create user: %v", err)
 		}
-		if err := db.Create(&u).Error; err != nil {
-			t.Fatalf("Failed to create user %s: %v", name, err)
+
+		var check models.User
+		if err := db.First(&check, id).Error; err != nil {
+			t.Error("user was not written to database")
 		}
-		p := models.UserProgress{UserID: id, Energy: 100, XP: xp, Level: 1}
-		if err := db.Create(&p).Error; err != nil {
-			t.Fatalf("Failed to create progress %s: %v", name, err)
+	})
+
+	t.Run("Success: Permanent delete (Unscoped)", func(t *testing.T) {
+		err := repo.DeleteUser(context.Background(), id)
+		if err != nil {
+			t.Fatalf("failed to delete user: %v", err)
 		}
-	}
 
-	// Alice: highest XP (rank 1)
-	createUserWithProgress(aliceID, "Alice", "user", 3000)
-	// Bob: middle XP (rank 2)
-	createUserWithProgress(bobID, "Bob", "user", 2000)
-	// Charlie: lowest XP (rank 3)
-	createUserWithProgress(charlieID, "Charlie", "user", 1000)
-
-	// Test Alice rank (should be 1)
-	rank, err := repo.GetUserRank(context.Background(), aliceID)
-	if err != nil {
-		t.Fatalf("GetUserRank(alice) error: %v", err)
-	}
-	if rank != 1 {
-		t.Errorf("GetUserRank(alice) = %d, want 1", rank)
-	}
-
-	// Test Bob rank (should be 2)
-	rank, err = repo.GetUserRank(context.Background(), bobID)
-	if err != nil {
-		t.Fatalf("GetUserRank(bob) error: %v", err)
-	}
-	if rank != 2 {
-		t.Errorf("GetUserRank(bob) = %d, want 2", rank)
-	}
-
-	// Test Charlie rank (should be 3)
-	rank, err = repo.GetUserRank(context.Background(), charlieID)
-	if err != nil {
-		t.Fatalf("GetUserRank(charlie) error: %v", err)
-	}
-	if rank != 3 {
-		t.Errorf("GetUserRank(charlie) = %d, want 3", rank)
-	}
-}
-
-// TestUserRepository_GetUserRank_NoProgress verifies error when user has no progress record.
-func TestUserRepository_GetUserRank_NoProgress(t *testing.T) {
-	db := setupTestDB(t)
-	repo := repository.NewUserRepository(db)
-
-	userID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440020")
-	user := models.User{
-		ID:        userID,
-		Email:     "noprogress@focus.com",
-		FirstName: "NoProgress",
-		Username:  "noprogress",
-		Role:      "user",
-	}
-	if err := db.Create(&user).Error; err != nil {
-		t.Fatalf("Failed to create user: %v", err)
-	}
-
-	_, err := repo.GetUserRank(context.Background(), userID)
-	if err == nil {
-		t.Error("GetUserRank() expected error for user without progress, got nil")
-	}
+		var check models.User
+		err = db.Unscoped().First(&check, id).Error
+		if err == nil {
+			t.Error("expected user to be permanently removed from database")
+		}
+	})
 }

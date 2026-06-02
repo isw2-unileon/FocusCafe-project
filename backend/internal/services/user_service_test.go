@@ -3,7 +3,9 @@ package services_test
 import (
 	"context"
 	"errors"
+	"reflect"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/domain"
@@ -11,237 +13,310 @@ import (
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/services"
 )
 
-// mockUserRepository is a test double for the UserRepository.
 type mockUserRepository struct {
-	getUserProfileFunc     func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error)
-	updateUserProfileFunc  func(ctx context.Context, id uuid.UUID, firstName, lastName string) error
-	getAllUsersFunc        func(ctx context.Context) ([]models.User, error)
-	getUserByEmailFunc     func(ctx context.Context, email string) (*models.User, error)
-	deleteUserFunc         func(ctx context.Context, id uuid.UUID) error
-	getLeaderboardFunc     func(ctx context.Context, limit int) ([]models.User, error)
-	getUserRankFunc        func(ctx context.Context, userID uuid.UUID) (int, error)
+	getUserProfileFunc    func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error)
+	updateUserProfileFunc func(ctx context.Context, id uuid.UUID, firstName, lastName string) error
+	getAllUsersFunc       func(ctx context.Context) ([]models.User, error)
+	getUserByEmailFunc    func(ctx context.Context, email string) (*models.User, error)
+	deleteUserFunc        func(ctx context.Context, id uuid.UUID) error
 }
 
 func (m *mockUserRepository) GetUserProfile(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error) {
 	if m.getUserProfileFunc != nil {
 		return m.getUserProfileFunc(ctx, id)
 	}
-	return nil, errors.New("getUserProfile not mocked")
+	return nil, nil
 }
 
 func (m *mockUserRepository) UpdateUserProfile(ctx context.Context, id uuid.UUID, firstName, lastName string) error {
 	if m.updateUserProfileFunc != nil {
 		return m.updateUserProfileFunc(ctx, id, firstName, lastName)
 	}
-	return errors.New("updateUserProfile not mocked")
+	return nil
 }
 
 func (m *mockUserRepository) GetAllUsers(ctx context.Context) ([]models.User, error) {
 	if m.getAllUsersFunc != nil {
 		return m.getAllUsersFunc(ctx)
 	}
-	return nil, errors.New("getAllUsers not mocked")
+	return nil, nil
 }
 
 func (m *mockUserRepository) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	if m.getUserByEmailFunc != nil {
 		return m.getUserByEmailFunc(ctx, email)
 	}
-	return nil, errors.New("getUserByEmail not mocked")
+	return nil, nil
 }
 
 func (m *mockUserRepository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	if m.deleteUserFunc != nil {
 		return m.deleteUserFunc(ctx, id)
 	}
-	return errors.New("deleteUser not mocked")
+	return nil
 }
 
-func (m *mockUserRepository) GetLeaderboard(ctx context.Context, limit int) ([]models.User, error) {
-	if m.getLeaderboardFunc != nil {
-		return m.getLeaderboardFunc(ctx, limit)
-	}
-	return nil, errors.New("getLeaderboard not mocked")
-}
-
-func (m *mockUserRepository) GetUserRank(ctx context.Context, userID uuid.UUID) (int, error) {
-	if m.getUserRankFunc != nil {
-		return m.getUserRankFunc(ctx, userID)
-	}
-	return 0, errors.New("getUserRank not mocked")
-}
-
-// ============================================
-// TestUserService_GetLeaderboard
-// ============================================
-
-func TestUserService_GetLeaderboard(t *testing.T) {
-	testUUID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
+func TestUserService_GetUserProfile(t *testing.T) {
+	id := uuid.New()
+	mockProfile := &domain.UserProfile{ID: id, FirstName: "Juan", Email: "juan@test.com"}
 
 	tests := []struct {
-		name         string
-		mockBehavior func(ctx context.Context, limit int) ([]models.User, error)
-		wantErr      bool
-		wantLen      int
-		wantFirstXP  int
+		name    string
+		repo    services.UserRepository
+		wantErr bool
+		want    *domain.UserProfile
 	}{
 		{
-			name: "Success: Returns mapped profiles ordered by XP",
-			mockBehavior: func(ctx context.Context, limit int) ([]models.User, error) {
-				return []models.User{
-					{
-						ID:        testUUID,
-						FirstName: "Alice",
-						Username:  "alice",
-						Email:     "alice@test.com",
-						Role:      "user",
-						Progress:  &models.UserProgress{UserID: testUUID, XP: 1500, Level: 5, Energy: 300},
-					},
-					{
-						ID:        uuid.MustParse("550e8400-e29b-41d4-a716-446655440001"),
-						FirstName: "Bob",
-						Username:  "bob",
-						Email:     "bob@test.com",
-						Role:      "user",
-						Progress:  &models.UserProgress{UserID: uuid.MustParse("550e8400-e29b-41d4-a716-446655440001"), XP: 800, Level: 3, Energy: 200},
-					},
-				}, nil
-			},
-			wantErr:     false,
-			wantLen:     2,
-			wantFirstXP: 1500,
-		},
-		{
-			name: "Success: Returns empty leaderboard",
-			mockBehavior: func(ctx context.Context, limit int) ([]models.User, error) {
-				return []models.User{}, nil
+			name: "Success: Profile retrieved",
+			repo: &mockUserRepository{
+				getUserProfileFunc: func(ctx context.Context, uid uuid.UUID) (*domain.UserProfile, error) {
+					return mockProfile, nil
+				},
 			},
 			wantErr: false,
-			wantLen: 0,
+			want:    mockProfile,
 		},
 		{
-			name: "Error: Repository failure",
-			mockBehavior: func(ctx context.Context, limit int) ([]models.User, error) {
-				return nil, errors.New("database connection lost")
+			name: "Error: Repo failure",
+			repo: &mockUserRepository{
+				getUserProfileFunc: func(ctx context.Context, uid uuid.UUID) (*domain.UserProfile, error) {
+					return nil, errors.New("not found")
+				},
 			},
 			wantErr: true,
-			wantLen: 0,
+			want:    nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mRepo := &mockUserRepository{getLeaderboardFunc: tt.mockBehavior}
-			s := services.NewUserService(mRepo)
-
-			profiles, err := s.GetLeaderboard(context.Background(), 5)
+			s := services.NewUserService(tt.repo)
+			got, err := s.GetUserProfile(context.Background(), id)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetLeaderboard() error = %v, wantErr %v", err, tt.wantErr)
-				return
+				t.Fatalf("GetUserProfile() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			if !tt.wantErr && len(profiles) != tt.wantLen {
-				t.Errorf("GetLeaderboard() len = %d, want %d", len(profiles), tt.wantLen)
-			}
-			if !tt.wantErr && tt.wantLen > 0 && profiles[0].XP != tt.wantFirstXP {
-				t.Errorf("GetLeaderboard() first XP = %d, want %d", profiles[0].XP, tt.wantFirstXP)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetUserProfile() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-// ============================================
-// TestUserService_GetUserLeaderboard
-// ============================================
-
-func TestUserService_GetUserLeaderboard(t *testing.T) {
-	testUUID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440002")
+func TestUserService_UpdateUserProfile(t *testing.T) {
+	id := uuid.New()
 
 	tests := []struct {
-		name               string
-		mockProfileFunc    func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error)
-		mockRankFunc       func(ctx context.Context, userID uuid.UUID) (int, error)
-		wantErr            bool
-		wantRank           int
-		wantFirstName      string
+		name      string
+		firstName string
+		lastName  string
+		repo      services.UserRepository
+		wantErr   bool
 	}{
 		{
-			name: "Success: Returns rank 7 and profile for regular user",
-			mockProfileFunc: func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error) {
-				return &domain.UserProfile{
-					ID:        id,
-					FirstName: "Juan",
-					XP:        800,
-					Level:     5,
-				}, nil
+			name:      "Success: Valid inputs forwarded to repo",
+			firstName: "Carlos",
+			lastName:  "Santana",
+			repo: &mockUserRepository{
+				updateUserProfileFunc: func(ctx context.Context, uid uuid.UUID, f, l string) error {
+					return nil
+				},
 			},
-			mockRankFunc: func(ctx context.Context, userID uuid.UUID) (int, error) {
-				return 7, nil
-			},
-			wantErr:       false,
-			wantRank:      7,
-			wantFirstName: "Juan",
+			wantErr: false,
 		},
 		{
-			name: "Success: Returns rank 1 for top player",
-			mockProfileFunc: func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error) {
-				return &domain.UserProfile{
-					ID:        id,
-					FirstName: "Alice",
-					XP:        3200,
-					Level:     15,
-				}, nil
-			},
-			mockRankFunc: func(ctx context.Context, userID uuid.UUID) (int, error) {
-				return 1, nil
-			},
-			wantErr:       false,
-			wantRank:      1,
-			wantFirstName: "Alice",
+			name:      "Error: Missing first name",
+			firstName: "",
+			lastName:  "Santana",
+			repo:      &mockUserRepository{},
+			wantErr:   true,
 		},
 		{
-			name: "Error: GetUserProfile fails",
-			mockProfileFunc: func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error) {
-				return nil, errors.New("user not found")
-			},
-			mockRankFunc: func(ctx context.Context, userID uuid.UUID) (int, error) {
-				return 0, nil
-			},
-			wantErr: true,
-		},
-		{
-			name: "Error: GetUserRank fails",
-			mockProfileFunc: func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error) {
-				return &domain.UserProfile{ID: id, FirstName: "Juan"}, nil
-			},
-			mockRankFunc: func(ctx context.Context, userID uuid.UUID) (int, error) {
-				return 0, errors.New("database connection lost")
-			},
-			wantErr: true,
+			name:      "Error: Missing last name",
+			firstName: "Carlos",
+			lastName:  "",
+			repo:      &mockUserRepository{},
+			wantErr:   true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mRepo := &mockUserRepository{
-				getUserProfileFunc: tt.mockProfileFunc,
-				getUserRankFunc:    tt.mockRankFunc,
-			}
-			s := services.NewUserService(mRepo)
-
-			rank, profile, err := s.GetUserLeaderboard(context.Background(), testUUID)
+			s := services.NewUserService(tt.repo)
+			err := s.UpdateUserProfile(context.Background(), id, tt.firstName, tt.lastName)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("GetUserLeaderboard() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if tt.wantErr {
-				return
-			}
-			if rank != tt.wantRank {
-				t.Errorf("GetUserLeaderboard() rank = %d, want %d", rank, tt.wantRank)
-			}
-			if profile.FirstName != tt.wantFirstName {
-				t.Errorf("GetUserLeaderboard() firstName = %v, want %v", profile.FirstName, tt.wantFirstName)
+				t.Errorf("UpdateUserProfile() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
+}
+
+func TestUserService_GetAllUsers(t *testing.T) {
+	id1 := uuid.New()
+	id2 := uuid.New()
+	now := time.Now()
+
+	mockDBUsers := []models.User{
+		{
+			ID:        id1,
+			FirstName: "User1",
+			CreatedAt: now,
+			Progress:  &models.UserProgress{Energy: 200, XP: 50, Level: 2},
+		},
+		{
+			ID:        id2,
+			FirstName: "User2",
+			CreatedAt: now,
+			Group:     &models.Group{ID: 10, Name: "Alfa Team", InviteCode: "ALFA"},
+		},
+	}
+
+	expectedProfiles := []domain.UserProfile{
+		{
+			ID:        id1,
+			FirstName: "User1",
+			CreatedAt: now.Format("2006-01-02"),
+			Energy:    200,
+			MaxEnergy: 500,
+			XP:        50,
+			Level:     2,
+		},
+		{
+			ID:        id2,
+			FirstName: "User2",
+			CreatedAt: now.Format("2006-01-02"),
+			Energy:    0,
+			MaxEnergy: 500,
+			XP:        0,
+			Level:     1,
+			Group:     &domain.Group{ID: 10, Name: "Alfa Team", InviteCode: "ALFA"},
+		},
+	}
+
+	tests := []struct {
+		name    string
+		repo    services.UserRepository
+		wantErr bool
+		want    []domain.UserProfile
+	}{
+		{
+			name: "Success: Retrieve and map multiple users",
+			repo: &mockUserRepository{
+				getAllUsersFunc: func(ctx context.Context) ([]models.User, error) {
+					return mockDBUsers, nil
+				},
+			},
+			wantErr: false,
+			want:    expectedProfiles,
+		},
+		{
+			name: "Error: Repo failure",
+			repo: &mockUserRepository{
+				getAllUsersFunc: func(ctx context.Context) ([]models.User, error) {
+					return nil, errors.New("db error")
+				},
+			},
+			wantErr: true,
+			want:    nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := services.NewUserService(tt.repo)
+			got, err := s.GetAllUsers(context.Background())
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("GetAllUsers() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetAllUsers() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestUserService_GetUserByEmail(t *testing.T) {
+	id := uuid.New()
+	now := time.Now()
+
+	mockDBUser := &models.User{
+		ID:        id,
+		Email:     "test@focus.com",
+		CreatedAt: now,
+	}
+
+	expectedProfile := &domain.UserProfile{
+		ID:        id,
+		Email:     "test@focus.com",
+		CreatedAt: now.Format("2006-01-02"),
+		MaxEnergy: 500,
+		Level:     1,
+	}
+
+	tests := []struct {
+		name    string
+		email   string
+		repo    services.UserRepository
+		wantErr bool
+		want    *domain.UserProfile
+	}{
+		{
+			name:  "Success: User found by email",
+			email: "test@focus.com",
+			repo: &mockUserRepository{
+				getUserByEmailFunc: func(ctx context.Context, e string) (*models.User, error) {
+					return mockDBUser, nil
+				},
+			},
+			wantErr: false,
+			want:    expectedProfile,
+		},
+		{
+			name:    "Error: Email parameter is empty",
+			email:   "",
+			repo:    &mockUserRepository{},
+			wantErr: true,
+			want:    nil,
+		},
+		{
+			name:  "Error: Repo returns error",
+			email: "missing@test.com",
+			repo: &mockUserRepository{
+				getUserByEmailFunc: func(ctx context.Context, e string) (*models.User, error) {
+					return nil, errors.New("record not found")
+				},
+			},
+			wantErr: true,
+			want:    nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := services.NewUserService(tt.repo)
+			got, err := s.GetUserByEmail(context.Background(), tt.email)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("GetUserByEmail() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetUserByEmail() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestUserService_DeleteUser(t *testing.T) {
+	id := uuid.New()
+
+	t.Run("Success: Deletion call forwarded", func(t *testing.T) {
+		repo := &mockUserRepository{
+			deleteUserFunc: func(ctx context.Context, uid uuid.UUID) error {
+				return nil
+			},
+		}
+		s := services.NewUserService(repo)
+		err := s.DeleteUser(context.Background(), id)
+		if err != nil {
+			t.Errorf("unexpected error on DeleteUser: %v", err)
+		}
+	})
 }

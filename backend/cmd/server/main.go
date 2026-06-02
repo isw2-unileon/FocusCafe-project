@@ -94,7 +94,7 @@ func setupRouter(cfg *config.Config, adapterJWT *supabase.JWTAdapter, userServic
 	}))
 	r.Use(gin.Logger(), gin.Recovery())
 
-	h := handlers.NewHandler(cfg.SupabaseURL, cfg.SupabaseKey, cfg.SupabaseServiceRoleKey, cfg.ClientURL, adapterJWT, userService, userOrderService, studyService, aiService, groupService, wsHub)
+	h := handlers.NewHandler(cfg.SupabaseURL, cfg.SupabaseKey, cfg.SupabaseServiceRoleKey, cfg.CORSAllowOrigin, adapterJWT, userService, userOrderService, studyService, aiService, groupService, wsHub)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})

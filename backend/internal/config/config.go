@@ -17,7 +17,6 @@ type Config struct {
 	SupabaseURL            string
 	SupabaseKey            string
 	SupabaseServiceRoleKey string
-	SupabaseJWTSecret      string
 	DatabaseURL            string
 	GeminiKey              string
 }
@@ -36,7 +35,6 @@ func Load() *Config {
 		SupabaseURL:            getEnv("SUPABASE_URL", ""),
 		SupabaseKey:            getEnv("SUPABASE_KEY", ""),
 		SupabaseServiceRoleKey: getEnv("SUPABASE_SERVICE_ROLE_KEY", ""),
-		SupabaseJWTSecret:      getEnv("SUPABASE_JWT_SECRET", ""),
 		DatabaseURL:            getEnv("DATABASE_URL", ""),
 		GeminiKey:              getEnv("GEMINI_API_KEY", ""),
 	}
