@@ -35,13 +35,14 @@ func supabaseSyncStub(
 				w.WriteHeader(http.StatusNotFound)
 			}
 		case "/rest/v1/users":
-			if r.Method == http.MethodGet {
+			switch r.Method {
+			case http.MethodGet:
 				w.WriteHeader(http.StatusOK)
 				_ = json.NewEncoder(w).Encode(existsBody)
-			} else if r.Method == http.MethodPost {
+			case http.MethodPost:
 				w.WriteHeader(http.StatusCreated)
 				_ = json.NewEncoder(w).Encode([]interface{}{})
-			} else {
+			default:
 				w.WriteHeader(http.StatusNotFound)
 			}
 		case "/rest/v1/user_progress":
