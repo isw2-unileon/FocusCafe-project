@@ -57,7 +57,7 @@ jobs:
       - name: Run Database Migrations
         run: |
           npm install -g supabase
-          supabase db reset --no-tui --db-url "postgresql://postgres:postgres@localhost:54322/postgres?sslmode=disable"
+          supabase db reset --yes --db-url "postgresql://postgres:postgres@localhost:54322/postgres?sslmode=disable"
 
       # Playwright turns on frontend and backend automatically
       - name: Run E2E tests
