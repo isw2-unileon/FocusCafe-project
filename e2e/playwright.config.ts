@@ -14,7 +14,7 @@ export default defineConfig({
   globalTeardown: require.resolve("./global-teardown"),
 
   use: {
-    baseURL: "http://localhost:5173",
+    baseURL: "http://localhost",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
