@@ -42,14 +42,14 @@ func TestAIService_GenerateQuiz(t *testing.T) {
 				},
 			},
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer mockServer.Close()
 
 	// Mock server returning non-200
 	mockErrorServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"error":"Invalid API key"}`))
+		_, _ = w.Write([]byte(`{"error":"Invalid API key"}`))
 	}))
 	defer mockErrorServer.Close()
 
@@ -57,7 +57,7 @@ func TestAIService_GenerateQuiz(t *testing.T) {
 	mockEmptyServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"candidates":[]}`))
+		_, _ = w.Write([]byte(`{"candidates":[]}`))
 	}))
 	defer mockEmptyServer.Close()
 

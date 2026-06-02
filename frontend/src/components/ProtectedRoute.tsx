@@ -8,11 +8,7 @@ export const ProtectedRoute = () => {
         return <div className="flex items-center justify-center h-screen">Loading...</div>;
     }
 
-    // Read token directly from localStorage to avoid race conditions
-    // where React state hasn't propagated yet after login
-    const hasToken = !!localStorage.getItem('token');
-
-    if (!hasToken) {
+    if (!isAuthenticated) {
         return <Navigate to="/" replace />;
     }
 

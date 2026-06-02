@@ -10,8 +10,6 @@ import (
 )
 
 // UserServiceInterface defines the methods that the UserService must implement
-//
-//nolint:dupl
 type UserServiceInterface interface {
 	GetUserProfile(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error)
 	UpdateUserProfile(ctx context.Context, id uuid.UUID, firstName, lastName string) error
@@ -23,8 +21,6 @@ type UserServiceInterface interface {
 }
 
 // UserRepository defines the interface for user-related data operations
-//
-//nolint:dupl
 type UserRepository interface {
 	GetUserProfile(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error)
 	UpdateUserProfile(ctx context.Context, id uuid.UUID, firstName, lastName string) error

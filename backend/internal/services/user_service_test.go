@@ -19,6 +19,8 @@ type mockUserRepository struct {
 	getAllUsersFunc       func(ctx context.Context) ([]models.User, error)
 	getUserByEmailFunc    func(ctx context.Context, email string) (*models.User, error)
 	deleteUserFunc        func(ctx context.Context, id uuid.UUID) error
+	getLeaderboardFunc    func(ctx context.Context, limit int) ([]models.User, error)
+	getUserRankFunc       func(ctx context.Context, userID uuid.UUID) (int, error)
 }
 
 func (m *mockUserRepository) GetUserProfile(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error) {
@@ -54,6 +56,20 @@ func (m *mockUserRepository) DeleteUser(ctx context.Context, id uuid.UUID) error
 		return m.deleteUserFunc(ctx, id)
 	}
 	return nil
+}
+
+func (m *mockUserRepository) GetLeaderboard(ctx context.Context, limit int) ([]models.User, error) {
+	if m.getLeaderboardFunc != nil {
+		return m.getLeaderboardFunc(ctx, limit)
+	}
+	return nil, nil
+}
+
+func (m *mockUserRepository) GetUserRank(ctx context.Context, userID uuid.UUID) (int, error) {
+	if m.getUserRankFunc != nil {
+		return m.getUserRankFunc(ctx, userID)
+	}
+	return 0, nil
 }
 
 func TestUserService_GetUserProfile(t *testing.T) {
