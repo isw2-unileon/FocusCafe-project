@@ -10,11 +10,22 @@ export const useRegister = () => {
     setError('');
 
     if (!data.firstName || !data.lastName) {
-      setError('Nombre y apellido son obligatorios.');
+      setError('First Name and Last Name are mandatory.');
       return;
     }
+
+    if(!data.email) {
+      setError('Email is mandatory.');
+      return;
+    }
+
+    if(!data.password || !data.confirmPassword) {
+      setError('Password and its confirmation are mandatory.');
+      return;
+    }
+
     if (data.password !== data.confirmPassword) {
-      setError('Las contraseñas no coinciden.');
+      setError('Passwords do not match.');
       return;
     }
 

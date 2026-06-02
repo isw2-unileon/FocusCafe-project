@@ -15,7 +15,8 @@ import { WebSocketProvider } from "./context/WebSocketContext";
 import AdminDashboard from "./pages/AdminDashboard";
 
 const AdminRoute = () => {
-  const { isAuthenticated, isAdmin } = useAuth();
+  const { isAuthenticated, isAdmin, isLoading } = useAuth();
+  if (isLoading) return <div className="flex items-center justify-center h-screen">Loading...</div>;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (!isAdmin) return <Navigate to="/home" replace />;
   return <Outlet />;
