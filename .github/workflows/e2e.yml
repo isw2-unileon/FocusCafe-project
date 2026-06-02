@@ -87,6 +87,12 @@ jobs:
           echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
           echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> .env
 
+          echo "PORT=8080" >> e2e/.env
+          echo "GIN_MODE=debug" >> e2e/.env
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> e2e/.env
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> e2e/.env
+          echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> e2e/.env
+
       # Playwright turns on frontend and backend automatically
       - name: Run E2E tests
         run: make e2e
