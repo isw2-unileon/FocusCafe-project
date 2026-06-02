@@ -10,11 +10,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ─────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────
-
-// newSyncHandler inicializa el Handler con un nombre único para esta clase de tests
 func newSyncHandler(supabaseURL string) *Handler {
 	return &Handler{
 		SupabaseURL: supabaseURL,
@@ -23,7 +18,6 @@ func newSyncHandler(supabaseURL string) *Handler {
 	}
 }
 
-// supabaseSyncStub arranca el servidor de simulación exclusivo para SyncUser
 func supabaseSyncStub(
 	t *testing.T,
 	authStatus int, authBody interface{},
@@ -32,23 +26,31 @@ func supabaseSyncStub(
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		switch {
-		case r.Method == http.MethodGet && r.URL.Path == "/auth/v1/user":
-			w.WriteHeader(authStatus)
-			_ = json.NewEncoder(w).Encode(authBody)
-
-		case r.Method == http.MethodGet && r.URL.Path == "/rest/v1/users":
-			w.WriteHeader(http.StatusOK)
-			_ = json.NewEncoder(w).Encode(existsBody)
-
-		case r.Method == http.MethodPost && r.URL.Path == "/rest/v1/users":
-			w.WriteHeader(http.StatusCreated)
-			_ = json.NewEncoder(w).Encode([]interface{}{})
-
-		case r.Method == http.MethodPost && r.URL.Path == "/rest/v1/user_progress":
-			w.WriteHeader(http.StatusCreated)
-			_ = json.NewEncoder(w).Encode([]interface{}{})
-
+		switch r.URL.Path {
+		case "/auth/v1/user":
+			if r.Method == http.MethodGet {
+				w.WriteHeader(authStatus)
+				_ = json.NewEncoder(w).Encode(authBody)
+			} else {
+				w.WriteHeader(http.StatusNotFound)
+			}
+		case "/rest/v1/users":
+			if r.Method == http.MethodGet {
+				w.WriteHeader(http.StatusOK)
+				_ = json.NewEncoder(w).Encode(existsBody)
+			} else if r.Method == http.MethodPost {
+				w.WriteHeader(http.StatusCreated)
+				_ = json.NewEncoder(w).Encode([]interface{}{})
+			} else {
+				w.WriteHeader(http.StatusNotFound)
+			}
+		case "/rest/v1/user_progress":
+			if r.Method == http.MethodPost {
+				w.WriteHeader(http.StatusCreated)
+				_ = json.NewEncoder(w).Encode([]interface{}{})
+			} else {
+				w.WriteHeader(http.StatusNotFound)
+			}
 		default:
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -57,7 +59,6 @@ func supabaseSyncStub(
 	return srv
 }
 
-// validAuthBody returns a typical Supabase /auth/v1/user response.
 func validAuthBody(email string) map[string]interface{} {
 	return map[string]interface{}{
 		"id":    "uuid-001",
@@ -67,10 +68,6 @@ func validAuthBody(email string) map[string]interface{} {
 		},
 	}
 }
-
-// ─────────────────────────────────────────────
-// SyncUser – Authorization header tests
-// ─────────────────────────────────────────────
 
 func TestSyncUser_Auth_TableDriven(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -133,10 +130,6 @@ func TestSyncUser_Auth_TableDriven(t *testing.T) {
 	}
 }
 
-// ─────────────────────────────────────────────
-// SyncUser – User data extraction tests
-// ─────────────────────────────────────────────
-
 func TestSyncUser_ExtractUserData_TableDriven(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -186,7 +179,7 @@ func TestSyncUser_ExtractUserData_TableDriven(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			stub := supabaseSyncStub(t,
 				http.StatusOK, tt.authBody,
-				[]interface{}{}, // user does not exist yet
+				[]interface{}{},
 			)
 			h := newSyncHandler(stub.URL)
 
@@ -213,16 +206,12 @@ func TestSyncUser_ExtractUserData_TableDriven(t *testing.T) {
 	}
 }
 
-// ─────────────────────────────────────────────
-// SyncUser – User already exists
-// ─────────────────────────────────────────────
-
 func TestSyncUser_UserAlreadyExists(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	stub := supabaseSyncStub(t,
 		http.StatusOK, validAuthBody("user@focus.com"),
-		[]interface{}{map[string]interface{}{"id": "uuid-001"}}, // user exists
+		[]interface{}{map[string]interface{}{"id": "uuid-001"}},
 	)
 	h := newSyncHandler(stub.URL)
 
@@ -248,9 +237,29 @@ func TestSyncUser_UserAlreadyExists(t *testing.T) {
 	}
 }
 
-// ─────────────────────────────────────────────
-// SyncUser – User existence, Profile and Progress failures
-// ─────────────────────────────────────────────
+func failuresStub(existsStatus, profileStatus, progressStatus int) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/auth/v1/user":
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(validAuthBody("user@focus.com"))
+		case "/rest/v1/users":
+			if r.Method == http.MethodGet {
+				w.WriteHeader(existsStatus)
+				_ = json.NewEncoder(w).Encode([]interface{}{})
+			} else {
+				w.WriteHeader(profileStatus)
+				_ = json.NewEncoder(w).Encode([]interface{}{})
+			}
+		case "/rest/v1/user_progress":
+			w.WriteHeader(progressStatus)
+			if progressStatus != http.StatusCreated {
+				_ = json.NewEncoder(w).Encode(map[string]string{"message": "failed to save initial progress"})
+			}
+		}
+	}))
+}
 
 func TestSyncUser_Failures_TableDriven(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -285,34 +294,14 @@ func TestSyncUser_Failures_TableDriven(t *testing.T) {
 			profileStatus:  http.StatusCreated,
 			progressStatus: http.StatusInternalServerError,
 			expectedStatus: http.StatusInternalServerError,
-			expectedError:  "failed to save initial progress", // error from createUserProgress
+			expectedError:  "failed to save initial progress",
 		},
 	}
 
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Content-Type", "application/json")
-				switch {
-				case r.URL.Path == "/auth/v1/user":
-					w.WriteHeader(http.StatusOK)
-					_ = json.NewEncoder(w).Encode(validAuthBody("user@focus.com"))
-				case r.URL.Path == "/rest/v1/users":
-					if r.Method == http.MethodGet {
-						w.WriteHeader(tt.existsStatus)
-						_ = json.NewEncoder(w).Encode([]interface{}{})
-					} else {
-						w.WriteHeader(tt.profileStatus)
-						_ = json.NewEncoder(w).Encode([]interface{}{})
-					}
-				case r.URL.Path == "/rest/v1/user_progress":
-					w.WriteHeader(tt.progressStatus)
-					if tt.progressStatus != http.StatusCreated {
-						_ = json.NewEncoder(w).Encode(map[string]string{"message": "failed to save initial progress"})
-					}
-				}
-			}))
+			srv := failuresStub(tt.existsStatus, tt.profileStatus, tt.progressStatus)
 			defer srv.Close()
 
 			h := newSyncHandler(srv.URL)
@@ -338,7 +327,6 @@ func TestSyncUser_Failures_TableDriven(t *testing.T) {
 }
 
 func TestCreateUserProfileSync_FallbackError(t *testing.T) {
-	// Cubre la línea 190: JSON válido pero sin campos 'message' o 'code'
 	stub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(map[string]string{"something": "else"})
@@ -352,10 +340,6 @@ func TestCreateUserProfileSync_FallbackError(t *testing.T) {
 		t.Errorf("expected fallback error, got %v", err)
 	}
 }
-
-// ─────────────────────────────────────────────
-// SyncUser – User data extraction edge cases
-// ─────────────────────────────────────────────
 
 func TestExtractUserData_EdgeCases(t *testing.T) {
 	tests := []struct {
@@ -404,13 +388,9 @@ func TestExtractUserData_EdgeCases(t *testing.T) {
 	}
 }
 
-// ─────────────────────────────────────────────
-// Direct Unit Tests for Helpers
-// ─────────────────────────────────────────────
-
 func TestFetchSupabaseUser_Errors(t *testing.T) {
 	t.Run("Connection Error", func(t *testing.T) {
-		h := newSyncHandler("http://localhost:9999") // invalid URL
+		h := newSyncHandler("http://localhost:9999")
 		_, err := h.fetchSupabaseUser("token")
 		if err == nil {
 			t.Error("expected error, got nil")
@@ -536,7 +516,7 @@ func TestSyncUser_Success(t *testing.T) {
 
 	stub := supabaseSyncStub(t,
 		http.StatusOK, validAuthBody("ada@focus.com"),
-		[]interface{}{}, // user does not exist yet
+		[]interface{}{},
 	)
 	h := newSyncHandler(stub.URL)
 
