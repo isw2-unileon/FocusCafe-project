@@ -61,8 +61,9 @@ jobs:
           # 1. Install Supabase CLI
           npm install -g supabase
 
-          echo "Creating extensions schema in Postgres..."
-          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable" -c "CREATE SCHEMA IF NOT EXISTS extensions;"
+          # 2. Create extensions and auth schemas with dumy users table
+          echo "Creating required Supabase schemas and dummy tables..."
+          supabase db query "CREATE SCHEMA IF NOT EXISTS extensions; CREATE SCHEMA IF NOT EXISTS auth; CREATE TABLE IF NOT EXISTS auth.users (id UUID PRIMARY KEY);" --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
 
           # 3. Push database migrations (Adding --accept-all to bypass the [Y/n] prompt)
           echo "Pushing database migrations..."
