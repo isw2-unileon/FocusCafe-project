@@ -225,8 +225,8 @@ ALTER TABLE ONLY "public"."users"
 
 ALTER TABLE "public"."user_orders" ENABLE ROW LEVEL SECURITY;
 
-ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
-ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."user_orders";
+-- ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
+-- ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."user_orders";
 
 -- GRANT USAGE ON SCHEMA "public" TO "postgres";
 -- GRANT USAGE ON SCHEMA "public" TO "anon";
@@ -335,4 +335,4 @@ ALTER PUBLICATION "supabase_realtime" ADD TABLE ONLY "public"."user_orders";
 -- ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "postgres";
 -- ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 -- ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
--- ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
+-- ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role"; 
