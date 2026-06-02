@@ -14,7 +14,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    #Simutates a local supabase db
+    # Simulates a local postgres db
     services:
       postgres:
         image: postgres:15-alpine
@@ -61,37 +61,53 @@ jobs:
           # 1. Install Supabase CLI
           npm install -g supabase
 
-          # 2. Create extensions and auth schemas with dumy users table
+          # 2. Create extensions and auth schemas with dummy users table
           echo "Creating extensions schema..."
           supabase db query "CREATE SCHEMA IF NOT EXISTS extensions;" --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
 
+          # 3. Create auth schema
           echo "Creating auth schema..."
           supabase db query "CREATE SCHEMA IF NOT EXISTS auth;" --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
 
           echo "Creating dummy auth.users table..."
           supabase db query "CREATE TABLE IF NOT EXISTS auth.users (id UUID PRIMARY KEY);" --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
 
-          # 3. Push database migrations (Adding --accept-all to bypass the [Y/n] prompt)
+          # 4. Push database migrations
           echo "Pushing database migrations..."
           yes | supabase db push --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
 
-          # 4. Inject seed.sql file
+          # 5. Inject seed.sql file
           echo "Loading initial coffee menu data (seed.sql)..."
+          sudo apt-get install -y postgresql-client
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable" -f supabase/seed.sql
 
       - name: Create .env file securely
         run: |
+          # 1. Create the .env file in the ROOT directory (For the Go Backend)
           echo "PORT=8080" >> .env
           echo "GIN_MODE=debug" >> .env
-          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
-          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
-          echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> .env
+          echo "CORS_ALLOW_ORIGIN=*" >> .env
 
-          echo "PORT=8080" >> e2e/.env
-          echo "GIN_MODE=debug" >> e2e/.env
-          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> e2e/.env
-          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> e2e/.env
-          echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> e2e/.env
+          # Local Docker database URL
+          echo "DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable" >> .env
+          echo "SUPABASE_URL=http://127.0.0.1:54321" >> .env
+
+          # Simulate mock keys
+          MOCK_SECRET_KEY="sb_secret_local_development_key_mock_value_for_testing_purposes"
+          MOCK_ANON_KEY="sb_publishable_local_development_key_mock_value_for_testing_purposes"
+
+          echo "SUPABASE_KEY=$MOCK_SECRET_KEY" >> .env
+          echo "SUPABASE_SERVICE_ROLE_KEY=$MOCK_ANON_KEY" >> .env
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+
+          # 2. Copy this complete file to the e2e tests directory
+          cp .env e2e/.env
+
+          # 3. Create the specific .env file in the FRONTEND directory (For Vite)
+          echo "BACKEND_PORT=8080" >> frontend/.env
+          echo "VITE_API_URL=http://localhost:8080" >> frontend/.env
+          echo "VITE_SUPABASE_URL=http://127.0.0.1:54321" >> frontend/.env
+          echo "VITE_SUPABASE_ANON_KEY=$MOCK_ANON_KEY" >> frontend/.env
 
       # Playwright turns on frontend and backend automatically
       - name: Run E2E tests
