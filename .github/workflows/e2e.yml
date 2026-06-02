@@ -55,9 +55,11 @@ jobs:
 
       # Execute Supabase CLI in Postgres Github
       - name: Run Database Migrations
+        env:
+          GSSLMODE: disable
         run: |
           npm install -g supabase
-          supabase db reset --yes --db-url "postgresql://postgres:postgres@localhost:54322/postgres?sslmode=disable"
+          supabase db reset --yes --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
 
       # Playwright turns on frontend and backend automatically
       - name: Run E2E tests
