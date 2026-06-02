@@ -3,12 +3,12 @@ name: E2E Tests
 on:
   workflow_dispatch:
 
-  concurrency:
+concurrency:
   group: e2e-${{ github.ref }}
   cancel-in-progress: true
 
-  env:
-    NODE_VERSION: 22
+env:
+  NODE_VERSION: 22
 
 jobs:
   test:
@@ -52,9 +52,6 @@ jobs:
 
       - name: Build frontend
         run: make build-frontend
-
-      - name: Build frontend
-        run: cd frontend && npm ci && npm run build
 
       # Execute Supabase CLI in Postgres Github
       - name: Run Database Migrations
