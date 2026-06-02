@@ -54,12 +54,19 @@ jobs:
         run: make build-frontend
 
       # Execute Supabase CLI in Postgres Github
-      - name: Run Database Migrations
+      - name: Run Database Migrations and Seed
         env:
-          GSSLMODE: disable
+          PGSSLMODE: disable
         run: |
+          # 1. Install Supabase CLI
           npm install -g supabase
-          supabase db reset --yes --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
+
+          # 2. Push structural migrations
+          supabase db push --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
+
+          # 3. Inject seed.sql
+          echo "Loading seed.sql"
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable" -f supabase/seed.sql
 
       # Playwright turns on frontend and backend automatically
       - name: Run E2E tests
