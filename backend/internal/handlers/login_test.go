@@ -57,6 +57,73 @@ func loginBody(t *testing.T, email, password string) *bytes.Buffer {
 // Login handler tests (Table-Driven)
 // ─────────────────────────────────────────────
 
+type loginTestCase struct {
+	name             string
+	requestBody      interface{}
+	supabaseStatus   int
+	supabaseResponse interface{}
+	closeServer      bool
+	expectedStatus   int
+	expectedError    string
+	containsError    string
+	expectedToken    string
+	checkUser        bool
+}
+
+func runLoginTestCase(t *testing.T, tt loginTestCase) {
+	stub := supabaseLoginStub(t, tt.supabaseStatus, tt.supabaseResponse)
+	if tt.closeServer {
+		stub.Close()
+	}
+
+	h := newLoginHandler(stub.URL)
+	w := httptest.NewRecorder()
+	_, r := gin.CreateTestContext(w)
+	r.POST("/login", h.Login)
+
+	var reqBody *bytes.Buffer
+	switch v := tt.requestBody.(type) {
+	case string:
+		reqBody = bytes.NewBufferString(v)
+	default:
+		b, _ := json.Marshal(v)
+		reqBody = bytes.NewBuffer(b)
+	}
+
+	req, _ := http.NewRequest(http.MethodPost, "/login", reqBody)
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	if w.Code != tt.expectedStatus {
+		t.Errorf("[%s] expected HTTP %d, got %d", tt.name, tt.expectedStatus, w.Code)
+	}
+
+	var respBody map[string]interface{}
+	_ = json.Unmarshal(w.Body.Bytes(), &respBody)
+
+	if tt.expectedError != "" {
+		if respBody["error"] != tt.expectedError {
+			t.Errorf("[%s] expected error %q, got %q", tt.name, tt.expectedError, respBody["error"])
+		}
+	}
+	if tt.containsError != "" {
+		errStr, _ := respBody["error"].(string)
+		if !strings.Contains(errStr, tt.containsError) {
+			t.Errorf("[%s] expected error to contain %q, got %q", tt.name, tt.containsError, errStr)
+		}
+	}
+	if tt.expectedToken != "" {
+		if respBody["token"] != tt.expectedToken {
+			t.Errorf("[%s] expected token %q, got %q", tt.name, tt.expectedToken, respBody["token"])
+		}
+	}
+	if tt.checkUser {
+		if respBody["user"] == nil {
+			t.Errorf("[%s] expected user to be not nil", tt.name)
+		}
+	}
+}
+
 func TestLogin_TableDriven(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -69,29 +136,15 @@ func TestLogin_TableDriven(t *testing.T) {
 		"error_description": "Invalid login credentials",
 	}
 
-	tests := []struct {
-		name             string
-		requestBody      interface{}
-		supabaseStatus   int
-		supabaseResponse interface{}
-		closeServer      bool
-		expectedStatus   int
-		checkBody        func(t *testing.T, body map[string]interface{})
-	}{
+	tests := []loginTestCase{
 		{
 			name:             "Success - valid credentials",
 			requestBody:      map[string]string{"email": "user@focus.com", "password": "secret"},
 			supabaseStatus:   http.StatusOK,
 			supabaseResponse: successBody,
 			expectedStatus:   http.StatusOK,
-			checkBody: func(t *testing.T, body map[string]interface{}) {
-				if body["token"] != "jwt-token-abc123" {
-					t.Errorf("expected token %q, got %q", "jwt-token-abc123", body["token"])
-				}
-				if body["user"] == nil {
-					t.Error("expected user to be not nil")
-				}
-			},
+			expectedToken:    "jwt-token-abc123",
+			checkUser:        true,
 		},
 		{
 			name:             "Unauthorized - wrong password",
@@ -99,11 +152,7 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseStatus:   http.StatusBadRequest,
 			supabaseResponse: badCredsBody,
 			expectedStatus:   http.StatusUnauthorized,
-			checkBody: func(t *testing.T, body map[string]interface{}) {
-				if body["error"] != "Invalid login credentials" {
-					t.Errorf("expected error %q, got %q", "Invalid login credentials", body["error"])
-				}
-			},
+			expectedError:    "Invalid login credentials",
 		},
 		{
 			name:             "Bad request - malformed JSON body",
@@ -111,11 +160,7 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseStatus:   http.StatusOK,
 			supabaseResponse: successBody,
 			expectedStatus:   http.StatusBadRequest,
-			checkBody: func(t *testing.T, body map[string]interface{}) {
-				if body["error"] != "invalid request body" {
-					t.Errorf("expected error %q, got %q", "invalid request body", body["error"])
-				}
-			},
+			expectedError:    "invalid request body",
 		},
 		{
 			name:             "Bad request - missing email field",
@@ -123,11 +168,7 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseStatus:   http.StatusBadRequest,
 			supabaseResponse: badCredsBody,
 			expectedStatus:   http.StatusUnauthorized,
-			checkBody: func(t *testing.T, body map[string]interface{}) {
-				if body["error"] != "Invalid login credentials" {
-					t.Errorf("expected error %q, got %q", "Invalid login credentials", body["error"])
-				}
-			},
+			expectedError:    "Invalid login credentials",
 		},
 		{
 			name:             "Unauthorized - msg field in Supabase response",
@@ -135,11 +176,7 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseStatus:   http.StatusBadRequest,
 			supabaseResponse: map[string]interface{}{"msg": "Specific error message from msg field"},
 			expectedStatus:   http.StatusUnauthorized,
-			checkBody: func(t *testing.T, body map[string]interface{}) {
-				if body["error"] != "Specific error message from msg field" {
-					t.Errorf("expected error %q, got %q", "Specific error message from msg field", body["error"])
-				}
-			},
+			expectedError:    "Specific error message from msg field",
 		},
 		{
 			name:             "Unauthorized - message field in Supabase response",
@@ -147,11 +184,7 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseStatus:   http.StatusBadRequest,
 			supabaseResponse: map[string]interface{}{"message": "Specific error message from message field"},
 			expectedStatus:   http.StatusUnauthorized,
-			checkBody: func(t *testing.T, body map[string]interface{}) {
-				if body["error"] != "Specific error message from message field" {
-					t.Errorf("expected error %q, got %q", "Specific error message from message field", body["error"])
-				}
-			},
+			expectedError:    "Specific error message from message field",
 		},
 		{
 			name:             "Unauthorized - missing error_description in Supabase response",
@@ -159,11 +192,7 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseStatus:   http.StatusBadRequest,
 			supabaseResponse: map[string]interface{}{"error": "unknown"},
 			expectedStatus:   http.StatusUnauthorized,
-			checkBody: func(t *testing.T, body map[string]interface{}) {
-				if body["error"] != "invalid credentials" {
-					t.Errorf("expected error %q, got %q", "invalid credentials", body["error"])
-				}
-			},
+			expectedError:    "invalid credentials",
 		},
 		{
 			name:             "Supabase returns corrupt JSON response",
@@ -171,12 +200,7 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseStatus:   http.StatusOK,
 			supabaseResponse: "{bad-json-corrupt-data",
 			expectedStatus:   http.StatusUnauthorized,
-			checkBody: func(t *testing.T, body map[string]interface{}) {
-				errStr, _ := body["error"].(string)
-				if !strings.Contains(errStr, "error processing auth response") {
-					t.Errorf("expected error to contain %q, got %q", "error processing auth response", errStr)
-				}
-			},
+			containsError:    "error processing auth response",
 		},
 		{
 			name:             "Supabase network connection error",
@@ -185,49 +209,14 @@ func TestLogin_TableDriven(t *testing.T) {
 			supabaseResponse: successBody,
 			closeServer:      true,
 			expectedStatus:   http.StatusUnauthorized,
-			checkBody: func(t *testing.T, body map[string]interface{}) {
-				if body["error"] != "connection error: could not reach auth service" {
-					t.Errorf("expected error %q, got %q", "connection error: could not reach auth service", body["error"])
-				}
-			},
+			expectedError:    "connection error: could not reach auth service",
 		},
 	}
 
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			stub := supabaseLoginStub(t, tt.supabaseStatus, tt.supabaseResponse)
-			if tt.closeServer {
-				stub.Close()
-			}
-
-			h := newLoginHandler(stub.URL)
-			w := httptest.NewRecorder()
-			_, r := gin.CreateTestContext(w)
-			r.POST("/login", h.Login)
-
-			var reqBody *bytes.Buffer
-			switch v := tt.requestBody.(type) {
-			case string:
-				reqBody = bytes.NewBufferString(v)
-			default:
-				b, _ := json.Marshal(v)
-				reqBody = bytes.NewBuffer(b)
-			}
-
-			req, _ := http.NewRequest(http.MethodPost, "/login", reqBody)
-			req.Header.Set("Content-Type", "application/json")
-			r.ServeHTTP(w, req)
-
-			if w.Code != tt.expectedStatus {
-				t.Errorf("[%s] expected HTTP %d, got %d", tt.name, tt.expectedStatus, w.Code)
-			}
-
-			if tt.checkBody != nil {
-				var respBody map[string]interface{}
-				_ = json.Unmarshal(w.Body.Bytes(), &respBody)
-				tt.checkBody(t, respBody)
-			}
+			runLoginTestCase(t, tt)
 		})
 	}
 }
