@@ -186,10 +186,11 @@ func testAdminCreateUserSuccess(t *testing.T, db *gorm.DB, h *handlers.Handler, 
 
 	// 2. Prepare Request
 	reqBody, _ := json.Marshal(map[string]string{
-		"first_name": "Admin",
-		"last_name":  "Created",
-		"email":      "admin_created@test.com",
-		"password":   "password123",
+		"first_name":       "Admin",
+		"last_name":        "Created",
+		"email":            "admin_created@test.com",
+		"password":         "password123",
+		"confirm_password": "password123",
 	})
 
 	w := httptest.NewRecorder()

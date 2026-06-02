@@ -3,26 +3,32 @@ package database
 import (
 	"testing"
 
-	"github.com/isw2-unileon/FocusCafe-project/backend/internal/config"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
-	"github.com/joho/godotenv"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 func TestSupabaseSchemaValidation(t *testing.T) {
-	// Load .env from project root (3 levels up from internal/database/)
-	_ = godotenv.Load("../../../.env")
-
-	cfg := config.Load()
-
-	if cfg.DatabaseURL == "" {
-		t.Skip("DATABASE_URL not configured")
+	// Use an in-memory SQLite database to validate schema without requiring a live PostgreSQL instance.
+	var err error
+	DB, err = gorm.Open(sqlite.Open("file::memory:?cache=shared"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("Failed to connect to test database: %v", err)
 	}
 
-	InitDB(cfg)
-
-	if DB == nil {
-		t.Fatal("Failed to establish connection")
+	// AutoMigrate all models to create tables
+	err = DB.AutoMigrate(
+		&models.User{},
+		&models.UserProgress{},
+		&models.StudyMaterial{},
+		&models.StudySession{},
+		&models.CafeOrder{},
+		&models.UserOrder{},
+		&models.Quiz{},
+		&models.Question{},
+	)
+	if err != nil {
+		t.Fatalf("Failed to migrate test database: %v", err)
 	}
 
 	validations := []struct {
