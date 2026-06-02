@@ -72,6 +72,9 @@ jobs:
           echo "Creating dummy auth.users table..."
           supabase db query "CREATE TABLE IF NOT EXISTS auth.users (id UUID PRIMARY KEY);" --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
 
+          echo "Creating mock supabase_realtime publication..."
+          supabase db query "CREATE PUBLICATION supabase_realtime;" --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
+
           # 4. Push database migrations
           echo "Pushing database migrations..."
           yes | supabase db push --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
