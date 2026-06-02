@@ -79,16 +79,19 @@ jobs:
           echo "Loading initial coffee menu data (seed.sql)..."
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable" -f supabase/seed.sql
 
+      - name: Create .env file securely
+        run: |
+          echo "PORT=8080" >> .env
+          echo "GIN_MODE=debug" >> .env
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}" >> .env
+
       # Playwright turns on frontend and backend automatically
       - name: Run E2E tests
         run: make e2e
         env:
           CI: true
-          PORT: 8080
-          GIN_MODE: release
-          DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres?sslmode=disable
-          SUPABASE_URL: http://localhost:54321
-          SUPABASE_KEY: mock-key-for-testing
 
       - name: Upload test report
         if: always()
