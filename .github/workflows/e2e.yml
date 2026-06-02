@@ -46,7 +46,6 @@ jobs:
           npm install -g supabase
 
           # 2. Initialize and start the local cluster
-          supabase init
           supabase start
 
       # Seed the local Postgres container with your coffee menu
