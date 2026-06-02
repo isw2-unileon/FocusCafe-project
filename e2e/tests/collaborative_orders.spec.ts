@@ -52,8 +52,8 @@ test.describe('Collaborative Orders', () => {
     await expect(groupOrdersB.getByRole('button', { name: 'Complete' }).first()).toBeVisible({ timeout: 10000 });
 
     const orderName = await groupOrdersA.locator('span.font-semibold.text-stone-700').first().innerText();
-    await expect(groupOrdersB.getByText(orderName)).toBeVisible();
-
+    await expect(groupOrdersB.getByText(orderName).first()).toBeVisible();
+    
     let errorAlertTriggered = false;
 
     const handleDialog = async (dialog: any) => {

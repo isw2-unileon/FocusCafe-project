@@ -3,9 +3,33 @@ name: E2E Tests
 on:
   workflow_dispatch:
 
+  concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+  env:
+    NODE_VERSION: 22
+
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    #Simutates a local supabase db
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -17,40 +41,42 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            e2e/package-lock.json
 
-      - name: Install backend dependencies
-        run: go mod download
+      - name: Install dependencies
+        run: make install-e2e
+
+      - name: Build frontend
+        run: make build-frontend
 
       - name: Build frontend
         run: cd frontend && npm ci && npm run build
 
-      - name: Install E2E dependencies
-        run: cd e2e && npm ci
+      # Execute Supabase CLI in Postgres Github
+      - name: Run Database Migrations
+        run: |
+          npm install -g supabase
+          supabase db reset --db-url "postgresql://postgres:postgres@localhost:54322/postgres?sslmode=disable"
 
-      - name: Install Playwright browsers
-        run: cd e2e && npx playwright install --with-deps chromium
-
-      - name: Start backend
-        run: go run ./backend/cmd/server &
+      # Playwright turns on frontend and backend automatically
+      - name: Run E2E tests
+        run: make e2e
         env:
+          CI: true
           PORT: 8080
           GIN_MODE: release
-
-      - name: Start frontend preview
-        run: cd frontend && npx vite preview --port 5173 &
-
-      - name: Wait for services
-        run: |
-          timeout 30 bash -c 'until curl -s http://localhost:8080/health > /dev/null; do sleep 1; done'
-          timeout 30 bash -c 'until curl -s http://localhost:5173 > /dev/null; do sleep 1; done'
-
-      - name: Run Playwright tests
-        run: cd e2e && npx playwright test --workers=4
+          DATABASE_URL: postgresql://postgres:postgres@localhost:54322/postgres?sslmode=disable
+          SUPABASE_URL: http://localhost:54321
+          SUPABASE_KEY: mock-key-for-testing
 
       - name: Upload test report
+        if: always()
         uses: actions/upload-artifact@v4
-        if: failure()
         with:
           name: playwright-report
           path: e2e/playwright-report
+          retention-days: 7
