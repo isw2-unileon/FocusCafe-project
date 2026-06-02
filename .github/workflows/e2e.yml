@@ -47,7 +47,7 @@ jobs:
 
           # 3. Force seed
           echo "Injecting data..."
-          supabase db query -f supabase/seed.sql
+          supabase db reset
 
       # Dynamically build the .env files using LOCAL credentials only
       - name: Create Local .env Files
