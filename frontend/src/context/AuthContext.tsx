@@ -7,6 +7,7 @@ import { getCurrentProfile } from '@/services/user_service';
 interface AuthContextType{
     isAuthenticated: boolean;
     isAdmin: boolean;
+    isLoading: boolean;
     userId: string | null;
     userStats: UserStats | null;
     login: (email: string, password: string) => Promise<boolean>;
@@ -22,25 +23,39 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: React.ReactNode })=>{
     //Initial state
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(!!localStorage.getItem('token'));
-    const [isAdmin, setIsAdmin] = useState<boolean>(localStorage.getItem('userRole') === 'admin');
+    const [isAdmin, setIsAdmin] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
     const [userId, setUserId] = useState<string | null>(localStorage.getItem('userId'));
     const [userStats, setUserStats] = useState<UserStats | null>(null);
     const [error, setError] = useState<string | null>(null);
 
+    //Logout
+    const logout = useCallback(() =>{
+        localStorage.removeItem('token');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userId');
+        setIsAuthenticated(false);
+        setIsAdmin(false);
+        setUserId(null);
+        setUserStats(null);
+        setError(null);
+    }, []);
+
     // Helper to process profile after getting a token
-    const processProfile = async () => {
-        const profile = await getCurrentProfile();
-        const isAdminUser = profile.role === 'admin';
-        setIsAdmin(isAdminUser);
-        setUserId(profile.id);
-        localStorage.setItem('userId', profile.id);
-        if (isAdminUser) {
-            localStorage.setItem('userRole', 'admin');
-        } else {
-            localStorage.removeItem('userRole');
+    const processProfile = useCallback(async () => {
+        try {
+            const profile = await getCurrentProfile();
+            const isAdminUser = profile.role === 'admin';
+            setIsAdmin(isAdminUser);
+            setUserId(profile.id);
+            localStorage.setItem('userId', profile.id);
+            return isAdminUser;
+        } catch (err) {
+            console.error("Error fetching profile:", err);
+            logout();
+            return false;
         }
-        return isAdminUser;
-    };
+    }, [logout]);
 
     //Login
     const login = useCallback(async (email: string, password: string): Promise<boolean> => {
@@ -55,46 +70,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode })=>{
             setError((err as Error).message);
             throw err;
         }
-    }, []);
+    }, [processProfile]);
 
     const handleOAuthToken = useCallback(async (token: string) => {
         localStorage.setItem('token', token);
         setIsAuthenticated(true);
         await processProfile();
-    }, []);
+    }, [processProfile]);
 
     const loginWithGoogle = useCallback(() => {
         googleRedirect();
     }, []);
 
-    //Logout
-    const logout = useCallback(() =>{
-        localStorage.removeItem('token');
-        localStorage.removeItem('userRole');
-        localStorage.removeItem('userId');
-        setIsAuthenticated(false);
-        setIsAdmin(false);
-        setUserId(null);
-        setUserStats(null);
-        setError(null);
-    }, []);
-
     //Effect if token expires
     useEffect(() => {
-        const storedToken = localStorage.getItem('token');
-        if (storedToken) {
-            setIsAuthenticated(true);
-            setIsAdmin(localStorage.getItem('userRole') === 'admin');
-            setUserId(localStorage.getItem('userId'));
-        } else {
-            setIsAuthenticated(false);
-            setIsAdmin(false);
-            setUserId(null);
-        }
-    }, []);
+        const initAuth = async () => {
+            const storedToken = localStorage.getItem('token');
+            if (storedToken) {
+                setIsAuthenticated(true);
+                await processProfile();
+            } else {
+                setIsAuthenticated(false);
+                setIsAdmin(false);
+                setUserId(null);
+            }
+            setIsLoading(false);
+        };
+        initAuth();
+    }, [processProfile]);
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, isAdmin, userId, userStats, setUserStats, login, loginWithGoogle, handleOAuthToken, logout, error }}>
+        <AuthContext.Provider value={{ isAuthenticated, isAdmin, isLoading, userId, userStats, setUserStats, login, loginWithGoogle, handleOAuthToken, logout, error }}>
             {children}
         </AuthContext.Provider>
     );
