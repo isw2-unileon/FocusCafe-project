@@ -93,6 +93,7 @@ jobs:
       # Install Browsers
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
+        working-directory: e2e
 
       # Playwright turns on frontend and backend automatically
       - name: Run E2E tests
