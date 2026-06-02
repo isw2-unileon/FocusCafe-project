@@ -1,4 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
+import * as dotenv from "dotenv";
+import * as path from "path";
+
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+
 
 export default defineConfig({
   testDir: "./tests",
@@ -15,23 +20,32 @@ export default defineConfig({
     video: "retain-on-failure",
   },
 
-  // NOTE: Start backend and frontend manually before running tests:
-  //   Terminal 1: make run-backend    (port 8080)
-  //   Terminal 2: cd frontend && npm run dev  (port 5173)
-  // webServer: [
-  //   {
-  //     command: "go run ./backend/cmd/server",
-  //     cwd: "..",
-  //     port: 8080,
-  //     reuseExistingServer: !process.env.CI,
-  //   },
-  //   {
-  //     command: "cd frontend && npm run dev",
-  //     cwd: "..",
-  //     port: 5173,
-  //     reuseExistingServer: !process.env.CI,
-  //   },
-  // ],
+  webServer: [
+    {
+      command: process.platform === "win32"
+        ? "cd .. && go build -o backend/bin/server.exe ./backend/cmd/server && .\\backend\\bin\\server.exe"
+        : "cd .. && make build-backend && ./backend/bin/server",
+      port: Number(process.env.PORT) || 8080,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+
+      env: {
+        DATABASE_URL: "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable",
+        SUPABASE_URL: "http://127.0.0.1:54321",
+        SUPABASE_KEY: process.env.SUPABASE_KEY || "",
+        PORT: process.env.PORT || "8080",
+        GIN_MODE: "debug",
+      }
+    },
+    {
+      command: process.env.CI 
+        ? "cd ../frontend && npx vite preview --port 5173" 
+        : "cd ../frontend && npm run dev",
+      port: 5173,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
+  ],
 
   projects: [
     {

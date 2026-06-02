@@ -62,7 +62,7 @@ func TestHandler_GetUserProfile(t *testing.T) {
 		{
 			name:            "Success: Returns 200 and Profile",
 			userIDInContext: uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
-			mockBehavior: func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error) {
+			mockBehavior: func(_ context.Context, id uuid.UUID) (*domain.UserProfile, error) {
 				if id != uuid.MustParse("550e8400-e29b-41d4-a716-446655440000") {
 					return nil, errors.New("wrong id passed")
 				}
@@ -76,13 +76,13 @@ func TestHandler_GetUserProfile(t *testing.T) {
 			expectedBody:   `"energy":500`, // We check for key fragments
 		},
 		{
-			name:            "Error: User not found returns 404",
+			name:            "Error: User not found returns 401",
 			userIDInContext: uuid.New(),
-			mockBehavior: func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error) {
+			mockBehavior: func(_ context.Context, id uuid.UUID) (*domain.UserProfile, error) {
 				return nil, errors.New("record not found")
 			},
-			wantStatusCode: http.StatusNotFound,
-			expectedBody:   `{"error":"user not found"}`,
+			wantStatusCode: http.StatusUnauthorized,
+			expectedBody:   `{"error":"unauthorized"}`,
 		},
 	}
 

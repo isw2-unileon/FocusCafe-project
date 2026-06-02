@@ -19,7 +19,7 @@ type RegisterRequest struct {
 	ConfirmPassword string `json:"confirm_password"`
 }
 
-// Register es el handler principal, solo orquesta
+// Register is the main handler
 func (h *Handler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -56,7 +56,7 @@ func (h *Handler) Register(c *gin.Context) {
 	})
 }
 
-// validateRegisterRequest valida los campos del formulario
+// validateRegisterRequest validates form data
 func validateRegisterRequest(req *RegisterRequest) error {
 	req.FirstName = strings.TrimSpace(req.FirstName)
 	req.LastName = strings.TrimSpace(req.LastName)
@@ -77,7 +77,7 @@ func validateRegisterRequest(req *RegisterRequest) error {
 	return nil
 }
 
-// createAuthUser crea el usuario en Supabase Auth y devuelve su UUID
+// createAuthUser creates the user in Supabase Auth and return its UUID
 func (h *Handler) createAuthUser(email, password string) (string, error) {
 	body, _ := json.Marshal(map[string]string{
 		"email":    email,
@@ -93,43 +93,47 @@ func (h *Handler) createAuthUser(email, password string) (string, error) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("error: error connecting to Supabase Auth")
+		return "", fmt.Errorf("connection error while creating user")
 	}
 	defer resp.Body.Close()
 
 	var data map[string]any
-	err = json.NewDecoder(resp.Body).Decode(&data)
-	if err != nil {
-		return "", err
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return "", fmt.Errorf("error processing auth service response")
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		msg := "error: error creating the user"
-		if errMsg, ok := data["msg"].(string); ok {
-			msg = errMsg
+		if msg, ok := data["msg"].(string); ok && msg != "" {
+			return "", fmt.Errorf("%s", msg)
 		}
-		return "", fmt.Errorf("%s", msg)
+		if message, ok := data["message"].(string); ok && message != "" {
+			return "", fmt.Errorf("%s", message)
+		}
+		if desc, ok := data["error_description"].(string); ok && desc != "" {
+			return "", fmt.Errorf("%s", desc)
+		}
+		return "", fmt.Errorf("could not create user (status %d)", resp.StatusCode)
 	}
 
 	return extractUserID(data)
 }
 
-// extractUserID extrae el UUID del usuario de la respuesta de Supabase
+// extractUserID extracts the user's UUID from the Supabase response
 func extractUserID(data map[string]any) (string, error) {
 	userMap, ok := data["user"].(map[string]any)
 	if !ok {
-		return "", fmt.Errorf("error: unexpected response from Supabase Auth")
+		return "", fmt.Errorf("unexpected response format from auth service")
 	}
 
 	userID, ok := userMap["id"].(string)
 	if !ok || userID == "" {
-		return "", fmt.Errorf("error: the user ID could not be retrieved")
+		return "", fmt.Errorf("user ID not found in auth response")
 	}
 
 	return userID, nil
 }
 
-// createUserProfile inserta el perfil del usuario en la tabla public.users
+// createUserProfile inserts the user profile into the public.users table
 func (h *Handler) createUserProfile(userID string, req RegisterRequest, role string) error {
 	if role == "" {
 		role = "user"
@@ -157,25 +161,26 @@ func (h *Handler) createUserProfile(userID string, req RegisterRequest, role str
 
 	resp, err := http.DefaultClient.Do(profileReq)
 	if err != nil {
-		return fmt.Errorf("usuario creado en auth pero falló el perfil")
+		return fmt.Errorf("connection error while saving user profile")
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf(">>> Profile insert status: %d\n", resp.StatusCode)
-
-	if resp.StatusCode != http.StatusCreated {
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 		var profileErr map[string]any
-		err := json.NewDecoder(resp.Body).Decode(&profileErr)
-		if err != nil {
-			return err
+		if err := json.NewDecoder(resp.Body).Decode(&profileErr); err != nil {
+			return fmt.Errorf("error saving profile (status %d)", resp.StatusCode)
 		}
-		return fmt.Errorf("error al guardar el perfil")
+
+		if msg, ok := profileErr["message"].(string); ok && msg != "" {
+			return fmt.Errorf("database error: %s", msg)
+		}
+		return fmt.Errorf("failed to save profile")
 	}
 
 	return nil
 }
 
-// createUserProgress inserta el progreso inicial del usuario en public.user_progress
+// createUserProgress inserts the user's initial progress into public.user_progress
 func (h *Handler) createUserProgress(userID string) error {
 	body, _ := json.Marshal(map[string]any{
 		"user_id": userID,
@@ -196,17 +201,20 @@ func (h *Handler) createUserProgress(userID string) error {
 
 	resp, err := http.DefaultClient.Do(progressReq)
 	if err != nil {
-		return fmt.Errorf("error al crear el progreso del usuario")
+		return fmt.Errorf("connection error while saving user progress")
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusCreated {
+	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 		var progressErr map[string]any
-		err := json.NewDecoder(resp.Body).Decode(&progressErr)
-		if err != nil {
-			return err
+		if err := json.NewDecoder(resp.Body).Decode(&progressErr); err != nil {
+			return fmt.Errorf("error saving progress (status %d)", resp.StatusCode)
 		}
-		return fmt.Errorf("error: rror saving progress")
+
+		if msg, ok := progressErr["message"].(string); ok && msg != "" {
+			return fmt.Errorf("database error: %s", msg)
+		}
+		return fmt.Errorf("failed to save initial progress")
 	}
 
 	return nil

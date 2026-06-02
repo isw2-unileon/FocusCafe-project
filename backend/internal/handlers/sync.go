@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// SyncUser sincroniza el usuario de Google con public.users y user_progress
+// SyncUser synchronizes the Google user with public.users and user_progress
 func (h *Handler) SyncUser(c *gin.Context) {
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" {
@@ -79,26 +79,31 @@ func (h *Handler) fetchSupabaseUser(token string) (map[string]any, error) {
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	resp, err := http.DefaultClient.Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("invalid token")
+	if err != nil {
+		return nil, fmt.Errorf("error connecting to auth service")
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("invalid or expired token")
+	}
+
 	var data map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error decoding user data")
 	}
 
 	return data, nil
 }
 
 func extractUserData(userData map[string]any) (userID, email, firstName, lastName string, err error) {
-	userID, _ = userData["id"].(string)
-	email, _ = userData["email"].(string)
-
-	if userID == "" {
-		return "", "", "", "", fmt.Errorf("missing user id")
+	var ok bool
+	userID, ok = userData["id"].(string)
+	if !ok || userID == "" {
+		return "", "", "", "", fmt.Errorf("user id not found in token")
 	}
+
+	email, _ = userData["email"].(string)
 
 	if meta, ok := userData["user_metadata"].(map[string]any); ok {
 		fullName, _ := meta["full_name"].(string)
@@ -130,13 +135,17 @@ func (h *Handler) userExists(userID string) (bool, error) {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("error connecting to database")
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return false, fmt.Errorf("error verifying user existence (status %d)", resp.StatusCode)
+	}
+
 	var existing []map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&existing); err != nil {
-		return false, err
+		return false, fmt.Errorf("error decoding database response")
 	}
 
 	return len(existing) > 0, nil
@@ -160,40 +169,25 @@ func (h *Handler) createUserProfileSync(userID, email, firstName, lastName strin
 	req.Header.Set("Prefer", "return=representation")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("error de red: %w", err)
+		return fmt.Errorf("network error while creating profile")
 	}
 	defer resp.Body.Close()
 
-	// if resp.StatusCode != http.StatusCreated {
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
 		var errBody map[string]any
-
 		if err := json.NewDecoder(resp.Body).Decode(&errBody); err != nil {
-			return fmt.Errorf("error decoding supabase response: %w", err)
+			return fmt.Errorf("failed to create profile (status %d)", resp.StatusCode)
 		}
-		fmt.Printf("Error Supabase: %v\n", errBody)
-		return fmt.Errorf("supabase %d: %v", resp.StatusCode, errBody) // ← ahora ves el motivo
-	}
-	return nil
-	/*
-		// 1. Si el status es 201 (Creado), todo salió perfecto a la primera.
-		if resp.StatusCode == http.StatusCreated {
+
+		// If it's a duplicate error (Postgres code 23505)
+		if code, ok := errBody["code"].(string); ok && code == "23505" {
 			return nil
 		}
 
-		// 2. Si NO es 201, leemos el cuerpo para ver si es un duplicado
-		var errBody map[string]any
-		if err := json.NewDecoder(resp.Body).Decode(&errBody); err != nil {
-			return fmt.Errorf("error al decodificar error de supabase: %w", err)
+		if msg, ok := errBody["message"].(string); ok && msg != "" {
+			return fmt.Errorf("database error: %s", msg)
 		}
-
-		// 3. AQUÍ AÑADES EL IF MÁGICO: <--- NUEVO
-		// Buscamos el código 23505 (que es "Unique Violation" en Postgres)
-		if code, ok := errBody["code"].(string); ok && code == "23505" {
-			fmt.Printf("Usuario duplicado detectado para %s. Ignorando error...\n", email)
-			return nil // Devolvemos nil (éxito) porque el usuario ya está en la BD
-		}
-
-		// 4. Si llegamos aquí, es un error real (ej: 400, 401, 500)
-		return fmt.Errorf("supabase %d: %v", resp.StatusCode, errBody)*/
+		return fmt.Errorf("failed to create profile (status %d)", resp.StatusCode)
+	}
+	return nil
 }

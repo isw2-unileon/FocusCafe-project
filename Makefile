@@ -23,6 +23,11 @@ endif
 	cd frontend && npm ci
 	cd e2e && npm ci
 
+## Install Playwright dependencies
+install-e2e: install
+	cd e2e && npx playwright install --with-deps chromium
+
+
 ## --- Local Development ---
 run-backend:
 	$(AIR_BIN) -c $(AIR_CONFIG)
