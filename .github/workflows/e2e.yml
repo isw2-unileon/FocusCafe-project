@@ -53,7 +53,7 @@ jobs:
       - name: Build frontend
         run: make build-frontend
 
-      # Execute Supabase CLI in Postgres Github
+      # Execute Supabase CLI in Postgres Github & Load Seed Data
       - name: Run Database Migrations and Seed
         env:
           PGSSLMODE: disable
@@ -61,11 +61,15 @@ jobs:
           # 1. Install Supabase CLI
           npm install -g supabase
 
-          # 2. Push structural migrations
-          supabase db push --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
+          echo "Creating extensions schema in Postgres..."
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable" -c "CREATE SCHEMA IF NOT EXISTS extensions;"
 
-          # 3. Inject seed.sql
-          echo "Loading seed.sql"
+          # 3. Push database migrations (Adding --accept-all to bypass the [Y/n] prompt)
+          echo "Pushing database migrations..."
+          supabase db push --yes --db-url "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable"
+
+          # 4. Inject seed.sql file
+          echo "Loading initial coffee menu data (seed.sql)..."
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable" -f supabase/seed.sql
 
       # Playwright turns on frontend and backend automatically
