@@ -51,7 +51,7 @@ jobs:
 
           # 4. Execute seed
           echo "Running seed script..."
-          pwsh ./scripts/seed.ps1
+          pwsh ./scripts/seed-local.ps1
 
       # Dynamically build the .env files using LOCAL credentials only
       - name: Create Local .env Files
