@@ -25,7 +25,7 @@ import (
 var mockUserID = uuid.NewString()
 
 // setupSessionTest initializes the database and dependencies before each test case
-func setupSessionTest(t *testing.T) (*gorm.DB, *Handler) {
+func setupSessionTest(t *testing.T) *Handler { //
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
 		t.Fatalf("Error opening in-memory database: %v", err)
@@ -46,7 +46,7 @@ func setupSessionTest(t *testing.T) (*gorm.DB, *Handler) {
 
 	_ = os.MkdirAll("backend/uploads", 0o750)
 
-	return db, handler
+	return handler
 }
 
 // teardownSessionTest cleans up temporary folders and assets created during tests
@@ -57,7 +57,7 @@ func teardownSessionTest() {
 // TestStartStudySessionSuccess verifies the successful creation of a study session.
 func TestStartStudySessionSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	_, handler := setupSessionTest(t)
+	handler := setupSessionTest(t)
 	defer teardownSessionTest()
 
 	recorder := httptest.NewRecorder()
@@ -106,7 +106,7 @@ func TestStartStudySessionSuccess(t *testing.T) {
 // TestStartStudySessionNoFile verifies that the handler fails with a 400 status when no PDF is provided.
 func TestStartStudySessionNoFile(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	_, handler := setupSessionTest(t)
+	handler := setupSessionTest(t)
 	defer teardownSessionTest()
 
 	recorder := httptest.NewRecorder()
