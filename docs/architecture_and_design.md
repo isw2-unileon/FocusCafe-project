@@ -1,10 +1,10 @@
-# 2. Architectural and Design Documentation
+# Architectural and Design Documentation
 
 This document describes the architectural patterns, system design, and software engineering principles applied in FocusCafe. The system is built following a decoupled Client-Server architecture to maximize scalability, testability, and resilience.
 
 ---
 
-## 2.1. High-Level System Architecture
+## 1. High-Level System Architecture
 
 FocusCafe is structured around a **Client-Server model**, dividing the responsibilities into an interactive frontend client, a robust monolithic backend API, and managed external microservices.
 
@@ -39,7 +39,7 @@ FocusCafe is structured around a **Client-Server model**, dividing the responsib
 
 ---
 
-## 2.2. Backend Internal Architecture (Separation of Concerns)
+## 2. Backend Internal Architecture (Separation of Concerns)
 
 To avoid tight coupling and fulfill the assignment's requirement for *Separation of Concerns* and *Clean Code*, the Go backend is structured into **three distinct layers**:
 
@@ -73,7 +73,7 @@ v
 
 ---
 
-## 2.3. Design Decisions & Justifications
+## 3. Design Decisions & Justifications
 
 ### 1. Choice of Go (Golang) for the Backend
 
@@ -89,7 +89,7 @@ v
   * Database persistence is completely mocked or substituted with local fast in-memory instances.
   * Third-party networks (Supabase Auth and Gemini API) are isolated via HTTP request interceptors and test recorders (`httptest`), ensuring that tests check the application logic deterministically without real external dependencies.
   
-## 2.4. Database Schema
+## 4. Database Schema
 
 The application utilizes a relational SQL database schema managed via GORM. Since identity management is delegated, our schema connects directly with the internal **Supabase Auth Engine**.
 
