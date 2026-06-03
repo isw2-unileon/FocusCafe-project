@@ -31,13 +31,29 @@ export async function RegisterAndloginAsUser(page: Page): Promise<String> {
   // Clear any stale auth state before filling credentials
   await page.evaluate(() => localStorage.clear());
   
-  await page.getByPlaceholder("Email").locator("visible=true").fill(uniqueEmail);
-  await page.getByPlaceholder("Password", { exact: true }).locator("visible=true").fill(password);
+  const emailInput = page.getByPlaceholder("Email").locator("visible=true");
+  const passwordInput = page.getByPlaceholder("Password", { exact: true }).locator("visible=true");
+
+  // Robust fill-and-verify strategy to counter React state resets during mounting
+  await emailInput.fill(uniqueEmail.toString());
+  await passwordInput.fill(password);
+  
+  // Verify values; if they get cleared by a re-render, re-fill them
+  const filledEmail = await emailInput.inputValue();
+  if (filledEmail !== uniqueEmail) {
+    // If React wiped out the input on mount, safely refill the values
+    await emailInput.fill(uniqueEmail);
+    await passwordInput.fill(password);
+  }
+
+  // 6. Make sure the value is locked in place before clicking
+  await expect(emailInput).toHaveValue(uniqueEmail);
+  await expect(passwordInput).toHaveValue(password);
 
   // Click login and wait for the API response to finish
   const loginResponsePromise = page.waitForResponse(
     (response) => response.url().includes("/api/login") && response.status() === 200,
-    { timeout: 10000 }
+    { timeout: 15000 }
   );
   await page.getByRole("button", { name: "Enter the Café" }).click();
   await loginResponsePromise;

@@ -52,12 +52,16 @@ test.describe("Admin Dashboard", () => {
 
     // 8. Clear search and find user again
     await page.getByPlaceholder("Search by name or email...").fill("");
+    const deleteUserButton = page.getByTestId(`delete-user-${testEmail}`);
+    await expect(deleteUserButton).toBeVisible({ timeout: 5000 });
 
-    await page.getByTestId(`delete-user-${testEmail}`).click();
+    // 11.Open modal
+    await deleteUserButton.click();
+    const removeStaffModal = page.getByText("Remove Staff");
+    await expect(removeStaffModal).toBeVisible();
 
-    // 11. Confirm delete modal
-    await expect(page.getByText("Remove Staff")).toBeVisible();
     await page.getByRole("button", { name: "Delete" }).click();
+    await expect(removeStaffModal).not.toBeVisible({ timeout: 10000 });
 
     // 12. Verify user is gone
     await page.getByPlaceholder("Search by name or email...").fill(testEmail);

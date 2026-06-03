@@ -48,6 +48,6 @@ test.describe("Orders — Personal", () => {
 
     // 8. Verify XP is visible and positive
     const xpAfter = await getStatValue(page, 'Experience');
-    expect(xpAfter).toBeGreaterThanOrEqual(xpBefore);
+    expect(xpAfter).toBeGreaterThan(xpBefore);
   });
 });
