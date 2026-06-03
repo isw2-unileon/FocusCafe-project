@@ -63,7 +63,7 @@ export const StudyQuiz = ({
                     <h2 className="text-4xl font-black mb-2">Session Complete!</h2>
                     <div className="flex flex-col gap-2 mb-8">
                         <p className="text-stone-500 text-xl">
-                            Has acertado <span className="font-bold text-stone-800">{score}</span> de <span className="font-bold text-stone-800">{quiz.length}</span> preguntas.
+                            You've scored <span className="font-bold text-stone-800">{score}</span> out of <span className="font-bold text-stone-800">{quiz.length}</span> questions.
                         </p>
                         {earnedEnergy !== undefined && (
                             <p className="text-orange-600 font-black text-2xl">
