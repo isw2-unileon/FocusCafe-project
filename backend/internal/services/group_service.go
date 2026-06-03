@@ -26,6 +26,7 @@ type GroupRepository interface {
 	IsGroupLeader(ctx context.Context, userID uuid.UUID, groupID int64) (bool, error)
 	RemoveUserFromGroup(ctx context.Context, userID uuid.UUID) error
 	DeleteGroupOrders(ctx context.Context, groupID int64) error
+	DeleteGroupWithDependencies(ctx context.Context, groupID int64) error
 }
 
 // GroupServiceInterface defines the methods that the GroupService must implement.
@@ -185,20 +186,9 @@ func (s *GroupService) GetAllGroups(ctx context.Context) ([]domain.GroupDetail, 
 	return details, nil
 }
 
-// DeleteGroup removes a group and all its associated data.
+// DeleteGroup removes a group and all its associated data atomically.
 func (s *GroupService) DeleteGroup(ctx context.Context, groupID int64) error {
-	// 1. Remove all users from the group
-	if err := s.repo.RemoveAllUsersFromGroup(ctx, groupID); err != nil {
-		return err
-	}
-
-	// 2. Delete group orders
-	if err := s.repo.DeleteGroupOrders(ctx, groupID); err != nil {
-		return err
-	}
-
-	// 3. Delete the group itself
-	return s.repo.DeleteGroup(ctx, groupID)
+	return s.repo.DeleteGroupWithDependencies(ctx, groupID)
 }
 
 // LeaveGroup allows a user to leave their current group.
