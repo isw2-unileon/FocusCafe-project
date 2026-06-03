@@ -1,4 +1,4 @@
-# Architectural and Design Documentation
+# Architectural and Design
 
 This document describes the architectural patterns, system design, and software engineering principles applied in FocusCafe. The system is built following a decoupled Client-Server architecture to maximize scalability, testability, and resilience.
 
