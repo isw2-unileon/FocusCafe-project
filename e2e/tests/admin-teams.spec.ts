@@ -1,10 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { loginAsAdmin } from "../lib/auth-helper";
+import { CreateAndLoginAsAdmin } from "../lib/auth-helper";
 
 test.describe("Admin Dashboard — Teams Tab", () => {
   test("should navigate to Teams tab and display groups", async ({ page }) => {
     // 1. Login as admin
-    await loginAsAdmin(page);
+    await CreateAndLoginAsAdmin(page);
     await expect(page).toHaveURL(/.*adminDashboard/);
 
     // 2. Verify admin dashboard loaded (Staff tab active by default)
@@ -23,7 +23,7 @@ test.describe("Admin Dashboard — Teams Tab", () => {
 
   test("should expand a group to see members", async ({ page }) => {
     // 1. Login as admin
-    await loginAsAdmin(page);
+    await CreateAndLoginAsAdmin(page);
     await expect(page).toHaveURL(/.*adminDashboard/);
 
     // 2. Navigate to Teams tab

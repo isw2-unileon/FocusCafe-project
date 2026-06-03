@@ -1,10 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { loginAsUser } from "../lib/auth-helper";
+import { RegisterAndloginAsUser } from "../lib/auth-helper";
 
 test.describe("Dashboard view", () => {
   test("should display user profile data after navigating from Home", async ({ page }) => {
     // 1. Login
-    await loginAsUser(page);
+    await RegisterAndloginAsUser(page);
 
     // 2. Should be on Home after login
     await expect(page).toHaveURL(/.*home/);
@@ -28,7 +28,7 @@ test.describe("Dashboard view", () => {
 
   test("should navigate back to Home from Dashboard", async ({ page }) => {
     // 1. Login
-    await loginAsUser(page);
+    await RegisterAndloginAsUser(page);
 
     // 2. Go to Dashboard
     await page.getByTestId("nav-dashboard").click();

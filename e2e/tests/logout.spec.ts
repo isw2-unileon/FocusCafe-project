@@ -1,10 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { loginAsUser } from "../lib/auth-helper";
+import { RegisterAndloginAsUser } from "../lib/auth-helper";
 
 test.describe("Logout", () => {
   test("should logout from Home and redirect to login", async ({ page }) => {
     // 1. Login and land on Home
-    await loginAsUser(page);
+    await RegisterAndloginAsUser(page);
     await expect(page).toHaveURL(/.*home/);
 
     // 2. Verify token exists in localStorage
@@ -28,7 +28,7 @@ test.describe("Logout", () => {
 
   test("should logout from Dashboard and redirect to login", async ({ page }) => {
     // 1. Login and navigate to Dashboard
-    await loginAsUser(page);
+    await RegisterAndloginAsUser(page);
     await expect(page).toHaveURL(/.*home/);
     await page.getByTestId("nav-dashboard").click();
     await expect(page).toHaveURL(/.*dashboard/);

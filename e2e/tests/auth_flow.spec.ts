@@ -49,7 +49,7 @@ test.describe('Authentication Flow', () => {
     await page.getByRole('button', { name: 'Create my Café' }).click();
 
     // Verify error message
-    await expect(page.getByText('Las contraseñas no coinciden.')).toBeVisible();
+    await expect(page.getByText('Passwords do not match.')).toBeVisible();
   });
 
   test('should show error with invalid login credentials', async ({ page }) => {

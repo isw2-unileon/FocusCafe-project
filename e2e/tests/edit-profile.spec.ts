@@ -1,10 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { loginAsUser } from "../lib/auth-helper";
+import { RegisterAndloginAsUser } from "../lib/auth-helper";
 
 test.describe("Edit Profile", () => {
   test("should update first and last name through full navigation flow", async ({ page }) => {
     // 1. Login
-    await loginAsUser(page);
+    await RegisterAndloginAsUser(page);
     await expect(page).toHaveURL(/.*home/);
 
     // 2. Navigate to Dashboard via avatar icon in header
@@ -52,7 +52,7 @@ test.describe("Edit Profile", () => {
 
   test("should navigate back from Edit Profile to Dashboard", async ({ page }) => {
     // 1. Login
-    await loginAsUser(page);
+    await RegisterAndloginAsUser(page);
 
     // 2. Go to Dashboard
     await page.getByTestId("nav-dashboard").click();

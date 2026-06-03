@@ -1,10 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { loginAsUser } from "../lib/auth-helper";
+import { RegisterAndloginAsUser } from "../lib/auth-helper";
 
 test.describe("Protected Routes — Authenticated User", () => {
   test("should not show admin navigation for normal users", async ({ page }) => {
     // 1. Login as normal user
-    await loginAsUser(page);
+    await RegisterAndloginAsUser(page);
     await expect(page).toHaveURL(/.*home/);
 
     // 2. Verify admin shield icon is NOT visible in header

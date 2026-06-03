@@ -1,13 +1,38 @@
-import { Page } from "@playwright/test";
+import { expect, Page } from "@playwright/test";
 
-export async function loginAsUser(page: Page) {
-  await page.goto("/login");
+function generateUniqueEmail(prefix: string): string {
+  const timestamp = Date.now();
+  const random = Math.floor(Math.random() * 1000);
+  return `${prefix}.${timestamp}.${random}@example.com`;
+}
+
+export async function RegisterAndloginAsUser(page: Page): Promise<String> {
+  const uniqueEmail = generateUniqueEmail('user');
+  const password = "Password123!";
+
+  await page.goto("/register");
+  await page.evaluate(() => localStorage.clear());
+
+  await page.getByPlaceholder('First Name').fill('Test');
+  await page.getByPlaceholder('Last Name').fill('User');
+  await page.getByPlaceholder('Email').fill(uniqueEmail);
+  await page.getByPlaceholder('Password', { exact: true }).fill(password);
+  await page.getByPlaceholder('Confirm Password').fill(password);
+
+  const registerResponsePromise = page.waitForResponse(
+    (response) => response.url().includes("/api/register") && (response.status() === 200 || response.status() === 201),
+    { timeout: 10000 }
+  );
+  await page.getByRole('button', { name: 'Create my Café' }).click();
+  await registerResponsePromise;
+
+  await page.waitForURL(/.*login/, { timeout: 10000 });
   
   // Clear any stale auth state before filling credentials
   await page.evaluate(() => localStorage.clear());
   
-  await page.getByPlaceholder("Email").fill("user@user.com");
-  await page.getByPlaceholder("Password", { exact: true }).fill("user123");
+  await page.getByPlaceholder("Email").locator("visible=true").fill(uniqueEmail);
+  await page.getByPlaceholder("Password", { exact: true }).locator("visible=true").fill(password);
 
   // Click login and wait for the API response to finish
   const loginResponsePromise = page.waitForResponse(
@@ -20,30 +45,68 @@ export async function loginAsUser(page: Page) {
   // Now wait for React Router to redirect after auth state updates
   await page.waitForURL(/.*home/, { timeout: 10000 });
   
-  // Small delay to let backend stabilize between rapid test logins
-  await page.waitForTimeout(300);
+  await page.getByTestId("nav-dashboard").waitFor({ state: "visible" });
+  return uniqueEmail;
 }
 
-export async function loginAsAdmin(page: Page) {
+export async function CreateAndLoginAsAdmin(page: Page): Promise<String> {
+  const uniqueAdminEmail = generateUniqueEmail('admin');
+  const password = "AdminPassword123!";
+
+  // 1. Login with admin user to create a new user
   await page.goto("/login");
-  
-  // Clear any stale auth state before filling credentials
   await page.evaluate(() => localStorage.clear());
   
   await page.getByPlaceholder("Email").fill("admin@admin.com");
   await page.getByPlaceholder("Password", { exact: true }).fill("admin123");
-
-  // Click login and wait for the API response to finish
-  const loginResponsePromise = page.waitForResponse(
-    (response) => response.url().includes("/api/login") && response.status() === 200,
-    { timeout: 10000 }
+  
+  const initialLoginPromise = page.waitForResponse(
+    (res) => res.url().includes("/api/login") && res.status() === 200
   );
   await page.getByRole("button", { name: "Enter the Café" }).click();
-  await loginResponsePromise;
-
-  // Now wait for React Router to redirect after auth state updates
+  await initialLoginPromise;
   await page.waitForURL(/.*adminDashboard/, { timeout: 10000 });
-  
-  // Small delay to let backend stabilize between rapid test logins
+
+  // 2. Open modal HIRE STAFF
+  await page.getByRole("button", { name: /HIRE NEW STAFF/i }).click();
+  await expect(page.getByText("Create New Staff")).toBeVisible();
+
+  await page.getByPlaceholder("First Name").fill("E2E");
+  await page.getByPlaceholder("Last Name").fill("Admin");
+  await page.getByTestId("create-user-email").fill(uniqueAdminEmail);
+  await page.getByPlaceholder("Password", { exact: true }).fill(password);
+  await page.getByPlaceholder("Confirm Password", { exact: true }).fill(password);
+  await page.locator('select').selectOption("admin");
+
+  // 5. Create user
+  await page.getByRole("button", { name: "Create User" }).click();
+
+  // 6. Wait for modal to close and user to appear in list
+   await expect(page.getByText("Create New Staff")).not.toBeVisible();
+
+  //LOGOUT
+  const logoutButton = page.getByRole("button", { name: /logout|cerrar sesión/i });
+  if (await logoutButton.isVisible()) {
+    await logoutButton.click();
+  } else {
+    await page.evaluate(() => localStorage.clear());
+    await page.goto("/login");
+  }
+
+  await page.waitForURL(/.*login/);
+
+  //Login with the new admin
+  await page.getByPlaceholder("Email").locator("visible=true").fill(uniqueAdminEmail);
+  await page.getByPlaceholder("Password", { exact: true }).locator("visible=true").fill(password);
+
+  const finalLoginPromise = page.waitForResponse(
+    (res) => res.url().includes("/api/login") && res.status() === 200
+  );
+  await page.getByRole("button", { name: "Enter the Café" }).click();
+  await finalLoginPromise;
+
+  await page.waitForURL(/.*adminDashboard/, { timeout: 10000 });
   await page.waitForTimeout(300);
+
+  return uniqueAdminEmail;
 }

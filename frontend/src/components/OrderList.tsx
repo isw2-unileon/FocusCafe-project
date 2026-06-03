@@ -43,8 +43,15 @@ export const OrderList = ({ inGroup = false }: { inGroup?: boolean }) => {
         console.log('Initializing WebSocket listener for orders...');
 
         // Subscribe to real-time updates
-        const unsubscribe = subscribe('ORDERS_UPDATED', (payload) => {
+        const unsubscribe = subscribe('ORDERS_UPDATED', async (payload) => {
             console.log('Real-time update received: Triggering smart refresh');
+
+            try {
+                const stats = await getRemoteUserStats();
+                setUserStats(stats);
+            } catch (error) {
+                console.error('Failed to refresh stats on real-time update:', error);
+            }
             
             if (payload && payload.order_id) {
                 showOrderServedToast();
@@ -75,7 +82,7 @@ export const OrderList = ({ inGroup = false }: { inGroup?: boolean }) => {
             unsubscribe();
         };
 
-    }, [subscribe, fetchOrders, inGroup]);
+    }, [subscribe, fetchOrders, inGroup, setUserStats]);
 
     const handleComplete = async (order: UserOrder) =>{
         try{
@@ -161,6 +168,7 @@ export const OrderList = ({ inGroup = false }: { inGroup?: boolean }) => {
                                     return (
                                         <div 
                                             key={order.id} 
+                                            data-testid={`order-card-${order.id}`}
                                             className={`flex items-center justify-between p-4 rounded-xl border border-stone-50 bg-stone-50/30 ${!canAfford && 'opacity-60'}`}
                                         >
                                             <div className="flex flex-col gap-1">
