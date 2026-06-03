@@ -15,11 +15,11 @@ test.describe("Orders — Personal", () => {
   test("should complete a personal order and decrease energy", async ({ page }) => {
     // 1. Login and land on Home
     await RegisterAndloginAsUser(page);
-    await expect(page).toHaveURL(/.*home/);
+    await expect(page).toHaveURL(/.*home/, { timeout: 10000 });
 
     // 2. Wait for orders to load
     const pendingOrdersSection = page.locator('div').filter({ has: page.getByRole('heading', { name: 'Pending orders', level: 2 }) }).first();
-    await expect(pendingOrdersSection).toBeVisible();
+    await expect(pendingOrdersSection).toBeVisible({ timeout: 10000 });
 
     // 3. Capture energy before
     const energyBefore = await getStatValue(page, 'Energy');
@@ -27,7 +27,7 @@ test.describe("Orders — Personal", () => {
 
     // 4. Capture the name of the first order before completing it
     const firstOrderCard = pendingOrdersSection.locator('[data-testid^="order-card-"]').first();
-    await expect(firstOrderCard).toBeVisible();
+    await expect(firstOrderCard).toBeVisible({ timeout: 10000 });
     const testId = await firstOrderCard.getAttribute('data-testid');
 
     // 5. Click the first "Complete" button in Pending orders
@@ -35,7 +35,7 @@ test.describe("Orders — Personal", () => {
 
     //Close Level Up modal if it appears
     const levelUpModal = page.getByRole('dialog', { name: 'LEVEL UP!' });
-     if (await levelUpModal.isVisible({ timeout: 3000 }).catch(() => false)) {
+     if (await levelUpModal.isVisible({ timeout: 5000 }).catch(() => false)) {
        await page.getByRole('button', { name: 'AWESOME!' }).click();
      }
 

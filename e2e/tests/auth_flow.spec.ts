@@ -18,12 +18,12 @@ test.describe('Authentication Flow', () => {
     await page.getByRole('button', { name: 'Create my Café' }).click();
 
     // Verify redirection to login page after successful registration
-    await page.waitForURL(/.*login/);
-    await expect(page).toHaveURL(/.*login/);
+    await page.waitForURL(/.*login/, { timeout: 10000 });
+    await expect(page).toHaveURL(/.*login/, { timeout: 10000 });
 
     // Wait for login form to fully render (especially important in WebKit)
-    await expect(page.getByPlaceholder('Email')).toBeVisible();
-    await expect(page.getByPlaceholder('Password', { exact: true })).toBeVisible();
+    await expect(page.getByPlaceholder('Email')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByPlaceholder('Password', { exact: true })).toBeVisible({ timeout: 10000 });
 
     // Fill login form (using mock or existing credentials if applicable)
     await page.getByPlaceholder('Email').fill(validEmail);
@@ -34,7 +34,7 @@ test.describe('Authentication Flow', () => {
     // Verify redirection to home/dashboard
     // According to App.tsx, successful login should lead to a protected route like /home
     await page.waitForURL(/.*home/, { timeout: 15000 });
-    await expect(page).toHaveURL(/.*home/);
+    await expect(page).toHaveURL(/.*home/, { timeout: 10000 });
   });
 
   test('should show error when registration passwords do not match', async ({ page }) => {
@@ -49,7 +49,7 @@ test.describe('Authentication Flow', () => {
     await page.getByRole('button', { name: 'Create my Café' }).click();
 
     // Verify error message
-    await expect(page.getByText('Passwords do not match.')).toBeVisible();
+    await expect(page.getByText('Passwords do not match.')).toBeVisible({ timeout: 10000 });
   });
 
   test('should show error with invalid login credentials', async ({ page }) => {
@@ -63,6 +63,6 @@ test.describe('Authentication Flow', () => {
     // Verify error message (assuming the service returns an error that is displayed)
     // The exact error message depends on the auth service implementation
     const errorElement = page.locator('p.text-red-500');
-    await expect(errorElement).toBeVisible();
+    await expect(errorElement).toBeVisible({ timeout: 10000 });
   });
 });

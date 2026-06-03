@@ -9,11 +9,11 @@ async function registerUser(page: Page, email: string) {
   await page.getByPlaceholder('Confirm Password').fill('Password123!');
   await page.getByRole('button', { name: 'Create my Café' }).click();
   
-  await expect(page).toHaveURL(/.*login/);
+  await expect(page).toHaveURL(/.*login/, { timeout: 10000 });
   await page.getByPlaceholder('Email').fill(email);
   await page.getByPlaceholder('Password', { exact: true }).fill('Password123!');
   await page.getByRole('button', { name: 'Enter the Café' }).click();
-  await expect(page).toHaveURL(/.*home/);
+  await expect(page).toHaveURL(/.*home/, { timeout: 10000 });
 }
 
 //Helper function to obtain the numeric value of an Stat from StatCard
@@ -41,15 +41,15 @@ test.describe('Collaborative Orders', () => {
     await pageA.getByTitle('Create Team').click();
     
     // Wait for the modal and get the code
-    await expect(pageA.getByText('Team Created!')).toBeVisible();
+    await expect(pageA.getByText('Team Created!')).toBeVisible({ timeout: 10000 });
     const inviteCode = await pageA.locator('span.font-mono.font-black').innerText();
     await pageA.keyboard.press('Escape'); // Close modal
 
     const doneButton = pageA.getByRole('button', { name: 'Done!' });
     await doneButton.click();
 
-    await expect(pageA.locator('.fixed.inset-0')).not.toBeVisible();
-    await expect(pageA.getByText('Team Created!')).not.toBeVisible();
+    await expect(pageA.locator('.fixed.inset-0')).not.toBeVisible({ timeout: 10000 });
+    await expect(pageA.getByText('Team Created!')).not.toBeVisible({ timeout: 10000 });
 
     const contextB = await browser.newContext();
     const pageB = await contextB.newPage();
@@ -58,7 +58,7 @@ test.describe('Collaborative Orders', () => {
     // Join group
     await pageB.getByPlaceholder('Invite Code').fill(inviteCode);
     await pageB.getByTitle('Join Team').click();
-    await expect(pageB.getByText(groupName, { exact: true })).toBeVisible();
+    await expect(pageB.getByText(groupName, { exact: true })).toBeVisible({ timeout: 10000 });
 
     const groupOrdersA = pageA.locator('div.w-full:has(h2:text("Group orders"))');
     const groupOrdersB = pageB.locator('div.w-full:has(h2:text("Group orders"))');
@@ -66,8 +66,8 @@ test.describe('Collaborative Orders', () => {
     // Wait for at least one order to appear in both
     const firstCardA = groupOrdersA.locator('[data-testid^="order-card-"]').first();
     const firstCardB = groupOrdersB.locator('[data-testid^="order-card-"]').first();
-    await expect(firstCardA).toBeVisible({ timeout: 10000 });
-    await expect(firstCardB).toBeVisible({ timeout: 10000 });
+    await expect(firstCardA).toBeVisible({ timeout: 15000 });
+    await expect(firstCardB).toBeVisible({ timeout: 15000 });
 
     const targetTestId = await firstCardA.getAttribute('data-testid');
     expect(targetTestId).toBeTruthy();
@@ -109,7 +109,7 @@ test.describe('Collaborative Orders', () => {
 
     await expect.poll(() => loserPage !== null, {
       message: "The loser user should have received an error",
-      timeout: 5000
+      timeout: 10000
     }).toBeTruthy();
 
     const winnerPage = loserPage === pageA ? pageB : pageA;

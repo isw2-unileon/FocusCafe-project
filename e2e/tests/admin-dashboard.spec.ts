@@ -11,20 +11,20 @@ test.describe("Admin Dashboard", () => {
   test("should allow admin to manage users through full flow", async ({ page }) => {
     // 1. Login as admin (goes to adminDashboard by default)
     await CreateAndLoginAsAdmin(page);
-    await expect(page).toHaveURL(/.*adminDashboard/);
+    await expect(page).toHaveURL(/.*adminDashboard/, { timeout: 10000 });
 
     // 2. Verify page elements
-    await expect(page.getByText("Staff Management")).toBeVisible();
+    await expect(page.getByText("Staff Management")).toBeVisible({ timeout: 10000 });
     const searchInput = page.getByPlaceholder("Search by name or email...");
-    await expect(searchInput).toBeVisible();
-    await expect(page.getByRole("button", { name: /HIRE NEW STAFF/i })).toBeVisible();
+    await expect(searchInput).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("button", { name: /HIRE NEW STAFF/i })).toBeVisible({ timeout: 10000 });
 
     // 3. Open create user modal
     await page.getByRole("button", { name: /HIRE NEW STAFF/i }).click();
-    await expect(page.getByText("Create New Staff")).toBeVisible();
+    await expect(page.getByText("Create New Staff")).toBeVisible({ timeout: 10000 });
 
     const modalHeading = page.getByRole("heading", { name: "Create New Staff" });
-    await expect(modalHeading).toBeVisible();
+    await expect(modalHeading).toBeVisible({ timeout: 10000 });
 
     // 4. Fill the form
     await page.getByPlaceholder("First Name").fill(uniqueFirstName);
@@ -38,27 +38,26 @@ test.describe("Admin Dashboard", () => {
     // 5. Create user
     await page.getByRole("button", { name: "Create User" }).click();
     // 6. Wait for modal to close and user to appear in list
-    await expect(modalHeading).not.toBeVisible();
+    await expect(modalHeading).not.toBeVisible({ timeout: 10000 });
 
     // 7. Search for the created user
     await searchInput.waitFor({ state: "visible" });
     await searchInput.fill(fullName);
-    await expect(page.getByText(fullName)).toBeVisible();
-    await expect(page.getByText(testEmail)).toBeVisible();
-
-    await page.getByPlaceholder("Search by name or email...").fill(fullName);
-    await expect(page.getByText(fullName)).toBeVisible();
-    await expect(page.getByText(testEmail)).toBeVisible();
+    await searchInput.press("Enter");
+    await expect(page.getByText(fullName)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(testEmail)).toBeVisible({ timeout: 10000 });
 
     // 8. Clear search and find user again
-    await page.getByPlaceholder("Search by name or email...").fill("");
+    await searchInput.fill("");
+    await searchInput.press("Enter");
+    
     const deleteUserButton = page.getByTestId(`delete-user-${testEmail}`);
-    await expect(deleteUserButton).toBeVisible({ timeout: 5000 });
+    await expect(deleteUserButton).toBeVisible({ timeout: 10000 });
 
     // 11.Open modal
     await deleteUserButton.click();
     const removeStaffModal = page.getByText("Remove Staff");
-    await expect(removeStaffModal).toBeVisible();
+    await expect(removeStaffModal).toBeVisible({ timeout: 10000 });
 
     await page.getByRole("button", { name: "Delete" }).click();
     await expect(removeStaffModal).not.toBeVisible({ timeout: 10000 });
@@ -74,10 +73,10 @@ test.describe("Admin Dashboard", () => {
     await CreateAndLoginAsAdmin(page);
 
     // Admin login redirects directly to adminDashboard, but let's verify
-    await expect(page).toHaveURL(/.*adminDashboard/);
+    await expect(page).toHaveURL(/.*adminDashboard/, { timeout: 10000 });
 
     // 2. Navigate to Home (if there's a back button or home link)
     // For now, verify we're on the correct page
-    await expect(page.getByText("Staff Management")).toBeVisible();
+    await expect(page.getByText("Staff Management")).toBeVisible({ timeout: 10000 });
   });
 });

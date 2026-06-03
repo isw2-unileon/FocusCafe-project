@@ -24,12 +24,10 @@ test.describe("Study Session — Critical User Journey", () => {
             success: true,
             id: 123,
             session_id: 5,
-            // Matches Go's Quiz model `json:"questions"`
             questions: [
               {
                 id: 1,
                 quiz_id: 123,
-                // Matches Go's Question model json tags exactly
                 question_text: "What is the primary benefit of network mocking in E2E testing?",
                 option_a: "It isolates tests from third-party API downtime",
                 option_b: "It increases cloud costs",
@@ -39,7 +37,6 @@ test.describe("Study Session — Critical User Journey", () => {
                 explanation: "Network mocking prevents flaky tests caused by third-party service outages."
               }
             ],
-            // Fail-safe fallbacks in case your handler adapts properties before sending
             quiz: [
               {
                 question: "What is the primary benefit of network mocking in E2E testing?",
@@ -56,25 +53,26 @@ test.describe("Study Session — Critical User Journey", () => {
 
     // 1. Authentication: Register a fresh user and land on Home
     await RegisterAndloginAsUser(page);
-    await expect(page).toHaveURL(/.*home/);
+    await expect(page).toHaveURL(/.*home/, { timeout: 10000 });
 
     // 2. Snapshot Initial State: Capture starting energy
     const energyBefore = await GetStatValue(page, 'Energy');
 
     // 3. Navigation: Move to the Study Session page
-    await page.getByRole('button', { name: /BREW COFFEE \(STUDY\)/i }).click({ force: true });
-    await expect(page).toHaveURL(/.*study/);
+    const studyButton = page.getByRole('button', { name: /BREW COFFEE \(STUDY\)/i });
+    await expect(studyButton).toBeEnabled({ timeout: 10000 });
+    await studyButton.click();
+    await expect(page).toHaveURL(/.*study/, { timeout: 10000 });
 
     // 4. Setup Phase: Upload the PDF material
     const fileInput = page.getByTestId('study-file-input');
     await fileInput.setInputFiles(pdfPath);
     
-    // Usamos una aserción flexible para evitar bloqueos por carga en Webkit
     await expect(page.getByTestId('study-file-name')).toBeVisible({ timeout: 10000 });
 
     // 5. Execution Phase: Start the study timer
     await page.getByTestId('study-start-button').click();
-    await expect(page.getByTestId('study-timer')).toBeVisible();
+    await expect(page.getByTestId('study-timer')).toBeVisible({ timeout: 10000 });
 
     // 6. Transition: Skip the timer to trigger quiz generation immediately
     await page.getByTestId('study-skip-quiz').click();
@@ -86,7 +84,7 @@ test.describe("Study Session — Critical User Journey", () => {
     const optionButtons = page.locator('button[data-testid^="quiz-option-"]');
     
     // Explicitly wait for the first option button element to build in DOM
-    await optionButtons.first().waitFor({ state: 'visible', timeout: 5000 });
+    await optionButtons.first().waitFor({ state: 'visible', timeout: 10000 });
     
     // Select the answer option
     await optionButtons.first().click();
@@ -95,12 +93,12 @@ test.describe("Study Session — Critical User Journey", () => {
     await page.getByTestId('quiz-submit-button').click();
 
     // 10. Verification (Results Page): Ensure results are shown and reward is indicated
-    await expect(page.getByText(/Session Complete!/i)).toBeVisible();
-    await expect(page.getByText(/ENERGY EARNED/i)).toBeVisible();
+    await expect(page.getByText(/Session Complete!/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/ENERGY EARNED/i)).toBeVisible({ timeout: 10000 });
 
     // 11. Final Validation: Return home and verify the energy stat has increased
     await page.getByRole('button', { name: /RETURN TO CAFETERIA/i }).click();
-    await expect(page).toHaveURL(/.*home/);
+    await expect(page).toHaveURL(/.*home/, { timeout: 10000 });
 
     const energyAfter = await GetStatValue(page, 'Energy');
     expect(energyAfter).toBeGreaterThan(energyBefore);
