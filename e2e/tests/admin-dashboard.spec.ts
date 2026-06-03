@@ -64,8 +64,9 @@ test.describe("Admin Dashboard", () => {
     await expect(removeStaffModal).not.toBeVisible({ timeout: 10000 });
 
     // 12. Verify user is gone
-    await page.getByPlaceholder("Search by name or email...").fill(testEmail);
-    await expect(page.getByText("No users found")).toBeVisible();
+    await searchInput.fill(testEmail);
+    await searchInput.press("Enter");
+    await expect(page.getByText("No users found")).toBeVisible({ timeout: 10000 });
   });
 
   test("should navigate to admin dashboard from Home via shield icon", async ({ page }) => {
