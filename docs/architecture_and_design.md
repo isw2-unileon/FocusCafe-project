@@ -9,23 +9,30 @@ This document describes the architectural patterns, system design, and software 
 FocusCafe is structured around a **Client-Server model**, dividing the responsibilities into an interactive frontend client, a robust monolithic backend API, and managed external microservices.
 
 ```test
+            +-------------------------------------------+
+            |               INFRASTRUCTURE              |
+            |  [Primary Adapter: Gin HTTP Handlers]     |
+            +-------------------------------------------+
+                                  |
+                                  v
+            +-------------------------------------------+
+            |                CORE ENGINE                |
+            |   +-----------------------------------+   |
+            |   |          PORTS (Interfaces)       |   |
+            |   +-----------------------------------+   |
+            |                     |                     |
+            |                     v                     |
+            |   +-----------------------------------+   |
+            |   |       DOMAIN / BUSINESS LOGIC     |   |
+            |   |     (Services & Core Entities)    |   |
+            |   +-----------------------------------+   |
+            +-------------------------------------------+
+                                  |
+                                  v
 +-------------------------------------------------------------------+
-|                           CLIENT TIER                             |
-|    Frontend Application (React / Next.js / Vue / Angular)         |
+|                           INFRASTRUCTURE                          |
+| [Secondary Adapters: GORM SQL / Supabase Client / Gemini Client]  |
 +-------------------------------------------------------------------+
-|                        HTTP REST / WebSockets                     |
-|                                 v                                 | 
-+-------------------------------------------------------------------+
-|                           SERVER TIER                             |
-|          Go (Golang) REST API - Modular Monolith                  |
-+-------------------------------------------------------------------+
-|                              |                  |                 |
-| GORM (SQL)                   | HTTP REST        | HTTP REST       |
-|     v                              v                  v           |
-+--------------------+          +----------------+    +-------------+
-|   DATA STORAGE     |          | AUTH & PROFILE |    |  AI ENGINE  |
-| PostgreSQL/SQLite  |          |  Supabase Auth |    |Google Gemini|
-+--------------------+          +----------------+    +-------------+
 ```
 
 ### Architectural Components
