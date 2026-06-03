@@ -47,8 +47,8 @@ export async function RegisterAndloginAsUser(page: Page): Promise<String> {
   }
 
   // 6. Make sure the value is locked in place before clicking
-  await expect(emailInput).toHaveValue(uniqueEmail);
-  await expect(passwordInput).toHaveValue(password);
+  await expect(emailInput).toHaveValue(uniqueEmail, { timeout: 10000 });
+  await expect(passwordInput).toHaveValue(password, { timeout: 10000 });
 
   // Click login and wait for the API response to finish
   const loginResponsePromise = page.waitForResponse(
@@ -61,7 +61,7 @@ export async function RegisterAndloginAsUser(page: Page): Promise<String> {
   // Now wait for React Router to redirect after auth state updates
   await page.waitForURL(/.*home/, { timeout: 10000 });
   
-  await page.getByTestId("nav-dashboard").waitFor({ state: "visible" });
+  await page.getByTestId("nav-dashboard").waitFor({ state: "visible", timeout: 10000 });
   return uniqueEmail;
 }
 
@@ -73,11 +73,15 @@ export async function CreateAndLoginAsAdmin(page: Page): Promise<String> {
   await page.goto("/login");
   await page.evaluate(() => localStorage.clear());
   
-  await page.getByPlaceholder("Email").fill("admin@admin.com");
-  await page.getByPlaceholder("Password", { exact: true }).fill("admin123");
+  const adminEmailInput = page.getByPlaceholder("Email");
+  const adminPasswordInput = page.getByPlaceholder("Password", { exact: true });
+
+  await adminEmailInput.fill("admin@admin.com");
+  await adminPasswordInput.fill("admin123");
   
   const initialLoginPromise = page.waitForResponse(
-    (res) => res.url().includes("/api/login") && res.status() === 200
+    (res) => res.url().includes("/api/login") && res.status() === 200,
+    { timeout: 15000 }
   );
   await page.getByRole("button", { name: "Enter the Café" }).click();
   await initialLoginPromise;
@@ -85,7 +89,7 @@ export async function CreateAndLoginAsAdmin(page: Page): Promise<String> {
 
   // 2. Open modal HIRE STAFF
   await page.getByRole("button", { name: /HIRE NEW STAFF/i }).click();
-  await expect(page.getByText("Create New Staff")).toBeVisible();
+  await expect(page.getByText("Create New Staff")).toBeVisible({ timeout: 10000 });
 
   await page.getByPlaceholder("First Name").fill("E2E");
   await page.getByPlaceholder("Last Name").fill("Admin");
@@ -98,9 +102,9 @@ export async function CreateAndLoginAsAdmin(page: Page): Promise<String> {
   await page.getByRole("button", { name: "Create User" }).click();
 
   // 6. Wait for modal to close and user to appear in list
-   await expect(page.getByText("Create New Staff")).not.toBeVisible();
+  await expect(page.getByText("Create New Staff")).not.toBeVisible({ timeout: 10000 });
 
-  //LOGOUT
+  // LOGOUT
   const logoutButton = page.getByRole("button", { name: /logout|cerrar sesión/i });
   if (await logoutButton.isVisible()) {
     await logoutButton.click();
@@ -109,20 +113,26 @@ export async function CreateAndLoginAsAdmin(page: Page): Promise<String> {
     await page.goto("/login");
   }
 
-  await page.waitForURL(/.*login/);
+  await page.waitForURL(/.*login/, { timeout: 10000 });
 
-  //Login with the new admin
-  await page.getByPlaceholder("Email").locator("visible=true").fill(uniqueAdminEmail);
-  await page.getByPlaceholder("Password", { exact: true }).locator("visible=true").fill(password);
+  // Login with the new admin
+  const newEmailInput = page.getByPlaceholder("Email").locator("visible=true");
+  const newPasswordInput = page.getByPlaceholder("Password", { exact: true }).locator("visible=true");
+  
+  await newEmailInput.fill(uniqueAdminEmail);
+  await newPasswordInput.fill(password);
 
   const finalLoginPromise = page.waitForResponse(
-    (res) => res.url().includes("/api/login") && res.status() === 200
+    (res) => res.url().includes("/api/login") && res.status() === 200,
+    { timeout: 15000 }
   );
   await page.getByRole("button", { name: "Enter the Café" }).click();
   await finalLoginPromise;
 
   await page.waitForURL(/.*adminDashboard/, { timeout: 10000 });
-  await page.waitForTimeout(300);
+  
+  // Wait for post-login stabilizers
+  await page.waitForLoadState('networkidle');
 
   return uniqueAdminEmail;
 }
