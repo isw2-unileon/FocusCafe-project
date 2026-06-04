@@ -4,11 +4,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/glebarez/sqlite" // Cambiado al driver que no requiere CGO ni GCC
 	"github.com/google/uuid"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/domain"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/repository"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -103,12 +103,13 @@ func TestUserOrdersRepository_GetUserOrders(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			// Timeout is forced only when test explicitly searches for an error in DB
+			// MODIFICADO AQUÍ: Para evitar que el driver súper rápido de Go puro
+			// complete la consulta antes de que expire el nanosegundo, cancelamos
+			// el contexto de forma manual e inmediata antes de la ejecución.
 			if tt.wantErr && tt.name == "Database Error: Cancelled context returns error" {
 				var cancel context.CancelFunc
-				// GORM cancels queries
-				ctx, cancel = context.WithTimeout(context.Background(), 1)
-				defer cancel()
+				ctx, cancel = context.WithCancel(context.Background())
+				cancel() // Se cancela inmediatamente
 			}
 
 			got, err := repo.GetUserOrders(ctx, tt.userID)
@@ -282,7 +283,7 @@ func TestUserOrdersRepository_CompleteGroupOrder(t *testing.T) {
 
 	t.Run("Error: Group member has no progress", func(t *testing.T) {
 		u3 := uuid.New()
-		db.Create(&models.User{ID: u3, GroupID: &groupID, FirstName: "M2", LastName: "B2", Username: "member2", Email: "m2@t.com"})
+		db.Create(&models.User{ID: u3, GroupID: &groupID, FirstName: "M2", LastName: "B2", Username: "member2", Email: "m2@test.com"})
 		// u3 has no progress entry
 
 		oNew2 := models.UserOrder{UserID: u1, CafeOrderID: 1, Status: "pending", GroupID: &groupID}
@@ -292,5 +293,65 @@ func TestUserOrdersRepository_CompleteGroupOrder(t *testing.T) {
 		if err == nil {
 			t.Errorf("expected error when a group member has no progress")
 		}
+	})
+
+	t.Run("Success: XP distribution with 3 members", func(t *testing.T) {
+		g4 := int64(4)
+		u1, u2, u3 := uuid.New(), uuid.New(), uuid.New()
+		db.Create(&models.Group{ID: g4, Name: "Group 4", InviteCode: "TEST4", LeaderID: u1})
+		db.Create(&models.User{ID: u1, GroupID: &g4, Email: "u1@g4.com", Username: "u1g4", FirstName: "f", LastName: "l"})
+		db.Create(&models.User{ID: u2, GroupID: &g4, Email: "u2@g4.com", Username: "u2g4", FirstName: "f", LastName: "l"})
+		db.Create(&models.User{ID: u3, GroupID: &g4, Email: "u3@g4.com", Username: "u3g4", FirstName: "f", LastName: "l"})
+		db.Create(&models.UserProgress{UserID: u1, Level: 1, XP: 0, Energy: 100})
+		db.Create(&models.UserProgress{UserID: u2, Level: 1, XP: 0, Energy: 100})
+		db.Create(&models.UserProgress{UserID: u3, Level: 1, XP: 0, Energy: 100})
+
+		// CafeOrder 2 has RewardXP: 15. 15 / 3 = 5 XP each. No remainder.
+		o := models.UserOrder{UserID: u1, CafeOrderID: 2, Status: "pending", GroupID: &g4}
+		db.Create(&o)
+
+		err := repo.CompleteUserOrder(context.Background(), u1, uint(o.ID))
+		if err != nil {
+			t.Fatalf("failed to complete group order: %v", err)
+		}
+
+		var p1, p2, p3 models.UserProgress
+		db.Where("user_id = ?", u1).First(&p1)
+		db.Where("user_id = ?", u2).First(&p2)
+		db.Where("user_id = ?", u3).First(&p3)
+
+		if p1.XP != 5 || p2.XP != 5 || p3.XP != 5 {
+			t.Errorf("expected 5 XP each, got %d, %d, %d", p1.XP, p2.XP, p3.XP)
+		}
+	})
+
+	t.Run("Success: Group orders regeneration with high level", func(t *testing.T) {
+		g5 := int64(5)
+		u1, u2 := uuid.New(), uuid.New()
+		db.Create(&models.Group{ID: g5, Name: "Group 5", InviteCode: "TEST5", LeaderID: u1})
+		db.Create(&models.User{ID: u1, GroupID: &g5, Email: "u1@g5.com", Username: "u1g5", FirstName: "f", LastName: "l"})
+		db.Create(&models.User{ID: u2, GroupID: &g5, Email: "u2@g5.com", Username: "u2g5", FirstName: "f", LastName: "l"})
+		db.Create(&models.UserProgress{UserID: u1, Level: 10, XP: 0, Energy: 100}) // High level
+		db.Create(&models.UserProgress{UserID: u2, Level: 1, XP: 0, Energy: 100})
+
+		// Create some cafes that require level > 1
+		db.Create(&models.CafeOrder{ID: 10, Name: "High Level Coffee", EnergyCost: 50, RewardXP: 100, RequiredLevel: 5})
+
+		o := models.UserOrder{UserID: u1, CafeOrderID: 1, Status: "pending", GroupID: &g5}
+		db.Create(&o)
+
+		err := repo.CompleteUserOrder(context.Background(), u1, uint(o.ID))
+		if err != nil {
+			t.Fatalf("failed to complete group order: %v", err)
+		}
+
+		var newOrders []models.UserOrder
+		db.Preload("CafeOrder").Where("group_id = ? AND status = ?", g5, "pending").Find(&newOrders)
+		if len(newOrders) != 3 {
+			t.Errorf("expected 3 regenerated group orders, got %d", len(newOrders))
+		}
+		
+		// Check if any of the new orders can be the high level one (random but possible)
+		// At least we verify the logic didn't crash.
 	})
 }
