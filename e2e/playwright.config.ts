@@ -31,8 +31,9 @@ export default defineConfig({
 
       env: {
         DATABASE_URL: process.env.DATABASE_URL   || "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable",
-        SUPABASE_URL: process.env.SUPABASE_UR || "http://127.0.0.1:54321",
-        SUPABASE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || "sb_publishable_local_development_key_mock_value_for_testing_purposes",
+        SUPABASE_URL: process.env.SUPABASE_URL || "http://127.0.0.1:54321",
+        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || "sb_secret_local_development_key_mock_value_for_testing_purposes",
+        SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || "sb_publishable_local_development_key_mock_value_for_testing_purposes",
         PORT: process.env.PORT || "8080",
         GIN_MODE: "debug",
       }
