@@ -449,6 +449,38 @@ func TestHandler_AdminDeleteGroup(t *testing.T) {
 // TestHandler_AdminCreateUser
 // ============================================
 
+func createMockSupabaseServer(email string) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		switch {
+		case strings.Contains(path, "/auth/v1/signup"):
+			if email == "error-auth@test.com" {
+				w.WriteHeader(http.StatusBadRequest)
+				_ = json.NewEncoder(w).Encode(map[string]any{"message": "auth error"})
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"user": map[string]any{"id": "550e8400-e29b-41d4-a716-446655440000"},
+			})
+		case strings.Contains(path, "/rest/v1/users"):
+			if email == "error-profile@test.com" {
+				w.WriteHeader(http.StatusInternalServerError)
+				_ = json.NewEncoder(w).Encode(map[string]any{"message": "profile error"})
+				return
+			}
+			w.WriteHeader(http.StatusCreated)
+		case strings.Contains(path, "/rest/v1/user_progress"):
+			if email == "error-progress@test.com" {
+				w.WriteHeader(http.StatusInternalServerError)
+				_ = json.NewEncoder(w).Encode(map[string]any{"message": "progress error"})
+				return
+			}
+			w.WriteHeader(http.StatusCreated)
+		}
+	}))
+}
+
 func TestHandler_AdminCreateUser(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -533,35 +565,7 @@ func TestHandler_AdminCreateUser(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			localServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				path := r.URL.Path
-				switch {
-				case strings.Contains(path, "/auth/v1/signup"):
-					if tt.requestBody.Email == "error-auth@test.com" {
-						w.WriteHeader(http.StatusBadRequest)
-						_ = json.NewEncoder(w).Encode(map[string]any{"message": "auth error"})
-						return
-					}
-					w.WriteHeader(http.StatusOK)
-					_ = json.NewEncoder(w).Encode(map[string]any{
-						"user": map[string]any{"id": "550e8400-e29b-41d4-a716-446655440000"},
-					})
-				case strings.Contains(path, "/rest/v1/users"):
-					if tt.requestBody.Email == "error-profile@test.com" {
-						w.WriteHeader(http.StatusInternalServerError)
-						_ = json.NewEncoder(w).Encode(map[string]any{"message": "profile error"})
-						return
-					}
-					w.WriteHeader(http.StatusCreated)
-				case strings.Contains(path, "/rest/v1/user_progress"):
-					if tt.requestBody.Email == "error-progress@test.com" {
-						w.WriteHeader(http.StatusInternalServerError)
-						_ = json.NewEncoder(w).Encode(map[string]any{"message": "progress error"})
-						return
-					}
-					w.WriteHeader(http.StatusCreated)
-				}
-			}))
+			localServer := createMockSupabaseServer(tt.requestBody.Email)
 			defer localServer.Close()
 
 			h := &handlers.Handler{SupabaseURL: localServer.URL, SupabaseKey: "test-key"}

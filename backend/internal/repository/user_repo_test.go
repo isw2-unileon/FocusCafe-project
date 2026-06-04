@@ -141,6 +141,12 @@ func TestUserRepository_GetUserProfile(t *testing.T) {
 	}
 	db.Create(progress)
 
+	testUserProfileSuccess(t, ctx, repo, userID)
+	testUserProfileNoProgressOrGroup(t, ctx, db, repo)
+	testUserProfileNotFound(t, ctx, repo)
+}
+
+func testUserProfileSuccess(t *testing.T, ctx context.Context, repo *repository.UserRepository, userID uuid.UUID) {
 	t.Run("Success", func(t *testing.T) {
 		profile, err := repo.GetUserProfile(ctx, userID)
 		if err != nil {
@@ -168,7 +174,9 @@ func TestUserRepository_GetUserProfile(t *testing.T) {
 			t.Errorf("Expected Group Name 'Test Group', got %s", profile.Group.Name)
 		}
 	})
+}
 
+func testUserProfileNoProgressOrGroup(t *testing.T, ctx context.Context, db *gorm.DB, repo *repository.UserRepository) {
 	t.Run("NoProgressOrGroup", func(t *testing.T) {
 		userID2 := uuid.New()
 		user2 := &models.User{
@@ -194,7 +202,9 @@ func TestUserRepository_GetUserProfile(t *testing.T) {
 			t.Errorf("Expected Group to be nil, got %v", profile.Group)
 		}
 	})
+}
 
+func testUserProfileNotFound(t *testing.T, ctx context.Context, repo *repository.UserRepository) {
 	t.Run("NotFound", func(t *testing.T) {
 		profile, err := repo.GetUserProfile(ctx, uuid.New())
 		if err == nil {
