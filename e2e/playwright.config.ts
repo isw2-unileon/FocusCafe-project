@@ -4,7 +4,6 @@ import * as path from "path";
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
-
 export default defineConfig({
   testDir: "./tests",
   timeout: 30_000,
@@ -19,6 +18,8 @@ export default defineConfig({
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
+
+  
 
   webServer: [
     {
