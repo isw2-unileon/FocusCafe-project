@@ -25,16 +25,19 @@ export default defineConfig({
       command: process.platform === "win32"
         ? "cd .. && go build -o backend/bin/server.exe ./backend/cmd/server && .\\backend\\bin\\server.exe"
         : "cd .. && make build-backend && ./backend/bin/server",
-      port: Number(process.env.PORT) || 8080,
+      port: Number(process.env.PORT) || 8081,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
 
       env: {
         DATABASE_URL: process.env.DATABASE_URL   || "postgresql://postgres:postgres@127.0.0.1:54322/postgres?sslmode=disable",
         SUPABASE_URL: process.env.SUPABASE_URL || "http://127.0.0.1:54321",
-        SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || "sb_secret_local_development_key_mock_value_for_testing_purposes",
-        SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || "sb_publishable_local_development_key_mock_value_for_testing_purposes",
-        PORT: process.env.PORT || "8080",
+        //Map it to both variables for compatibility
+        SUPABASE_ANON_KEY: process.env.SUPABASE_KEY || "sb_publishable_MOCK_ANON_KEY_DEVELOPMENT_123456789",
+        SUPABASE_KEY: process.env.SUPABASE_KEY || "sb_publishable_MOCK_ANON_KEY_DEVELOPMENT_123456789",
+       
+        SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || "sb_secret_MOCK_SECRET_SERVICE_ROLE_KEY_123456789",
+        PORT: process.env.PORT || "8081",
         GIN_MODE: "debug",
       }
     },
