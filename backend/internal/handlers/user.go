@@ -102,7 +102,7 @@ func (h *Handler) GetUserLeaderboardRank(c *gin.Context) {
 // UpdateUserProfile Updates the authenticated user's profile
 // It only allows updating FirstName and LastName
 func (h *Handler) UpdateUserProfile(c *gin.Context) {
-	// Obtener userID del contexto usando el helper existente
+	// Obtain userID from context using the existing helper
 	id, err := h.getUserID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})

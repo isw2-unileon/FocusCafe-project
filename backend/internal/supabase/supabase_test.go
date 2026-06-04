@@ -75,9 +75,9 @@ func TestValidateToken(t *testing.T) {
 	}
 
 	adapter, err := supabase.NewJWTAdapter(server.URL)
-	if err != nil {
-		t.Fatalf("No se pudo crear el adaptador: %v", err)
-	}
+		if err != nil {
+			t.Fatalf("Failed to create adapter: %v", err)
+		}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

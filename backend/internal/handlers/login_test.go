@@ -15,7 +15,7 @@ import (
 // Helpers & Stubs
 // ─────────────────────────────────────────────
 
-// newLoginHandler inicializa el Handler con un nombre único para evitar duplicados
+// newLoginHandler initializes the Handler with a unique name to avoid duplicates
 func newLoginHandler(supabaseURL string) *Handler {
 	return &Handler{
 		SupabaseURL: supabaseURL,
@@ -24,7 +24,7 @@ func newLoginHandler(supabaseURL string) *Handler {
 	}
 }
 
-// supabaseLoginStub levanta un servidor de mentira único para las pruebas de login
+// supabaseLoginStub spins up a unique mock server for login tests
 func supabaseLoginStub(t *testing.T, statusCode int, body interface{}) *httptest.Server {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -43,7 +43,7 @@ func supabaseLoginStub(t *testing.T, statusCode int, body interface{}) *httptest
 	return srv
 }
 
-// loginBody serializa las credenciales rápidamente para las peticiones de test
+// loginBody serializes credentials quickly for test requests
 func loginBody(t *testing.T, email, password string) *bytes.Buffer {
 	t.Helper()
 	b, err := json.Marshal(map[string]string{"email": email, "password": password})
@@ -296,13 +296,13 @@ func TestLogin_ParseAuthResponse_MissingToken(t *testing.T) {
 }
 
 // ─────────────────────────────────────────────
-// Direct Unit Tests (Para cubrir líneas huérfanas)
+// Direct Unit Tests (To cover orphan lines)
 // ─────────────────────────────────────────────
 
 func TestCallSupabaseAuth_InvalidMethod(t *testing.T) {
 	h := newLoginHandler("http://localhost:8080")
 
-	h.SupabaseURL = "http://[::1]:abcd" // URL inválida para forzar que falle el request interno
+	h.SupabaseURL = "http://[::1]:abcd" // Invalid URL to force the internal request to fail
 	_, err := h.callSupabaseAuth([]byte(`{}`))
 	if err == nil {
 		t.Error("expected error, got nil")
