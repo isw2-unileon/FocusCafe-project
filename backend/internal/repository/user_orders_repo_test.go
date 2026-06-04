@@ -99,6 +99,38 @@ func TestUserOrdersRepository_GetUserOrders(t *testing.T) {
 		{"Database Error: Cancelled context returns error", u1, 0, false, "", true},
 	}
 
+	t.Run("Success: Group orders generated based on max level", func(t *testing.T) {
+		g8 := int64(8)
+		uA, uB := uuid.New(), uuid.New()
+		db.Create(&models.Group{ID: g8, Name: "G8", InviteCode: "T8", LeaderID: uA})
+		db.Create(&models.User{ID: uA, GroupID: &g8, Email: "ua@g8.com", Username: "uag8", FirstName: "f", LastName: "l"})
+		db.Create(&models.User{ID: uB, GroupID: &g8, Email: "ub@g8.com", Username: "ubg8", FirstName: "f", LastName: "l"})
+		db.Create(&models.UserProgress{UserID: uA, Level: 1, Energy: 100})
+		db.Create(&models.UserProgress{UserID: uB, Level: 10, Energy: 100}) // High level member
+
+		// High level cafe
+		db.Create(&models.CafeOrder{ID: 20, Name: "Level 10 Coffee", RequiredLevel: 10, EnergyCost: 10, RewardXP: 10})
+
+		// This should trigger addGroupOrders
+		orders, err := repo.GetUserOrders(context.Background(), uA)
+		if err != nil {
+			t.Fatalf("failed to get orders: %v", err)
+		}
+
+		// Since uB is level 10, group orders *could* include the Level 10 Coffee.
+		// We verify at least that group orders were generated (count > 0).
+		hasGroupOrder := false
+		for _, o := range orders {
+			if o.GroupID != nil && *o.GroupID == g8 {
+				hasGroupOrder = true
+				break
+			}
+		}
+		if !hasGroupOrder {
+			t.Errorf("expected group orders to be generated")
+		}
+	})
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
@@ -325,33 +357,43 @@ func TestUserOrdersRepository_CompleteGroupOrder(t *testing.T) {
 		}
 	})
 
-	t.Run("Success: Group orders regeneration with high level", func(t *testing.T) {
-		g5 := int64(5)
-		u1, u2 := uuid.New(), uuid.New()
-		db.Create(&models.Group{ID: g5, Name: "Group 5", InviteCode: "TEST5", LeaderID: u1})
-		db.Create(&models.User{ID: u1, GroupID: &g5, Email: "u1@g5.com", Username: "u1g5", FirstName: "f", LastName: "l"})
-		db.Create(&models.User{ID: u2, GroupID: &g5, Email: "u2@g5.com", Username: "u2g5", FirstName: "f", LastName: "l"})
-		db.Create(&models.UserProgress{UserID: u1, Level: 10, XP: 0, Energy: 100}) // High level
-		db.Create(&models.UserProgress{UserID: u2, Level: 1, XP: 0, Energy: 100})
+	t.Run("Error: Group completer insufficient energy", func(t *testing.T) {
+		g6 := int64(6)
+		uInsuff := uuid.New()
+		db.Create(&models.Group{ID: g6, Name: "G6", InviteCode: "T6", LeaderID: uInsuff})
+		db.Create(&models.User{ID: uInsuff, GroupID: &g6, Email: "uinsuff@g6.com", Username: "uinsuff", FirstName: "f", LastName: "l"})
+		db.Create(&models.UserProgress{UserID: uInsuff, Energy: 5, Level: 1}) // Low energy
 
-		// Create some cafes that require level > 1
-		db.Create(&models.CafeOrder{ID: 10, Name: "High Level Coffee", EnergyCost: 50, RewardXP: 100, RequiredLevel: 5})
-
-		o := models.UserOrder{UserID: u1, CafeOrderID: 1, Status: "pending", GroupID: &g5}
+		o := models.UserOrder{UserID: uInsuff, CafeOrderID: 2, Status: "pending", GroupID: &g6} // Cost 20
 		db.Create(&o)
 
-		err := repo.CompleteUserOrder(context.Background(), u1, uint(o.ID))
+		err := repo.CompleteUserOrder(context.Background(), uInsuff, uint(o.ID))
+		if err == nil || err.Error() != "insufficient energy" {
+			t.Errorf("expected 'insufficient energy' error, got %v", err)
+		}
+	})
+
+	t.Run("Success: Group member levels up from shared XP", func(t *testing.T) {
+		g7 := int64(7)
+		uLvl1, uLvl2 := uuid.New(), uuid.New()
+		db.Create(&models.Group{ID: g7, Name: "G7", InviteCode: "T7", LeaderID: uLvl1})
+		db.Create(&models.User{ID: uLvl1, GroupID: &g7, Email: "ulvl1@g7.com", Username: "ulvl1", FirstName: "f", LastName: "l"})
+		db.Create(&models.User{ID: uLvl2, GroupID: &g7, Email: "ulvl2@g7.com", Username: "ulvl2", FirstName: "f", LastName: "l"})
+		db.Create(&models.UserProgress{UserID: uLvl1, XP: 0, Level: 1, Energy: 100})
+		db.Create(&models.UserProgress{UserID: uLvl2, XP: 98, Level: 1, Energy: 100}) // Near level up
+
+		o := models.UserOrder{UserID: uLvl1, CafeOrderID: 1, Status: "pending", GroupID: &g7} // Reward 5. 5/2 = 2 each. Remainder 1 to completer.
+		db.Create(&o)
+
+		err := repo.CompleteUserOrder(context.Background(), uLvl1, uint(o.ID))
 		if err != nil {
 			t.Fatalf("failed to complete group order: %v", err)
 		}
 
-		var newOrders []models.UserOrder
-		db.Preload("CafeOrder").Where("group_id = ? AND status = ?", g5, "pending").Find(&newOrders)
-		if len(newOrders) != 3 {
-			t.Errorf("expected 3 regenerated group orders, got %d", len(newOrders))
+		var p2 models.UserProgress
+		db.Where("user_id = ?", uLvl2).First(&p2)
+		if p2.Level != 2 {
+			t.Errorf("expected member to level up to 2, got %d", p2.Level)
 		}
-		
-		// Check if any of the new orders can be the high level one (random but possible)
-		// At least we verify the logic didn't crash.
 	})
 }

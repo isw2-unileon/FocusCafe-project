@@ -2,36 +2,42 @@ package repository_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
-	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/repository"
-	"github.com/stretchr/testify/assert"
-	"gorm.io/driver/postgres"
+
+	"github.com/glebarez/sqlite"
+
 	"gorm.io/gorm"
 )
 
-// setupMockDB initializes a mock database connection and returns the gorm DB instance along with the sqlmock for setting expectations.
-func setupMockDB(t *testing.T) (*gorm.DB, sqlmock.Sqlmock) {
-	sqlDB, mock, err := sqlmock.New()
+func setupStudyTestDB(t *testing.T) *gorm.DB {
+	db, err := gorm.Open(sqlite.Open(fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name())), &gorm.Config{})
 	if err != nil {
-		t.Fatalf("Failed to open sqlmock: %s", err)
+		t.Fatalf("failed to connect to test database: %v", err)
 	}
 
-	gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{})
+	err = db.AutoMigrate(
+		&models.User{},
+		&models.UserProgress{},
+		&models.StudyMaterial{},
+		&models.StudySession{},
+		&models.Quiz{},
+		&models.Question{},
+	)
 	if err != nil {
-		t.Fatalf("Failed to open gorm: %s", err)
+		t.Fatalf("failed to migrate test database: %v", err)
 	}
 
-	return gormDB, mock
+	return db
 }
 
-// TestStudyRepository_CreateMaterial tests the CreateMaterial method of the StudyRepository to ensure it correctly inserts a new study material into the database and returns the generated ID.
 func TestStudyRepository_CreateMaterial(t *testing.T) {
-	db, mock := setupMockDB(t)
+	db := setupStudyTestDB(t)
 	repo := repository.NewStudyRepository(db)
 	userID := uuid.New()
 	material := &models.StudyMaterial{
@@ -42,21 +48,25 @@ func TestStudyRepository_CreateMaterial(t *testing.T) {
 		Content:     "Some content",
 	}
 
-	mock.ExpectBegin()
-	mock.ExpectQuery(`INSERT INTO "study_materials" .* RETURNING "id"`).
-		WithArgs(userID, material.Title, material.SubjectName, material.FilePath, sqlmock.AnyArg(), material.Content).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
-	mock.ExpectCommit()
-
 	err := repo.CreateMaterial(context.Background(), material)
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(1), material.ID)
-	assert.NoError(t, mock.ExpectationsWereMet())
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	if material.ID == 0 {
+		t.Errorf("Expected non-zero material ID")
+	}
+
+	var saved models.StudyMaterial
+	if err := db.First(&saved, material.ID).Error; err != nil {
+		t.Errorf("Could not find saved material: %v", err)
+	}
+	if saved.Title != material.Title {
+		t.Errorf("Expected title %s, got %s", material.Title, saved.Title)
+	}
 }
 
-// TestStudyRepository_CreateSession tests the CreateSession method of the StudyRepository to ensure it correctly inserts a new study session into the database and returns the generated ID.
 func TestStudyRepository_CreateSession(t *testing.T) {
-	db, mock := setupMockDB(t)
+	db := setupStudyTestDB(t)
 	repo := repository.NewStudyRepository(db)
 	userID := uuid.New()
 	session := &models.StudySession{
@@ -67,95 +77,132 @@ func TestStudyRepository_CreateSession(t *testing.T) {
 		Status:          "STUDYING",
 	}
 
-	mock.ExpectBegin()
-	mock.ExpectQuery(`INSERT INTO "study_sessions" .* RETURNING "id"`).
-		WithArgs(userID, session.MaterialID, session.DurationMinutes, sqlmock.AnyArg(), nil, session.Status).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
-	mock.ExpectCommit()
-
 	err := repo.CreateSession(context.Background(), session)
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(1), session.ID)
-	assert.NoError(t, mock.ExpectationsWereMet())
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	if session.ID == 0 {
+		t.Errorf("Expected non-zero session ID")
+	}
 }
 
-// TestStudyRepository_GetSessionWithMaterial tests the GetSessionWithMaterial method of the StudyRepository to ensure it correctly retrieves a study session along with its associated material.
 func TestStudyRepository_GetSessionWithMaterial(t *testing.T) {
-	db, mock := setupMockDB(t)
+	db := setupStudyTestDB(t)
 	repo := repository.NewStudyRepository(db)
-	sessionID := uint64(1)
 	userID := uuid.New()
 
-	mock.ExpectQuery(`SELECT \* FROM "study_sessions" WHERE id = \$1 .* LIMIT \$2`).
-		WithArgs(sessionID, 1).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "user_id", "material_id"}).AddRow(sessionID, userID, uint64(10)))
+	material := models.StudyMaterial{UserID: userID, Title: "Associated Material"}
+	db.Create(&material)
 
-	mock.ExpectQuery(`SELECT \* FROM "study_materials" WHERE "study_materials"\."id" = \$1`).
-		WithArgs(uint64(10)).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "title"}).AddRow(10, "Test Material"))
+	session := models.StudySession{UserID: userID, MaterialID: material.ID, Status: "STUDYING"}
+	db.Create(&session)
 
-	session, err := repo.GetSessionWithMaterial(context.Background(), sessionID)
-	assert.NoError(t, err)
-	assert.NotNil(t, session)
-	assert.Equal(t, sessionID, session.ID)
-	assert.Equal(t, "Test Material", session.Material.Title)
-	assert.NoError(t, mock.ExpectationsWereMet())
+	t.Run("Success", func(t *testing.T) {
+		got, err := repo.GetSessionWithMaterial(context.Background(), session.ID)
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if got == nil {
+			t.Fatalf("Expected session to be non-nil")
+		}
+		if got.ID != session.ID {
+			t.Errorf("Expected ID %d, got %d", session.ID, got.ID)
+		}
+		if got.Material.Title != "Associated Material" {
+			t.Errorf("Expected preloaded material title 'Associated Material', got %s", got.Material.Title)
+		}
+	})
+
+	t.Run("NotFound", func(t *testing.T) {
+		got, err := repo.GetSessionWithMaterial(context.Background(), 9999)
+		if err == nil {
+			t.Errorf("Expected error for non-existent session, got nil")
+		}
+		if got != nil {
+			t.Errorf("Expected nil session, got %v", got)
+		}
+	})
 }
 
-// TestStudyRepository_SaveFullQuiz tests the SaveFullQuiz method of the StudyRepository to ensure it correctly inserts a new quiz and its questions into the database.
 func TestStudyRepository_SaveFullQuiz(t *testing.T) {
-	db, mock := setupMockDB(t)
+	db := setupStudyTestDB(t)
 	repo := repository.NewStudyRepository(db)
 	sessionID := uint64(1)
 	quizName := "Test Quiz"
 	questions := []models.Question{
 		{QuestionText: "Q1", OptionA: "A", OptionB: "B", OptionC: "C", OptionD: "D", CorrectAnswer: "A"},
+		{QuestionText: "Q2", OptionA: "A", OptionB: "B", OptionC: "C", OptionD: "D", CorrectAnswer: "B"},
 	}
 
-	mock.ExpectBegin()
-	mock.ExpectQuery(`INSERT INTO "quizzes" .* RETURNING "id","generated_at"`).
-		WithArgs(sessionID).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "generated_at"}).AddRow(1, time.Now()))
+	t.Run("Success", func(t *testing.T) {
+		err := repo.SaveFullQuiz(context.Background(), sessionID, quizName, questions)
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
 
-	mock.ExpectQuery(`INSERT INTO "questions" .* RETURNING "id"`).
-		WithArgs(uint64(1), questions[0].QuestionText, questions[0].OptionA, questions[0].OptionB, questions[0].OptionC, questions[0].OptionD, questions[0].CorrectAnswer, "").
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
+		var savedQuiz models.Quiz
+		if err := db.Where("session_id = ?", sessionID).First(&savedQuiz).Error; err != nil {
+			t.Errorf("Failed to find saved quiz: %v", err)
+		}
 
-	mock.ExpectCommit()
-
-	err := repo.SaveFullQuiz(context.Background(), sessionID, quizName, questions)
-	assert.NoError(t, err)
-	assert.NoError(t, mock.ExpectationsWereMet())
+		var count int64
+		db.Model(&models.Question{}).Where("quiz_id = ?", savedQuiz.ID).Count(&count)
+		if count != 2 {
+			t.Errorf("Expected 2 questions, got %d", count)
+		}
+	})
 }
 
-// TestStudyRepository_UpdateUserProgress tests the UpdateUserProgress method of the StudyRepository to ensure it correctly updates a user's progress in the database.
 func TestStudyRepository_UpdateUserProgress(t *testing.T) {
-	db, mock := setupMockDB(t)
+	db := setupStudyTestDB(t)
 	repo := repository.NewStudyRepository(db)
 	userID := uuid.New()
 	sessionID := uint64(1)
-	energy := 100
 
-	// 1. Check session
-	mock.ExpectQuery(`SELECT \* FROM "study_sessions" WHERE id = \$1 AND user_id = \$2 .* LIMIT \$3`).
-		WithArgs(sessionID, userID, 1).
-		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(sessionID))
+	// Setup: Session must exist
+	db.Create(&models.StudySession{ID: sessionID, UserID: userID})
 
-	mock.ExpectBegin()
-	// 2. Get Progress
-	mock.ExpectQuery(`SELECT \* FROM "user_progress" WHERE user_id = \$1 .* LIMIT \$2`).
-		WithArgs(userID, 1).
-		WillReturnRows(sqlmock.NewRows([]string{"user_id", "energy", "level", "xp"}).AddRow(userID, 50, 1, 10))
+	t.Run("Success - Create Progress", func(t *testing.T) {
+		newEnergy, err := repo.UpdateUserProgress(context.Background(), userID, sessionID, 50)
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if newEnergy != 50 {
+			t.Errorf("Expected energy 50, got %d", newEnergy)
+		}
 
-	// 3. Save Progress
-	mock.ExpectExec(`UPDATE "user_progress" SET "energy"=\$1,"level"=\$2,"xp"=\$3 WHERE "user_id" = \$4`).
-		WithArgs(150, 1, 10, userID).
-		WillReturnResult(sqlmock.NewResult(1, 1))
+		var p models.UserProgress
+		db.Where("user_id = ?", userID).First(&p)
+		if p.Energy != 50 {
+			t.Errorf("Expected DB energy 50, got %d", p.Energy)
+		}
+	})
 
-	mock.ExpectCommit()
+	t.Run("Success - Update Existing Progress", func(t *testing.T) {
+		newEnergy, err := repo.UpdateUserProgress(context.Background(), userID, sessionID, 100)
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if newEnergy != 150 { // 50 + 100
+			t.Errorf("Expected energy 150, got %d", newEnergy)
+		}
+	})
 
-	newEnergy, err := repo.UpdateUserProgress(context.Background(), userID, sessionID, energy)
-	assert.NoError(t, err)
-	assert.Equal(t, 150, newEnergy)
-	assert.NoError(t, mock.ExpectationsWereMet())
+	t.Run("Error - Session Not Found", func(t *testing.T) {
+		_, err := repo.UpdateUserProgress(context.Background(), userID, 999, 10)
+		if err == nil {
+			t.Errorf("Expected error, got nil")
+		}
+		if err.Error() != "study session not found" {
+			t.Errorf("Expected 'study session not found', got %v", err)
+		}
+	})
+
+	t.Run("Error - Session Belongs to Other User", func(t *testing.T) {
+		otherUser := uuid.New()
+		_, err := repo.UpdateUserProgress(context.Background(), otherUser, sessionID, 10)
+		if err == nil {
+			t.Errorf("Expected error, got nil")
+		}
+	})
 }
