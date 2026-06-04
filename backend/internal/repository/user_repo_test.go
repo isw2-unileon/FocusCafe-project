@@ -2,14 +2,16 @@ package repository_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/repository"
-	"github.com/isw2-unileon/FocusCafe-project/backend/internal/services"
-	"gorm.io/driver/sqlite"
+
+	"github.com/glebarez/sqlite"
+
 	"gorm.io/gorm"
 )
 
@@ -32,214 +34,336 @@ func setupTestDB(t *testing.T) *gorm.DB {
 	return db
 }
 
-// seedTestData handles the creation of initial database records for testing.
-func seedTestData(t *testing.T, db *gorm.DB, id uuid.UUID, email string, progress *models.UserProgress, groupID *int64) {
-	t.Helper() // Marks this function as a test helper
-
-	user := models.User{
-		ID:        id,
-		Email:     email,
-		FirstName: "Test",
-		LastName:  "User",
-		Username:  "testuser",
-		GroupID:   groupID,
-	}
-	if err := db.Create(&user).Error; err != nil {
-		t.Fatalf("Failed to create seed user: %v", err)
-	}
-
-	if progress != nil {
-		progress.UserID = id
-		if err := db.Create(progress).Error; err != nil {
-			t.Fatalf("Failed to create seed progress: %v", err)
-		}
-	}
-}
-
-func TestUserRepository_GetUserProfile(t *testing.T) {
+func TestUserRepository_CreateUser(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewUserRepository(db)
+	ctx := context.Background()
 
-	// Populate the in-memory database with test data
-	uNormal := uuid.New()
-	uWithGroup := uuid.New()
-	uWoProgress := uuid.New()
-
-	groupID := int64(99)
-	db.Create(&models.Group{ID: groupID, Name: "Cafesss", InviteCode: "CAFE12"})
-
-	seedTestData(t, db, uNormal, "normal@focus.com", &models.UserProgress{Energy: 300, XP: 150, Level: 4}, nil)
-	seedTestData(t, db, uWithGroup, "group@focus.com", &models.UserProgress{Energy: 100, XP: 10, Level: 1}, &groupID)
-	seedTestData(t, db, uWoProgress, "worogress@focus.com", nil, nil)
-
-	tests := []struct {
-		name         string
-		id           uuid.UUID
-		wantErr      bool
-		expectGroup  bool
-		expectEnergy int
-	}{
-		{
-			name:         "Success: User profile found",
-			id:           uNormal,
-			wantErr:      false,
-			expectGroup:  false,
-			expectEnergy: 300,
-		},
-		{
-			name:         "Error: User ID does not exist",
-			id:           uuid.New(),
-			wantErr:      true,
-			expectGroup:  false,
-			expectEnergy: 0,
-		},
-		{
-			name:         "Success: User with Group",
-			id:           uWithGroup,
-			wantErr:      false,
-			expectGroup:  true,
-			expectEnergy: 100,
-		},
-		{
-			name:         "Success: User Without Progress",
-			id:           uWoProgress,
-			wantErr:      false,
-			expectGroup:  false,
-			expectEnergy: 0,
-		},
+	user := &models.User{
+		ID:        uuid.New(),
+		FirstName: "John",
+		LastName:  "Doe",
+		Username:  "johndoe",
+		Email:     "john@example.com",
+		Role:      "user",
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Logic is delegated to a specialized helper
-			runProfileTest(t, repo, tt.id, tt.wantErr)
-		})
-	}
-}
-
-// runProfileTest executes the actual repository call and performs assertions.
-func runProfileTest(t *testing.T, repo services.UserRepository, id uuid.UUID, wantErr bool) {
-	t.Helper()
-
-	got, err := repo.GetUserProfile(context.Background(), id)
-
-	// Check if error matches expected outcome
-	if (err != nil) != wantErr {
-		t.Errorf("GetUserProfile() error = %v, wantErr %v", err, wantErr)
-		return
+	err := repo.CreateUser(ctx, user)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
 	}
 
-	// Additional assertions for success cases
-	if !wantErr && got == nil {
-		t.Error("GetUserProfile() returned nil profile unexpectedly")
+	var savedUser models.User
+	err = db.First(&savedUser, "id = ?", user.ID).Error
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
 	}
-}
-
-func TestUserRepository_UpdateUserProfile(t *testing.T) {
-	db := setupTestDB(t)
-	repo := repository.NewUserRepository(db)
-	id := uuid.New()
-
-	seedTestData(t, db, id, "update@test.com", nil, nil)
-
-	t.Run("Success: Update fields", func(t *testing.T) {
-		err := repo.UpdateUserProfile(context.Background(), id, "NEw", "Surname")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		var updated models.User
-		db.First(&updated, id)
-		if updated.FirstName != "NEw" || updated.LastName != "Surname" {
-			t.Errorf("profile updates were not saved correctly: %v", updated)
-		}
-	})
-}
-
-func TestUserRepository_GetAllUsers(t *testing.T) {
-	db := setupTestDB(t)
-	repo := repository.NewUserRepository(db)
-
-	seedTestData(t, db, uuid.New(), "all1@test.com", nil, nil)
-	seedTestData(t, db, uuid.New(), "all2@test.com", nil, nil)
-
-	t.Run("Success: Retrieve all users", func(t *testing.T) {
-		users, err := repo.GetAllUsers(context.Background())
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if len(users) < 2 {
-			t.Errorf("expected at least 2 users, got %d", len(users))
-		}
-	})
+	if savedUser.Email != user.Email {
+		t.Errorf("Expected email %s, got %s", user.Email, savedUser.Email)
+	}
 }
 
 func TestUserRepository_GetUserByEmail(t *testing.T) {
 	db := setupTestDB(t)
 	repo := repository.NewUserRepository(db)
-	targetEmail := "find_me@focus.com"
-	id := uuid.New()
+	ctx := context.Background()
 
-	seedTestData(t, db, id, targetEmail, nil, nil)
-
-	var existingUser models.User
-	db.Preload("Progress").Preload("Group").First(&existingUser, id)
-
-	tests := []struct {
-		name    string // description of this test case
-		email   string
-		want    *models.User
-		wantErr bool
-	}{
-		{"Success: Existing email", targetEmail, &existingUser, false},
-		{"Error: Non-existing email", "fake@focus.com", nil, true},
+	email := "test@example.com"
+	user := &models.User{
+		ID:        uuid.New(),
+		FirstName: "Test",
+		LastName:  "User",
+		Username:  "testuser",
+		Email:     email,
+		Role:      "user",
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := repo.GetUserByEmail(context.Background(), tt.email)
-			if (err != nil) != tt.wantErr {
-				t.Fatalf("GetUserByEmail() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if !tt.wantErr && got.Email != tt.email {
-				t.Errorf("expected email %s, got %s", tt.email, got.Email)
-			}
-		})
-	}
-}
+	db.Create(user)
 
-func TestUserRepository_CreateAndDeleteUser(t *testing.T) {
-	db := setupTestDB(t)
-	repo := repository.NewUserRepository(db)
-	id := uuid.New()
-
-	newUser := &models.User{
-		ID:        id,
-		FirstName: "Juan",
-		Email:     "juan@focus.com",
-	}
-
-	t.Run("Success: Create user", func(t *testing.T) {
-		err := repo.CreateUser(context.Background(), newUser)
+	t.Run("Success", func(t *testing.T) {
+		foundUser, err := repo.GetUserByEmail(ctx, email)
 		if err != nil {
-			t.Fatalf("failed to create user: %v", err)
+			t.Errorf("Expected no error, got %v", err)
 		}
-
-		var check models.User
-		if err := db.First(&check, id).Error; err != nil {
-			t.Error("user was not written to database")
+		if foundUser == nil {
+			t.Fatalf("Expected foundUser to be non-nil")
+		}
+		if foundUser.ID != user.ID {
+			t.Errorf("Expected ID %v, got %v", user.ID, foundUser.ID)
 		}
 	})
 
-	t.Run("Success: Permanent delete (Unscoped)", func(t *testing.T) {
-		err := repo.DeleteUser(context.Background(), id)
-		if err != nil {
-			t.Fatalf("failed to delete user: %v", err)
-		}
-
-		var check models.User
-		err = db.Unscoped().First(&check, id).Error
+	t.Run("NotFound", func(t *testing.T) {
+		foundUser, err := repo.GetUserByEmail(ctx, "nonexistent@example.com")
 		if err == nil {
-			t.Error("expected user to be permanently removed from database")
+			t.Errorf("Expected error, got nil")
+		}
+		if foundUser != nil {
+			t.Errorf("Expected foundUser to be nil, got %v", foundUser)
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			t.Errorf("Expected gorm.ErrRecordNotFound, got %v", err)
+		}
+	})
+}
+
+func TestUserRepository_GetUserProfile(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewUserRepository(db)
+	ctx := context.Background()
+
+	userID := uuid.New()
+	groupID := int64(1)
+
+	group := &models.Group{
+		ID:         groupID,
+		Name:       "Test Group",
+		InviteCode: "ABCDEF",
+		LeaderID:   userID,
+	}
+	db.Create(group)
+
+	user := &models.User{
+		ID:        userID,
+		FirstName: "John",
+		LastName:  "Doe",
+		Username:  "johndoe",
+		Email:     "john@example.com",
+		Role:      "user",
+		GroupID:   &groupID,
+	}
+	db.Create(user)
+
+	progress := &models.UserProgress{
+		UserID: userID,
+		Energy: 100,
+		XP:     500,
+		Level:  5,
+	}
+	db.Create(progress)
+
+	testUserProfileSuccess(ctx, t, repo, userID)
+	testUserProfileNoProgressOrGroup(ctx, t, db, repo)
+	testUserProfileNotFound(ctx, t, repo)
+}
+
+func testUserProfileSuccess(ctx context.Context, t *testing.T, repo *repository.UserRepository, userID uuid.UUID) {
+	t.Run("Success", func(t *testing.T) {
+		profile, err := repo.GetUserProfile(ctx, userID)
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if profile == nil {
+			t.Fatalf("Expected profile to be non-nil")
+		}
+		if profile.FirstName != "John" {
+			t.Errorf("Expected FirstName 'John', got %s", profile.FirstName)
+		}
+		if profile.Energy != 100 {
+			t.Errorf("Expected Energy 100, got %d", profile.Energy)
+		}
+		if profile.XP != 500 {
+			t.Errorf("Expected XP 500, got %d", profile.XP)
+		}
+		if profile.Level != 5 {
+			t.Errorf("Expected Level 5, got %d", profile.Level)
+		}
+		if profile.Group == nil {
+			t.Fatalf("Expected Group to be non-nil")
+		}
+		if profile.Group.Name != "Test Group" {
+			t.Errorf("Expected Group Name 'Test Group', got %s", profile.Group.Name)
+		}
+	})
+}
+
+func testUserProfileNoProgressOrGroup(ctx context.Context, t *testing.T, db *gorm.DB, repo *repository.UserRepository) {
+	t.Run("NoProgressOrGroup", func(t *testing.T) {
+		userID2 := uuid.New()
+		user2 := &models.User{
+			ID:        userID2,
+			FirstName: "Jane",
+			LastName:  "Doe",
+			Username:  "janedoe",
+			Email:     "jane@example.com",
+		}
+		db.Create(user2)
+
+		profile, err := repo.GetUserProfile(ctx, userID2)
+		if err != nil {
+			t.Errorf("Expected no error, got %v", err)
+		}
+		if profile == nil {
+			t.Fatalf("Expected profile to be non-nil")
+		}
+		if profile.Energy != 0 {
+			t.Errorf("Expected Energy 0, got %d", profile.Energy)
+		}
+		if profile.Group != nil {
+			t.Errorf("Expected Group to be nil, got %v", profile.Group)
+		}
+	})
+}
+
+func testUserProfileNotFound(ctx context.Context, t *testing.T, repo *repository.UserRepository) {
+	t.Run("NotFound", func(t *testing.T) {
+		profile, err := repo.GetUserProfile(ctx, uuid.New())
+		if err == nil {
+			t.Errorf("Expected error, got nil")
+		}
+		if profile != nil {
+			t.Errorf("Expected profile to be nil, got %v", profile)
+		}
+	})
+}
+
+func TestUserRepository_UpdateUserProfile(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewUserRepository(db)
+	ctx := context.Background()
+
+	userID := uuid.New()
+	user := &models.User{
+		ID:        userID,
+		FirstName: "Old",
+		LastName:  "Name",
+		Email:     "old@example.com",
+	}
+	db.Create(user)
+
+	err := repo.UpdateUserProfile(ctx, userID, "New", "Name")
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+
+	var updatedUser models.User
+	db.First(&updatedUser, userID)
+	if updatedUser.FirstName != "New" {
+		t.Errorf("Expected FirstName 'New', got %s", updatedUser.FirstName)
+	}
+	if updatedUser.LastName != "Name" {
+		t.Errorf("Expected LastName 'Name', got %s", updatedUser.LastName)
+	}
+}
+
+func TestUserRepository_GetAllUsers(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewUserRepository(db)
+	ctx := context.Background()
+
+	db.Create(&models.User{ID: uuid.New(), Email: "user1@example.com"})
+	db.Create(&models.User{ID: uuid.New(), Email: "user2@example.com"})
+
+	users, err := repo.GetAllUsers(ctx)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	if len(users) != 2 {
+		t.Errorf("Expected 2 users, got %d", len(users))
+	}
+}
+
+func TestUserRepository_DeleteUser(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewUserRepository(db)
+	ctx := context.Background()
+
+	userID := uuid.New()
+	db.Create(&models.User{ID: userID, Email: "delete@example.com"})
+
+	err := repo.DeleteUser(ctx, userID)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+
+	var count int64
+	db.Unscoped().Model(&models.User{}).Where("id = ?", userID).Count(&count)
+	if count != 0 {
+		t.Errorf("Expected count 0, got %d", count)
+	}
+}
+
+func TestUserRepository_GetLeaderboard(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewUserRepository(db)
+	ctx := context.Background()
+
+	u1 := uuid.New()
+	u2 := uuid.New()
+	adminID := uuid.New()
+
+	db.Create(&models.User{ID: u1, Role: "user", Email: "u1@e.com"})
+	db.Create(&models.UserProgress{UserID: u1, XP: 100})
+
+	db.Create(&models.User{ID: u2, Role: "user", Email: "u2@e.com"})
+	db.Create(&models.UserProgress{UserID: u2, XP: 200})
+
+	db.Create(&models.User{ID: adminID, Role: "admin", Email: "admin@e.com"})
+	db.Create(&models.UserProgress{UserID: adminID, XP: 300})
+
+	leaderboard, err := repo.GetLeaderboard(ctx, 10)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	if len(leaderboard) != 2 {
+		t.Errorf("Expected 2 users in leaderboard, got %d", len(leaderboard))
+	}
+	if leaderboard[0].ID != u2 {
+		t.Errorf("Expected top user to be %v, got %v", u2, leaderboard[0].ID)
+	}
+	if leaderboard[1].ID != u1 {
+		t.Errorf("Expected second user to be %v, got %v", u1, leaderboard[1].ID)
+	}
+}
+
+func TestUserRepository_GetUserRank(t *testing.T) {
+	db := setupTestDB(t)
+	repo := repository.NewUserRepository(db)
+	ctx := context.Background()
+
+	u1 := uuid.New()
+	u2 := uuid.New()
+	u3 := uuid.New()
+
+	db.Create(&models.User{ID: u1, Role: "user", Email: "u1@e.com"})
+	db.Create(&models.UserProgress{UserID: u1, XP: 100})
+
+	db.Create(&models.User{ID: u2, Role: "user", Email: "u2@e.com"})
+	db.Create(&models.UserProgress{UserID: u2, XP: 200})
+
+	db.Create(&models.User{ID: u3, Role: "user", Email: "u3@e.com"})
+	db.Create(&models.UserProgress{UserID: u3, XP: 150})
+
+	rank1, err := repo.GetUserRank(ctx, u2) // Should be 1
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	if rank1 != 1 {
+		t.Errorf("Expected rank 1, got %d", rank1)
+	}
+
+	rank2, err := repo.GetUserRank(ctx, u3) // Should be 2
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	if rank2 != 2 {
+		t.Errorf("Expected rank 2, got %d", rank2)
+	}
+
+	rank3, err := repo.GetUserRank(ctx, u1) // Should be 3
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	if rank3 != 3 {
+		t.Errorf("Expected rank 3, got %d", rank3)
+	}
+
+	t.Run("NotFound", func(t *testing.T) {
+		rank, err := repo.GetUserRank(ctx, uuid.New())
+		if err == nil {
+			t.Errorf("Expected error, got nil")
+		}
+		if rank != 0 {
+			t.Errorf("Expected rank 0, got %d", rank)
 		}
 	})
 }

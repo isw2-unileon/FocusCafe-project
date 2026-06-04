@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
@@ -15,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/auth"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/database"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/domain"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/repository"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/services"
@@ -128,5 +131,179 @@ func TestStartStudySessionNoFile(t *testing.T) {
 
 	if recorder.Code != http.StatusBadRequest {
 		t.Errorf("Unexpected status code: expected %d, got %d", http.StatusBadRequest, recorder.Code)
+	}
+}
+
+// TestStartStudySessionNoUserInContext verifies the handler fails with 401 when user is missing in context.
+func TestStartStudySessionNoUserInContext(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := setupSessionTest(t)
+	defer teardownSessionTest()
+
+	recorder := httptest.NewRecorder()
+	_, r := gin.CreateTestContext(recorder)
+
+	r.POST("/api/study/start", handler.StartStudySessionHandler)
+
+	req, _ := http.NewRequest("POST", "/api/study/start", nil)
+	r.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status 401, got %d", recorder.Code)
+	}
+}
+
+// TestStartStudySessionInvalidUserType verifies the handler fails with 500 when user in context is of wrong type.
+func TestStartStudySessionInvalidUserType(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := setupSessionTest(t)
+	defer teardownSessionTest()
+
+	recorder := httptest.NewRecorder()
+	_, r := gin.CreateTestContext(recorder)
+
+	r.POST("/api/study/start", func(c *gin.Context) {
+		c.Set("user", "not a UserClaims object")
+		handler.StartStudySessionHandler(c)
+	})
+
+	req, _ := http.NewRequest("POST", "/api/study/start", nil)
+	r.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d", recorder.Code)
+	}
+}
+
+// TestStartStudySessionInvalidUserID verifies the handler fails with 500 when user ID in token is invalid.
+func TestStartStudySessionInvalidUserID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := setupSessionTest(t)
+	defer teardownSessionTest()
+
+	recorder := httptest.NewRecorder()
+	_, r := gin.CreateTestContext(recorder)
+
+	mockClaims := &auth.UserClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject: "invalid-uuid",
+		},
+	}
+
+	r.POST("/api/study/start", func(c *gin.Context) {
+		c.Set("user", mockClaims)
+		handler.StartStudySessionHandler(c)
+	})
+
+	req, _ := http.NewRequest("POST", "/api/study/start", nil)
+	r.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d", recorder.Code)
+	}
+}
+
+// TestStartStudySessionSaveFileError verifies the handler fails with 500 when file saving fails.
+func TestStartStudySessionSaveFileError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := setupSessionTest(t)
+	defer teardownSessionTest()
+
+	// Make the uploads directory un-writable or non-existent to force an error
+	os.RemoveAll("backend")
+	// Create a file named 'backend' so MkdirAll and file creation inside it fails
+	if err := os.WriteFile("backend", []byte("blocker"), 0644); err != nil {
+		t.Fatalf("Failed to create blocker file: %v", err)
+	}
+
+	recorder := httptest.NewRecorder()
+
+	mockClaims := &auth.UserClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject: mockUserID,
+		},
+	}
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, _ := writer.CreateFormFile("pdf", "test.pdf")
+	if _, err := part.Write([]byte("content")); err != nil {
+		t.Fatalf("Failed to write part: %v", err)
+	}
+	writer.Close()
+
+	req, _ := http.NewRequest("POST", "/api/study/start", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	_, r := gin.CreateTestContext(recorder)
+	r.POST("/api/study/start", func(c *gin.Context) {
+		c.Set("user", mockClaims)
+		handler.StartStudySessionHandler(c)
+	})
+
+	r.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Errorf("Expected status 500, got %d", recorder.Code)
+	}
+}
+
+// MockStudyService implements services.StudyServiceInterface for testing purposes.
+type MockStudyService struct {
+	services.StudyServiceInterface
+	StartStudySessionFunc func(ctx context.Context, userID uuid.UUID, fileName, subjectName, filePath, content string) (*domain.StudySession, uint64, error)
+}
+
+func (m *MockStudyService) StartStudySession(ctx context.Context, userID uuid.UUID, fileName, subjectName, filePath, content string) (*domain.StudySession, uint64, error) {
+	return m.StartStudySessionFunc(ctx, userID, fileName, subjectName, filePath, content)
+}
+
+// TestStartStudySessionServiceError verifies that the handler handles service errors correctly.
+func TestStartStudySessionServiceError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := setupSessionTest(t)
+	defer teardownSessionTest()
+
+	// Inject the mock service
+	mockService := &MockStudyService{
+		StartStudySessionFunc: func(_ context.Context, _ uuid.UUID, _, _, _, _ string) (*domain.StudySession, uint64, error) {
+			return nil, 0, errors.New("simulated service error")
+		},
+	}
+	handler.StudyService = mockService
+
+	recorder := httptest.NewRecorder()
+
+	mockClaims := &auth.UserClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject: mockUserID,
+		},
+	}
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, _ := writer.CreateFormFile("pdf", "test.pdf")
+	if _, err := part.Write([]byte("content")); err != nil {
+		t.Fatalf("Failed to write part: %v", err)
+	}
+	writer.Close()
+
+	req, _ := http.NewRequest("POST", "/api/study/start", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	_, r := gin.CreateTestContext(recorder)
+	r.POST("/api/study/start", func(c *gin.Context) {
+		c.Set("user", mockClaims)
+		handler.StartStudySessionHandler(c)
+	})
+
+	r.ServeHTTP(recorder, req)
+
+	if recorder.Code != http.StatusInternalServerError {
+		t.Errorf("Unexpected status code: expected %d, got %d", http.StatusInternalServerError, recorder.Code)
+	}
+
+	if !strings.Contains(recorder.Body.String(), "Error while registering study material or session.") {
+		t.Errorf("Expected error message not found in response")
 	}
 }

@@ -44,7 +44,7 @@ func (h *Handler) SyncUser(c *gin.Context) {
 	if exists {
 		c.JSON(http.StatusOK, gin.H{
 			"synced":  false,
-			"message": "usuario ya existe",
+			"message": "user already exists",
 		})
 		return
 	}

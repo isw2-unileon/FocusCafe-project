@@ -53,7 +53,7 @@ func (h *Handler) GetUserProfile(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-// UpdateProfileRequest contiene los datos para actualizar el perfil
+// UpdateProfileRequest contains the data to update the profile.
 type UpdateProfileRequest struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
@@ -90,13 +90,13 @@ func (h *Handler) GetUserLeaderboardRank(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"rank":  rank,
-		"user":  profile,
+		"rank": rank,
+		"user": profile,
 	})
 }
 
-// UpdateUserProfile actualiza el perfil del usuario autenticado
-// Solo permite actualizar FirstName y LastName
+// UpdateUserProfile Updates the authenticated user's profile
+// It only allows updating FirstName and LastName
 func (h *Handler) UpdateUserProfile(c *gin.Context) {
 	// Obtener userID del contexto usando el helper existente
 	id, err := h.getUserID(c)
@@ -105,14 +105,14 @@ func (h *Handler) UpdateUserProfile(c *gin.Context) {
 		return
 	}
 
-	// Parsear request body
+	// Parse request body
 	var req UpdateProfileRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
 		return
 	}
 
-	// Validar que los campos no estén vacíos (con trimming)
+	// Validate that the fields are not empty (with trimming)
 	req.FirstName = strings.TrimSpace(req.FirstName)
 	req.LastName = strings.TrimSpace(req.LastName)
 
@@ -121,19 +121,19 @@ func (h *Handler) UpdateUserProfile(c *gin.Context) {
 		return
 	}
 
-	// Actualizar usuario a través del service layer
+	// Update user through the service layer
 	if err := h.UserService.UpdateUserProfile(c.Request.Context(), id, req.FirstName, req.LastName); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update profile"})
 		return
 	}
 
-	// Obtener usuario actualizado con Progress a través del service layer
+	// Get updated user with Progress through the service layer
 	user, err := h.UserService.GetUserProfile(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch updated profile"})
 		return
 	}
 
-	// Retornar usuario actualizado
+	// Returned the updated user
 	c.JSON(http.StatusOK, user)
 }
