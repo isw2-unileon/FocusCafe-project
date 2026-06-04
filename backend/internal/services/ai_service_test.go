@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -141,5 +142,31 @@ func TestGenerateQuiz_MalformedJSONResponse(t *testing.T) {
 
 	if !strings.Contains(err.Error(), "error unmarshaling") {
 		t.Errorf("Expected unmarshaling error context, got: %v", err)
+	}
+}
+
+type errorTransport struct {
+	err error
+}
+
+func (e *errorTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	return nil, e.err
+}
+
+func TestGenerateQuiz_NetworkFailure(t *testing.T) {
+	expectedErr := errors.New("connection refused: gemini API unreachable")
+
+	http.DefaultTransport = &errorTransport{err: expectedErr}
+	defer func() { http.DefaultTransport = originalTransport }()
+
+	service := NewAIService("fake-key")
+	_, err := service.GenerateQuiz("Sample text.")
+
+	if err == nil {
+		t.Fatal("Expected network error, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "error sending request") {
+		t.Errorf("Expected 'error sending request' in error, got: %v", err)
 	}
 }

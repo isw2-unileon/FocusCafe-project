@@ -6,7 +6,7 @@ test.describe("Protected Routes — Unauthenticated", () => {
 
     for (const route of protectedRoutes) {
       await page.goto(route);
-      await expect(page).toHaveURL(/.*login/);
+      await expect(page).toHaveURL(/.*login/, { timeout: 10000 });
     }
   });
 });

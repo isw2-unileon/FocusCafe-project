@@ -10,10 +10,12 @@ import { UserProfile } from "@/types/user-profile";
 import { OrderList } from "@/components/OrderList";
 import { AvatarDashboard } from "@/components/AvatarDashboard";
 import { useAuth } from "@/context/AuthContext";
+import { useWebSocket } from "@/context/WebSocketContext";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const Home = () => {
     const { logout, userStats, setUserStats, isAdmin, userId } = useAuth();
+    const { subscribe } = useWebSocket();
     const [loading, setLoading] = useState(true);
     const [inviteCode, setInviteCode] = useState("");
     const [newGroupName, setNewGroupName] = useState("");
@@ -44,6 +46,13 @@ const Home = () => {
         });
     }, [navigate, setUserStats, logout]);
 
+    useEffect(() => {
+        const unsubscribe = subscribe('GROUP_DELETED', () => {
+            setUserStats(prev => prev ? { ...prev, group: undefined } : prev);
+            toast.error("Your team has been deleted.");
+        });
+        return unsubscribe;
+    }, [subscribe, setUserStats]);
 
     const handleLogout = () => {
         logout();

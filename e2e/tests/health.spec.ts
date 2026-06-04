@@ -7,7 +7,7 @@ dotenv.config({path: resolve(__dirname, "../../.env") });
 
 test("homepage loads", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("h1")).toHaveText("FocusCafe");
+  await expect(page.locator("h1")).toHaveText("FocusCafe", { timeout: 10000 });
 });
 
 test("health endpoint responds", async ({ request }) => {

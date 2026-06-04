@@ -19,11 +19,12 @@ type mockGroupRepository struct {
 	getUserGroupIDFunc       func(ctx context.Context, userID uuid.UUID) (*int64, error)
 	isUserInGroupFunc        func(ctx context.Context, userID uuid.UUID) (bool, error)
 	getAllGroupsFunc         func(ctx context.Context) ([]models.Group, error)
-	deleteGroupFunc          func(ctx context.Context, groupID int64) error
-	removeAllUsersFromGroup  func(ctx context.Context, groupID int64) error
-	isGroupLeaderFunc        func(ctx context.Context, userID uuid.UUID, groupID int64) (bool, error)
-	removeUserFromGroupFunc  func(ctx context.Context, userID uuid.UUID) error
-	deleteGroupOrdersFunc    func(ctx context.Context, groupID int64) error
+	deleteGroupFunc                     func(ctx context.Context, groupID int64) error
+	removeAllUsersFromGroup           func(ctx context.Context, groupID int64) error
+	isGroupLeaderFunc                 func(ctx context.Context, userID uuid.UUID, groupID int64) (bool, error)
+	removeUserFromGroupFunc           func(ctx context.Context, userID uuid.UUID) error
+	deleteGroupOrdersFunc             func(ctx context.Context, groupID int64) error
+	deleteGroupWithDependenciesFunc   func(ctx context.Context, groupID int64) error
 }
 
 func (m *mockGroupRepository) CreateGroup(ctx context.Context, group *models.Group) error {
@@ -108,6 +109,13 @@ func (m *mockGroupRepository) DeleteGroupOrders(ctx context.Context, groupID int
 		return m.deleteGroupOrdersFunc(ctx, groupID)
 	}
 	return errors.New("deleteGroupOrders not mocked")
+}
+
+func (m *mockGroupRepository) DeleteGroupWithDependencies(ctx context.Context, groupID int64) error {
+	if m.deleteGroupWithDependenciesFunc != nil {
+		return m.deleteGroupWithDependenciesFunc(ctx, groupID)
+	}
+	return errors.New("deleteGroupWithDependencies not mocked")
 }
 
 // ============================================
@@ -492,57 +500,35 @@ func TestGroupService_GetAllGroups(t *testing.T) {
 
 func TestGroupService_DeleteGroup(t *testing.T) {
 	tests := []struct {
-		name                 string
-		groupID              int64
-		mockRemoveUsersFunc  func(ctx context.Context, groupID int64) error
-		mockDeleteOrdersFunc func(ctx context.Context, groupID int64) error
-		mockDeleteGroupFunc  func(ctx context.Context, groupID int64) error
-		wantErr              bool
-		expectedErr          string
+		name                            string
+		groupID                         int64
+		mockDeleteGroupWithDependencies func(ctx context.Context, groupID int64) error
+		wantErr                         bool
+		expectedErr                     string
 	}{
 		{
 			name:    "Success: Deletes group and cleans up",
 			groupID: 1,
-			mockRemoveUsersFunc: func(ctx context.Context, groupID int64) error {
-				return nil
-			},
-			mockDeleteOrdersFunc: func(ctx context.Context, groupID int64) error {
-				return nil
-			},
-			mockDeleteGroupFunc: func(ctx context.Context, groupID int64) error {
+			mockDeleteGroupWithDependencies: func(ctx context.Context, groupID int64) error {
 				return nil
 			},
 			wantErr: false,
 		},
 		{
-			name:    "Error: Fails to remove users",
+			name:    "Error: Transaction fails",
 			groupID: 1,
-			mockRemoveUsersFunc: func(ctx context.Context, groupID int64) error {
+			mockDeleteGroupWithDependencies: func(ctx context.Context, groupID int64) error {
 				return errors.New("foreign key constraint")
 			},
 			wantErr:     true,
 			expectedErr: "foreign key constraint",
-		},
-		{
-			name:    "Error: Fails to delete group orders",
-			groupID: 1,
-			mockRemoveUsersFunc: func(ctx context.Context, groupID int64) error {
-				return nil
-			},
-			mockDeleteOrdersFunc: func(ctx context.Context, groupID int64) error {
-				return errors.New("orders purge failed")
-			},
-			wantErr:     true,
-			expectedErr: "orders purge failed",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mRepo := &mockGroupRepository{
-				removeAllUsersFromGroup: tt.mockRemoveUsersFunc,
-				deleteGroupOrdersFunc:   tt.mockDeleteOrdersFunc,
-				deleteGroupFunc:         tt.mockDeleteGroupFunc,
+				deleteGroupWithDependenciesFunc: tt.mockDeleteGroupWithDependencies,
 			}
 			s := services.NewGroupService(mRepo)
 

@@ -130,8 +130,8 @@ func (h *Handler) userExists(userID string) (bool, error) {
 		nil,
 	)
 
-	req.Header.Set("apikey", h.SupabaseKey)
-	req.Header.Set("Authorization", "Bearer "+h.SupabaseKey)
+	req.Header.Set("apikey", h.SupabaseServiceRoleKey)
+	req.Header.Set("Authorization", "Bearer "+h.SupabaseServiceRoleKey)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -164,8 +164,8 @@ func (h *Handler) createUserProfileSync(userID, email, firstName, lastName strin
 
 	req, _ := http.NewRequest(http.MethodPost, h.SupabaseURL+"/rest/v1/users", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("apikey", h.SupabaseKey)
-	req.Header.Set("Authorization", "Bearer "+h.SupabaseKey)
+	req.Header.Set("apikey", h.SupabaseServiceRoleKey)
+	req.Header.Set("Authorization", "Bearer "+h.SupabaseServiceRoleKey)
 	req.Header.Set("Prefer", "return=representation")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
