@@ -40,8 +40,8 @@ func Load() *Config {
 	}
 
 	log.Printf("Loaded Settings (Port: %s, Mode: %s)", cfg.Port, cfg.GinMode)
-	log.Printf("Supabase URL: %s", cfg.SupabaseURL)
-	log.Printf("Database URL: %s", cfg.DatabaseURL)
+	log.Printf("Supabase URL")
+	log.Printf("Database URL")
 
 	return cfg
 }
