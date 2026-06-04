@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/ws"
 )
 
 // CreateGroupRequest represents the request body for creating a group.
@@ -107,4 +108,16 @@ func (h *Handler) DeleteGroup(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "group deleted successfully"})
+
+	// Notify connected members asynchronously, matching the pattern used in CompleteUserOrder.
+	// Clients still hold the old GroupID in memory until they reconnect, so BroadcastToGroup works.
+	if h.WSHub != nil {
+		go h.WSHub.BroadcastToGroup(group.ID, ws.Message{
+			Type: "GROUP_DELETED",
+			Payload: map[string]interface{}{
+				"group_id": group.ID,
+				"reason":   "leader_deleted",
+			},
+		})
+	}
 }

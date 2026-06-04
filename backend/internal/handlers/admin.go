@@ -9,6 +9,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/isw2-unileon/FocusCafe-project/backend/internal/ws"
 )
 
 // AdminCreateUserRequest defines the data needed by an admin to create a new user
@@ -202,4 +203,15 @@ func (h *Handler) AdminDeleteGroup(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "group deleted successfully"})
+
+	// Notify connected members asynchronously.
+	if h.WSHub != nil {
+		go h.WSHub.BroadcastToGroup(groupID, ws.Message{
+			Type: "GROUP_DELETED",
+			Payload: map[string]interface{}{
+				"group_id": groupID,
+				"reason":   "admin_deleted",
+			},
+		})
+	}
 }

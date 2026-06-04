@@ -155,8 +155,8 @@ func (h *Handler) createUserProfile(userID string, req RegisterRequest, role str
 		bytes.NewBuffer(body),
 	)
 	profileReq.Header.Set("Content-Type", "application/json")
-	profileReq.Header.Set("apikey", h.SupabaseKey)
-	profileReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", h.SupabaseKey))
+	profileReq.Header.Set("apikey", h.SupabaseServiceRoleKey)
+	profileReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", h.SupabaseServiceRoleKey))
 	profileReq.Header.Set("Prefer", "return=representation")
 
 	resp, err := http.DefaultClient.Do(profileReq)
@@ -195,8 +195,8 @@ func (h *Handler) createUserProgress(userID string) error {
 		bytes.NewBuffer(body),
 	)
 	progressReq.Header.Set("Content-Type", "application/json")
-	progressReq.Header.Set("apikey", h.SupabaseKey)
-	progressReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", h.SupabaseKey))
+	progressReq.Header.Set("apikey", h.SupabaseServiceRoleKey)
+	progressReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", h.SupabaseServiceRoleKey))
 	progressReq.Header.Set("Prefer", "return=representation")
 
 	resp, err := http.DefaultClient.Do(progressReq)

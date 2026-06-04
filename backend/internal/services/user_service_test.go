@@ -336,3 +336,148 @@ func TestUserService_DeleteUser(t *testing.T) {
 		}
 	})
 }
+
+func TestGetLeaderboard_Success(t *testing.T) {
+	repo := &mockUserRepository{
+		getLeaderboardFunc: func(ctx context.Context, limit int) ([]models.User, error) {
+			return []models.User{
+				{ID: uuid.MustParse("11111111-1111-1111-1111-111111111111"), FirstName: "Alice", Email: "alice@test.com", Progress: &models.UserProgress{XP: 3200, Level: 15}},
+				{ID: uuid.MustParse("22222222-2222-2222-2222-222222222222"), FirstName: "Bob", Email: "bob@test.com", Progress: &models.UserProgress{XP: 2100, Level: 12}},
+			}, nil
+		},
+	}
+	s := services.NewUserService(repo)
+
+	result, err := s.GetLeaderboard(context.Background(), 5)
+	if err != nil {
+		t.Fatalf("Unexpected error fetching leaderboard: %v", err)
+	}
+
+	if len(result) != 2 {
+		t.Errorf("Expected 2 leaderboard entries, got %d", len(result))
+	}
+
+	if result[0].FirstName != "Alice" {
+		t.Errorf("Expected first entry to be Alice, got %s", result[0].FirstName)
+	}
+
+	if result[0].XP != 3200 {
+		t.Errorf("Expected Alice to have 3200 XP, got %d", result[0].XP)
+	}
+
+	if result[1].FirstName != "Bob" {
+		t.Errorf("Expected second entry to be Bob, got %s", result[1].FirstName)
+	}
+}
+
+func TestGetLeaderboard_RepoError(t *testing.T) {
+	expectedErr := errors.New("leaderboard query timeout")
+	repo := &mockUserRepository{
+		getLeaderboardFunc: func(ctx context.Context, limit int) ([]models.User, error) {
+			return nil, expectedErr
+		},
+	}
+	s := services.NewUserService(repo)
+
+	_, err := s.GetLeaderboard(context.Background(), 5)
+	if err == nil {
+		t.Fatal("Expected error when repository fails, got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Errorf("Expected error %v, got %v", expectedErr, err)
+	}
+}
+
+func TestGetUserLeaderboard_Success(t *testing.T) {
+	userID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
+	repo := &mockUserRepository{
+		getUserProfileFunc: func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error) {
+			return &domain.UserProfile{ID: userID, FirstName: "Juan", XP: 800, Level: 5}, nil
+		},
+		getUserRankFunc: func(ctx context.Context, uid uuid.UUID) (int, error) {
+			return 7, nil
+		},
+	}
+	s := services.NewUserService(repo)
+
+	rank, profile, err := s.GetUserLeaderboard(context.Background(), userID)
+	if err != nil {
+		t.Fatalf("Unexpected error getting user leaderboard: %v", err)
+	}
+
+	if rank != 7 {
+		t.Errorf("Expected rank 7, got %d", rank)
+	}
+
+	if profile == nil {
+		t.Fatal("Expected profile to be returned, got nil")
+	}
+
+	if profile.FirstName != "Juan" {
+		t.Errorf("Expected profile name Juan, got %s", profile.FirstName)
+	}
+}
+
+func TestGetUserLeaderboard_UserNotFound(t *testing.T) {
+	userID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440001")
+	expectedErr := errors.New("user profile not found")
+	repo := &mockUserRepository{
+		getUserProfileFunc: func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error) {
+			return nil, expectedErr
+		},
+	}
+	s := services.NewUserService(repo)
+
+	_, _, err := s.GetUserLeaderboard(context.Background(), userID)
+	if err == nil {
+		t.Fatal("Expected error when user profile is missing, got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Errorf("Expected error %v, got %v", expectedErr, err)
+	}
+}
+
+func TestGetUserLeaderboard_RankError(t *testing.T) {
+	userID := uuid.MustParse("550e8400-e29b-41d4-a716-446655440002")
+	expectedErr := errors.New("rank calculation failed")
+	repo := &mockUserRepository{
+		getUserProfileFunc: func(ctx context.Context, id uuid.UUID) (*domain.UserProfile, error) {
+			return &domain.UserProfile{ID: userID, FirstName: "Ana"}, nil
+		},
+		getUserRankFunc: func(ctx context.Context, uid uuid.UUID) (int, error) {
+			return 0, expectedErr
+		},
+	}
+	s := services.NewUserService(repo)
+
+	_, _, err := s.GetUserLeaderboard(context.Background(), userID)
+	if err == nil {
+		t.Fatal("Expected error when rank calculation fails, got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Errorf("Expected error %v, got %v", expectedErr, err)
+	}
+}
+
+func TestDeleteUser_Failure(t *testing.T) {
+	id := uuid.New()
+	expectedErr := errors.New("foreign key constraint violation on delete")
+	repo := &mockUserRepository{
+		deleteUserFunc: func(ctx context.Context, uid uuid.UUID) error {
+			return expectedErr
+		},
+	}
+	s := services.NewUserService(repo)
+
+	err := s.DeleteUser(context.Background(), id)
+	if err == nil {
+		t.Fatal("Expected error when deletion fails, got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Errorf("Expected error %v, got %v", expectedErr, err)
+	}
+}

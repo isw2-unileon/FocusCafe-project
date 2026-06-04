@@ -311,3 +311,32 @@ func TestUpdateUserProgress_Failure(t *testing.T) {
 		t.Errorf("Expected error %v, got %v", expectedErr, err)
 	}
 }
+
+func TestStartStudySession_MaterialSuccessSessionFailure(t *testing.T) {
+	expectedErr := errors.New("session insert failed after material creation")
+	repo := &mockStudyRepository{
+		createSessionErr: expectedErr,
+	}
+	service := NewStudyService(repo)
+
+	ctx := context.Background()
+	_, _, err := service.StartStudySession(ctx, uuid.New(), "notes.pdf", "Math", "/uploads/notes.pdf", "content")
+
+	if err == nil {
+		t.Fatal("Expected error when session creation fails, got nil")
+	}
+
+	if !errors.Is(err, expectedErr) {
+		t.Errorf("Expected error %v, got %v", expectedErr, err)
+	}
+
+	// NOTE: The material was already persisted in the repo but there is no rollback logic.
+	// This documents a potential orphan data issue where a study material exists without a session.
+	if repo.capturedMaterial == nil {
+		t.Error("Material was not captured in repository before session failed; this indicates unexpected execution order")
+	}
+
+	if repo.capturedMaterial != nil && repo.capturedMaterial.ID != 42 {
+		t.Errorf("Expected material to have assigned ID 42 before failure, got %d", repo.capturedMaterial.ID)
+	}
+}

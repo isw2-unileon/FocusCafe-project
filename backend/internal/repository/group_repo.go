@@ -112,3 +112,19 @@ func (r *GroupRepository) RemoveUserFromGroup(ctx context.Context, userID uuid.U
 func (r *GroupRepository) DeleteGroupOrders(ctx context.Context, groupID int64) error {
 	return r.db.WithContext(ctx).Where("group_id = ?", groupID).Delete(&models.UserOrder{}).Error
 }
+
+// DeleteGroupWithDependencies removes a group and all its associated data atomically within a transaction.
+func (r *GroupRepository) DeleteGroupWithDependencies(ctx context.Context, groupID int64) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&models.User{}).Where("group_id = ?", groupID).Update("group_id", nil).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("group_id = ?", groupID).Delete(&models.UserOrder{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Delete(&models.Group{}, groupID).Error; err != nil {
+			return err
+		}
+		return nil
+	})
+}
