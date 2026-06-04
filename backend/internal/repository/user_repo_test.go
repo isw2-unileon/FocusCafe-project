@@ -141,12 +141,12 @@ func TestUserRepository_GetUserProfile(t *testing.T) {
 	}
 	db.Create(progress)
 
-	testUserProfileSuccess(t, ctx, repo, userID)
-	testUserProfileNoProgressOrGroup(t, ctx, db, repo)
-	testUserProfileNotFound(t, ctx, repo)
+	testUserProfileSuccess(ctx, t, repo, userID)
+	testUserProfileNoProgressOrGroup(ctx, t, db, repo)
+	testUserProfileNotFound(ctx, t, repo)
 }
 
-func testUserProfileSuccess(t *testing.T, ctx context.Context, repo *repository.UserRepository, userID uuid.UUID) {
+func testUserProfileSuccess(ctx context.Context, t *testing.T, repo *repository.UserRepository, userID uuid.UUID) {
 	t.Run("Success", func(t *testing.T) {
 		profile, err := repo.GetUserProfile(ctx, userID)
 		if err != nil {
@@ -176,7 +176,7 @@ func testUserProfileSuccess(t *testing.T, ctx context.Context, repo *repository.
 	})
 }
 
-func testUserProfileNoProgressOrGroup(t *testing.T, ctx context.Context, db *gorm.DB, repo *repository.UserRepository) {
+func testUserProfileNoProgressOrGroup(ctx context.Context, t *testing.T, db *gorm.DB, repo *repository.UserRepository) {
 	t.Run("NoProgressOrGroup", func(t *testing.T) {
 		userID2 := uuid.New()
 		user2 := &models.User{
@@ -204,7 +204,7 @@ func testUserProfileNoProgressOrGroup(t *testing.T, ctx context.Context, db *gor
 	})
 }
 
-func testUserProfileNotFound(t *testing.T, ctx context.Context, repo *repository.UserRepository) {
+func testUserProfileNotFound(ctx context.Context, t *testing.T, repo *repository.UserRepository) {
 	t.Run("NotFound", func(t *testing.T) {
 		profile, err := repo.GetUserProfile(ctx, uuid.New())
 		if err == nil {
