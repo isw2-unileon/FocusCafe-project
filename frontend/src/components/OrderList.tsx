@@ -35,16 +35,12 @@ export const OrderList = ({ inGroup = false }: { inGroup?: boolean }) => {
     }, [setUserStats]);
 
     useEffect(() => {
-        console.log('Group status changed or mounted. Fetching fresh orders...');
         fetchOrders(true);
     }, [fetchOrders, userStats?.group?.id]);
 
     useEffect(() => {
-        console.log('Initializing WebSocket listener for orders...');
-
         // Subscribe to real-time updates
         const unsubscribe = subscribe('ORDERS_UPDATED', async (payload) => {
-            console.log('Real-time update received: Triggering smart refresh');
 
             try {
                 const stats = await getRemoteUserStats();
@@ -78,7 +74,6 @@ export const OrderList = ({ inGroup = false }: { inGroup?: boolean }) => {
             }
     });
         return () => {
-            console.log('Cleaning up WebSocket subscription');
             unsubscribe();
         };
 
@@ -115,8 +110,6 @@ export const OrderList = ({ inGroup = false }: { inGroup?: boolean }) => {
             } else {
                 showXpToast(order.cafe_order?.reward_xp ?? 0);
             }
-            
-            console.log(`Order ${orderId} completed`);
         }catch(error){
             alert("Error completing order")
             console.error(error)

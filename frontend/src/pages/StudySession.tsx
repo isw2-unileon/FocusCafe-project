@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from "react-router-dom";
 import { Upload, Coffee,} from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '@/context/AuthContext';
 import { apiFetch } from '@/services/api_client'; 
 import { StudyQuiz } from '@/components/StudyQuiz';
@@ -70,10 +71,16 @@ const StudySession = () => {
 
     // --- LOGIC HANDLERS  ---
     const handleStartStudy = async () => {
-        if (!files || files.length === 0) return alert("Please upload a file.");
+        if (!files || files.length === 0) {
+            toast.error("Please upload a file.");
+            return;
+        }
 
     const selectedFile = files[0];
-    if (!selectedFile) return alert("Please upload a file.");
+    if (!selectedFile) {
+        toast.error("Please upload a file.");
+        return;
+    }
     
     const formData = new FormData();
     
@@ -81,18 +88,15 @@ const StudySession = () => {
     
     formData.append('subject_name', 'General Study');
 
-    console.log("Sending file:", selectedFile.name, "Size:", selectedFile.size);
-
     try {
         const data = await studyService.startSession(formData) as { session_id: number };
-        console.log("Session started successfully:", data);
         setCurrentSessionId(data.session_id);
         setTimeLeft(studyMinutes * 60);
         setState('STUDYING');
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error("Error 400 detailed:", errorMessage);
-        alert(`Error: ${errorMessage}.Check the console.`);
+        toast.error(`Error: ${errorMessage}`);
     }
     };
 

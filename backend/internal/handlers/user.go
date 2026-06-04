@@ -41,7 +41,11 @@ func (h *Handler) getUserID(c *gin.Context) (uuid.UUID, error) {
 // GetUserProfile obtains the profile information of the authenticated user, including personal details and gamified stats (energy, level).
 func (h *Handler) GetUserProfile(c *gin.Context) {
 	// Obtain user ID from JWT claims
-	id, _ := h.getUserID(c)
+	id, err := h.getUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
 
 	// Obtain user profile from the service layer
 	user, err := h.UserService.GetUserProfile(c.Request.Context(), id)
