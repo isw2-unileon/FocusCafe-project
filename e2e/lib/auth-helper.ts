@@ -107,7 +107,7 @@ export async function CreateAndLoginAsAdmin(page: Page): Promise<String> {
   // LOGOUT
   const logoutButton = page.getByRole("button", { name: /logout|cerrar sesión/i });
   if (await logoutButton.isVisible()) {
-    await logoutButton.click();
+    await logoutButton.click({force: true});
   } else {
     await page.evaluate(() => localStorage.clear());
     await page.goto("/login");
