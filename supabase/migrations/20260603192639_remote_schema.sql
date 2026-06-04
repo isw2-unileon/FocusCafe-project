@@ -141,3 +141,11 @@ as permissive
 for insert
 to service_role, postgres
 with check (true);
+
+create policy "Users can insert their own profile on register"
+on "public"."users" as permissive for insert to anon, authenticated
+with check ((auth.uid() = id));
+
+create policy "Admins can insert new profiles"
+on "public"."users" as permissive for insert to authenticated
+with check ((EXISTS ( SELECT 1 FROM public.users users_1 WHERE ((users_1.id = auth.uid()) AND (users_1.role = 'admin'::text)))));
