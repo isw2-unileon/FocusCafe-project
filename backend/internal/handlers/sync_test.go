@@ -233,8 +233,8 @@ func TestSyncUser_UserAlreadyExists(t *testing.T) {
 	if body["synced"] != false {
 		t.Errorf("expected synced=false, got %v", body["synced"])
 	}
-	if body["message"] != "usuario ya existe" {
-		t.Errorf("expected message %q, got %q", "usuario ya existe", body["message"])
+	if body["message"] != "user already exists" {
+		t.Errorf("expected message %q, got %q", "user already exists", body["message"])
 	}
 }
 
