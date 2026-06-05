@@ -1,4 +1,4 @@
-# Databa Models and Database Schema
+# Data Models and Database Schema
 
 The persistence layer of FocusCafe relies on a relational SQL model managed through GORM (Object-Relational Mapping). This structure enforces referential integrity, strong data typing, and strict relational constraints across all core features.
 
