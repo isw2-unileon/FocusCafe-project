@@ -28,7 +28,7 @@ func Auth(validator auth.TokenValidator) gin.HandlerFunc {
 
 		tokenString := headersParts[1]
 		if tokenString == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"err": "Token is empty"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Token is empty"})
 			return
 		}
 

@@ -135,13 +135,13 @@ func TestUserOrdersRepository_GetUserOrders(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 
-			// MODIFICADO AQUÍ: Para evitar que el driver súper rápido de Go puro
-			// complete la consulta antes de que expire el nanosegundo, cancelamos
-			// el contexto de forma manual e inmediata antes de la ejecución.
+			// MODIFIED HERE: To prevent the pure Go driver from completing the query
+			// before the nanosecond expires, we cancel the context manually and
+			// immediately before execution.
 			if tt.wantErr && tt.name == "Database Error: Cancelled context returns error" {
 				var cancel context.CancelFunc
 				ctx, cancel = context.WithCancel(context.Background())
-				cancel() // Se cancela inmediatamente
+				cancel() // Cancel immediately
 			}
 
 			got, err := repo.GetUserOrders(ctx, tt.userID)

@@ -39,7 +39,6 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const socket = new WebSocket(wsUrl);
 
         socket.onopen = () => {
-            console.log('WebSocket Connected');
             // Identify immediately after connection
             socket.send(JSON.stringify({ type: 'AUTH', payload: token }));
         };
@@ -55,7 +54,6 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         };
 
         socket.onclose = () => {
-            console.log('WebSocket Disconnected. Reconnecting...');
             setTimeout(connect, 3000);
         };
 

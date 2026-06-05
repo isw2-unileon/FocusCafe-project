@@ -24,13 +24,13 @@ export const loginWithGoogle = (): void => {
 };
 */
 export const loginWithGoogle = async (): Promise<void> => {
-  // Detecta si estás en localhost:5173 o en focuscafe-front.onrender.com
+  // Detects whether you are on localhost:5173 or focuscafe-front.onrender.com
   const currentOrigin = window.location.origin; 
 
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { 
-      // Al usar currentOrigin, si estás en local, volverá a local.
+      // Using currentOrigin ensures you return to the same host (local or deployed).
       redirectTo: `${currentOrigin}/auth/callback` 
     },
   });
@@ -69,7 +69,7 @@ export const registerWithGoogle = async (): Promise<void> => {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: { 
-      // El callback siempre será relativo a donde estés ejecutando la app
+      // The callback will always be relative to wherever the app is running
       redirectTo: `${currentOrigin}/auth/callback` 
     },
   });

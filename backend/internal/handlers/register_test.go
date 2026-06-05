@@ -56,11 +56,11 @@ func supabaseMultiStub(
 	return srv
 }
 
-// newHandler inicializa el Handler original apuntando a la URL del stub
+// newHandler initializes the Handler pointing to the stub URL
 func newHandler(url string) *Handler {
 	return &Handler{
 		SupabaseURL: url,
-		SupabaseKey: "test-key-de-mentira",
+		SupabaseKey: "test-fake-key",
 	}
 }
 
@@ -226,7 +226,7 @@ func TestRegister_AuthUser_TableDriven(t *testing.T) {
 		name           string
 		authStatus     int
 		authBody       interface{}
-		closeServer    bool // Fuerza un error de conexión de red
+		closeServer    bool // Forces a network connection error
 		expectedStatus int
 		expectedError  string
 	}{
@@ -299,7 +299,7 @@ func TestRegister_AuthUser_TableDriven(t *testing.T) {
 			)
 
 			if tt.closeServer {
-				stub.Close() // Cerramos el servidor antes del request para forzar error de red
+				stub.Close() // Close the server before the request to force a network error
 			}
 			h := newHandler(stub.URL)
 
