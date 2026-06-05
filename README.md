@@ -15,9 +15,8 @@ If you run out of "energy", the only way to get back into the game is by studyin
 - AI generates comprehension questions
 - Energy-based progression system
 - Leveling and gamified growth
-- Real-time collaborative café rooms
-
-Multiple users can join the same café "salon" and manage it together, contributing energy earned from their individual study sessions.
+- **Real-time collaborative café rooms** — multiple users join a team, share group orders, and receive instant WebSocket notifications when orders are completed or the group is deleted
+- **Global leaderboard** — top 5 users ranked by XP, with personal rank visibility
 
 ## Built-in Motivation Engine
 A global leaderboard turns studying into a competitive challenge. Ranking is based on AI-validated performance.
@@ -47,12 +46,12 @@ A full-stack application with a **Go** backend and a **React + TypeScript + Vite
 
 | Layer | Technology |
 |-------|------------|
-| **Backend** | Go 1.24+, Gin, GORM, JWT/JWKS (Supabase) |
+| **Backend** | Go 1.24+, Gin, GORM, Gorilla WebSocket, JWT/JWKS (Supabase) |
 | **Frontend** | React 18+, TypeScript, Vite, Tailwind CSS, shadcn/ui, Lucide React, react-hot-toast |
 | **Auth** | Supabase Auth (email/password + Google OAuth) |
-| **AI** | Gemini API (Gemini-flash 2.5) for quiz generation |
-| **Database** | PostgreSQL via Supabase (local or remote) |
-| **Testing** | Go table-driven tests, Playwright E2E (structure ready) |
+| **AI** | Gemini API (Gemini 2.5 Flash) for quiz generation |
+| **Database** | PostgreSQL via Supabase (production), SQLite in-memory (tests) |
+| **Testing** | Go table-driven unit tests, Playwright E2E (26 tests passing) |
 
 ## Project Structure
 
@@ -70,15 +69,23 @@ A full-stack application with a **Go** backend and a **React + TypeScript + Vite
 │       ├── models/             # GORM models
 │       ├── repository/         # Data access layer
 │       ├── services/           # Business logic
-│       └── supabase/           # Supabase client & JWT adapter
+│       ├── supabase/           # Supabase client & JWT adapter
+│       └── ws/                 # WebSocket hub and client management
 ├── frontend/
 │   └── src/
 │       ├── components/         # Reusable UI components
-│       ├── context/            # React contexts (Auth)
+│       ├── context/            # React contexts (Auth, WebSocket)
 │       ├── lib/                # Utilities (JWT, notifications)
 │       ├── pages/              # Route pages (Dashboard, Admin, EditProfile, ...)
 │       ├── services/           # API client functions
 │       └── types/              # TypeScript interfaces
+├── e2e/
+│   ├── tests/                  # Playwright E2E test specs
+│   └── lib/                    # E2E helpers (auth, setup)
+├── docs/
+│   ├── adr/                    # Architecture Decision Records
+│   ├── images/                 # Screenshots and diagrams
+│   └── *.md                    # Guides and documentation
 ├── supabase/
 │   ├── config.toml             # Supabase local config
 │   └── migrations/             # SQL migrations
@@ -120,7 +127,7 @@ The Vite dev server proxies `/api` requests to the backend.
 | `SUPABASE_ANON_KEY` | Supabase anon/public key | Yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (admin ops) | Yes |
 | `DATABASE_URL` | PostgreSQL connection string | Yes |
-| `OPENAI_API_KEY` | OpenAI API key (AI quizzes) | Yes |
+| `GEMINI_API_KEY` | Gemini API key (AI quiz generation) | Yes |
 | `CLIENT_URL` | Frontend origin (CORS) | Yes |
 | `PORT` | Backend server port | Optional (default 8080) |
 
@@ -133,6 +140,7 @@ The Vite dev server proxies `/api` requests to the backend.
 | `make run-frontend` | Frontend dev server (Vite) |
 | `make test` | Run Go + frontend unit tests |
 | `make lint` | Run linters (golangci-lint + ESLint) |
+| `make test-coverage` | Run Go tests with coverage report and open HTML |
 | `make db-up` | Start Supabase local + apply migrations + seed |
 | `make db-reset` | Reset database + re-apply migrations + seed |
 | `make db-down` | Stop Supabase local |
@@ -160,6 +168,22 @@ The Vite dev server proxies `/api` requests to the backend.
 | `POST` | `/api/study/generate-quiz/:session_id` | Generate AI quiz from material |
 | `POST` | `/api/user/progress` | Update gamified stats (energy, XP, level) |
 
+### Leaderboard
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/leaderboard` | Top 5 users by XP (admins excluded) |
+| `GET` | `/api/leaderboard/me` | Current user's global rank and profile |
+
+### Groups (requires auth)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/groups` | Create a new group (leader) |
+| `POST` | `/api/groups/join` | Join a group by invite code |
+| `POST` | `/api/groups/leave` | Leave current group |
+| `DELETE` | `/api/groups` | Delete group (leader only) |
+
 ### Admin (requires admin role)
 
 | Method | Path | Description |
@@ -168,6 +192,14 @@ The Vite dev server proxies `/api` requests to the backend.
 | `GET` | `/api/admin/users?email=` | Search user by email |
 | `POST` | `/api/admin/users` | Create new user |
 | `DELETE` | `/api/admin/users/:id` | Delete user (DB + Supabase Auth) |
+| `GET` | `/api/admin/groups` | List all groups with members |
+| `DELETE` | `/api/admin/groups/:id` | Delete any group |
+
+### Real-Time (WebSocket)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/ws` | WebSocket connection for real-time order and group updates |
 
 ### Health
 
@@ -185,6 +217,7 @@ The Vite dev server proxies `/api` requests to the backend.
   - Concentration Expert (levels 7-9)
   - Flow Master (levels 10-12)
   - Zen Grandmaster (levels 13+)
+- **Global Leaderboard:** Top 5 users by XP (admins excluded). Each user can view their own global rank and profile.
 
 ## Authentication
 
@@ -203,6 +236,6 @@ Supabase local is used for development:
 
 ## Testing
 
-- **Go:** Table-driven unit tests for handlers, services, and repositories (`go test ./...`)
-- **Frontend:** Unit test structure prepared (`npm run test`)
-- **E2E:** Playwright tests (requires backend + frontend running)
+- **Go:** Table-driven unit tests for handlers, services, repositories, and integration (`go test ./...`)
+- **Frontend:** Production build verified via TypeScript compiler (`npm run build`)
+- **E2E:** Playwright end-to-end tests covering authentication, study sessions, collaborative orders, group management, admin dashboard, leaderboard, and WebSocket real-time updates

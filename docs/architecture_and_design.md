@@ -95,3 +95,19 @@ v
 * **Justification:** To achieve a robust, isolated testing environment without triggering real network costs or database pollution during CI/CD runs:
   * Database persistence is completely mocked or substituted with local fast in-memory instances.
   * Third-party networks (Supabase Auth and Gemini API) are isolated via HTTP request interceptors and test recorders (`httptest`), ensuring that tests check the application logic deterministically without real external dependencies.
+
+### 4. Render Cloud Deployment
+
+* **Justification:** To provide a reliable, publicly accessible production environment with minimal DevOps overhead, FocusCafe is deployed on **Render** (https://render.com). Render offers managed infrastructure for both static frontends and backend services, eliminating the need to manually configure servers or containers.
+
+* **Deployment Architecture:**
+  * **Frontend:** Static site deployed from the `frontend/` directory, automatically built via `npm run build` on every Git push.
+  * **Backend:** Web service running the compiled Go binary (`go build -o bin/server ./cmd/server`). Render manages environment variables, health checks on `/health`, and automatic restarts.
+  * **Database:** Supabase provides the managed PostgreSQL instance; the backend connects to it via the `DATABASE_URL` environment variable.
+
+* **Key Benefits:**
+  * **Zero-Config CI/CD:** Automatic deployments on every Git push, with preview environments for pull requests.
+  * **Secure Environment Variables:** Secrets such as `DATABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `GEMINI_API_KEY` are stored securely in Render's dashboard, never exposed in the codebase.
+  * **Health Monitoring:** Built-in health checks ensure the backend service remains available.
+  * **Cost Efficiency:** Render's free tier is sufficient for a university project, with a clear upgrade path if needed.
+
