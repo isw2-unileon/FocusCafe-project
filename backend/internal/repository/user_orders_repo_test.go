@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/glebarez/sqlite" // Cambiado al driver que no requiere CGO ni GCC
+	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/domain"
 	"github.com/isw2-unileon/FocusCafe-project/backend/internal/models"

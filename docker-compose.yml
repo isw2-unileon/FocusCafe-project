@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile.backend
     ports:
-      - "8080:8080"
+      - "8081:8081"
     environment:
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_KEY=${SUPABASE_KEY}

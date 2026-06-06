@@ -12,19 +12,19 @@ import (
 
 // mockGroupRepository is a test double for the GroupRepository.
 type mockGroupRepository struct {
-	createGroupFunc          func(ctx context.Context, group *models.Group) error
-	getGroupByInviteCodeFunc func(ctx context.Context, inviteCode string) (*models.Group, error)
-	getGroupByIDFunc         func(ctx context.Context, id int64) (*models.Group, error)
-	addUserToGroupFunc       func(ctx context.Context, userID uuid.UUID, groupID int64) error
-	getUserGroupIDFunc       func(ctx context.Context, userID uuid.UUID) (*int64, error)
-	isUserInGroupFunc        func(ctx context.Context, userID uuid.UUID) (bool, error)
-	getAllGroupsFunc         func(ctx context.Context) ([]models.Group, error)
-	deleteGroupFunc                     func(ctx context.Context, groupID int64) error
-	removeAllUsersFromGroup           func(ctx context.Context, groupID int64) error
-	isGroupLeaderFunc                 func(ctx context.Context, userID uuid.UUID, groupID int64) (bool, error)
-	removeUserFromGroupFunc           func(ctx context.Context, userID uuid.UUID) error
-	deleteGroupOrdersFunc             func(ctx context.Context, groupID int64) error
-	deleteGroupWithDependenciesFunc   func(ctx context.Context, groupID int64) error
+	createGroupFunc                 func(ctx context.Context, group *models.Group) error
+	getGroupByInviteCodeFunc        func(ctx context.Context, inviteCode string) (*models.Group, error)
+	getGroupByIDFunc                func(ctx context.Context, id int64) (*models.Group, error)
+	addUserToGroupFunc              func(ctx context.Context, userID uuid.UUID, groupID int64) error
+	getUserGroupIDFunc              func(ctx context.Context, userID uuid.UUID) (*int64, error)
+	isUserInGroupFunc               func(ctx context.Context, userID uuid.UUID) (bool, error)
+	getAllGroupsFunc                func(ctx context.Context) ([]models.Group, error)
+	deleteGroupFunc                 func(ctx context.Context, groupID int64) error
+	removeAllUsersFromGroup         func(ctx context.Context, groupID int64) error
+	isGroupLeaderFunc               func(ctx context.Context, userID uuid.UUID, groupID int64) (bool, error)
+	removeUserFromGroupFunc         func(ctx context.Context, userID uuid.UUID) error
+	deleteGroupOrdersFunc           func(ctx context.Context, groupID int64) error
+	deleteGroupWithDependenciesFunc func(ctx context.Context, groupID int64) error
 }
 
 func (m *mockGroupRepository) CreateGroup(ctx context.Context, group *models.Group) error {
@@ -451,13 +451,13 @@ func TestGroupService_GetAllGroups(t *testing.T) {
 								ID:        uuid.MustParse("550e8400-e29b-41d4-a716-446655440000"),
 								FirstName: "Alice",
 								Email:     "alice@test.com",
-								Progress:  &models.UserProgress{Level: 5}, // <--- ENTRA EN EL IF (member.Level = 5)
+								Progress:  &models.UserProgress{Level: 5},
 							},
 							{
 								ID:        uuid.MustParse("550e8400-e29b-41d4-a716-446655440099"),
 								FirstName: "Bob",
 								Email:     "bob@test.com",
-								Progress:  nil, // <--- NO ENTRA EN EL IF (mantiene el nivel 1 por defecto)
+								Progress:  nil,
 							},
 						},
 					},
