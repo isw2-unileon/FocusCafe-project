@@ -1,8 +1,12 @@
 # FocusCafe
+
 **Where studying fuels progress.**
 
+[![Live Demo](https://img.shields.io/badge/demo-live-green?style=for-the-badge)](https://focuscafe-front.onrender.com/)
+
 ## The idea
-FocusCafe is a gamified web platform where every user owns a virtual café. 
+
+FocusCafe is a gamified web platform where every user owns a virtual café.
 
 **No studying. No energy. No growth.**
 
@@ -11,6 +15,7 @@ Users can earn "energy" by completing focused study sessions. After each session
 If you run out of "energy", the only way to get back into the game is by studying.
 
 ## How it works
+
 - Users upload their own study materials
 - AI generates comprehension questions
 - Energy-based progression system
@@ -19,6 +24,7 @@ If you run out of "energy", the only way to get back into the game is by studyin
 - **Global leaderboard** — top 5 users ranked by XP, with personal rank visibility
 
 ## Built-in Motivation Engine
+
 A global leaderboard turns studying into a competitive challenge. Ranking is based on AI-validated performance.
 
 Users can track their position based on real study performance, not just time logged.
@@ -26,7 +32,9 @@ Users can track their position based on real study performance, not just time lo
 **The more you truly understand, the higher you climb**.
 
 ## Educational Purposes
+
 This platform promotes:
+
 - Active recall
 - Time-blocked study sessions
 - Immediate feedback
@@ -34,7 +42,6 @@ This platform promotes:
 - Collaborative learning dynamics
 
 It transforms long hours of studying into engaging and interactive progress.
-
 
 ---
 
@@ -44,14 +51,14 @@ A full-stack application with a **Go** backend and a **React + TypeScript + Vite
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| **Backend** | Go 1.24+, Gin, GORM, Gorilla WebSocket, JWT/JWKS (Supabase) |
+| Layer        | Technology                                                                          |
+| ------------ | ----------------------------------------------------------------------------------- |
+| **Backend**  | Go 1.24+, Gin, GORM, Gorilla WebSocket, JWT/JWKS (Supabase)                         |
 | **Frontend** | React 18+, TypeScript, Vite, Tailwind CSS, shadcn/ui, Lucide React, react-hot-toast |
-| **Auth** | Supabase Auth (email/password + Google OAuth) |
-| **AI** | Gemini API (Gemini 2.5 Flash) for quiz generation |
-| **Database** | PostgreSQL via Supabase (production), SQLite in-memory (tests) |
-| **Testing** | Go table-driven unit tests, Playwright E2E (26 tests passing) |
+| **Auth**     | Supabase Auth (email/password + Google OAuth)                                       |
+| **AI**       | Gemini API (Gemini 2.5 Flash) for quiz generation                                   |
+| **Database** | PostgreSQL via Supabase (production), SQLite in-memory (tests)                      |
+| **Testing**  | Go table-driven unit tests, Playwright E2E (26 tests passing)                       |
 
 ## Project Structure
 
@@ -103,6 +110,15 @@ A full-stack application with a **Go** backend and a **React + TypeScript + Vite
 └── .env                        # Single env file (no .env.local)
 ```
 
+## Documentation
+
+Detailed technical documentation can be found in the [docs/](./docs/) directory:
+
+- [Architecture & Design](./docs/architecture_and_design.md) - High-level system overview.
+- [Data Model](./docs/data_model.md) - Database schema and entity relationships.
+- [Design Decisions (ADRs)](./docs/adr/) - Rationale behind architectural choices.
+- [User Guide](./docs/user_guide.md) - How to use the platform.
+
 ## Prerequisites
 
 - [Go](https://go.dev/dl/) 1.25+
@@ -112,12 +128,18 @@ A full-stack application with a **Go** backend and a **React + TypeScript + Vite
 
 ## Getting Started
 
-1. Create a `.env` file in the root directory and fill in the required variables (see Environment Variables table below).
-2. Start the local database and dependencies:
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/isw2-unileon/FocusCafe-project.git
+   cd FocusCafe-project
+   ```
+2. Create a `.env` file in the root directory and fill in the required variables (see Environment Variables table below).
+3. Start the local database and dependencies:
    ```bash
    make db-up
    ```
-3. Start the backend and frontend in separate terminals:
+4. Start the backend and frontend in separate terminals:
+
    ```bash
    # Terminal 1
    make run-backend    # port 8080
@@ -126,102 +148,119 @@ A full-stack application with a **Go** backend and a **React + TypeScript + Vite
    make run-frontend   # port 5173
    ```
 
+### Running with Docker
+
+If you prefer to run the entire stack (Frontend, Backend, and Nginx proxy) using Docker, after cloning the repository and starting the local database:
+
+1. Ensure your `.env` file is configured correctly.
+2. Build and start the containers:
+   ```bash
+   make docker-up
+   ```
+3. Access the application at `http://localhost`.
+
+To stop the containers:
+
+```bash
+make docker-down
+```
+
 The Vite dev server proxies `/api` requests to the backend.
 
 ## Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `SUPABASE_URL` | Supabase project URL | Yes |
-| `SUPABASE_KEY` | Supabase anon/public key | Yes |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (admin ops) | Yes |
-| `DATABASE_URL` | PostgreSQL connection string | Yes |
-| `GEMINI_API_KEY` | Gemini API key (AI quiz generation) | Yes |
-| `CORS_ALLOW_ORIGIN`| Frontend origin (e.g. http://localhost:5173) | Yes |
-| `PORT` | Backend server port | Optional (default 8080) |
-| `GIN_MODE` | Gin mode (debug/release) | Optional (default release) |
+| Variable                    | Description                                  | Required                   |
+| --------------------------- | -------------------------------------------- | -------------------------- |
+| `SUPABASE_URL`              | Supabase project URL                         | Yes                        |
+| `SUPABASE_KEY`              | Supabase anon/public key                     | Yes                        |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (admin ops)        | Yes                        |
+| `DATABASE_URL`              | PostgreSQL connection string                 | Yes                        |
+| `GEMINI_API_KEY`            | Gemini API key (AI quiz generation)          | Yes                        |
+| `CORS_ALLOW_ORIGIN`         | Frontend origin (e.g. http://localhost:5173) | Yes                        |
+| `PORT`                      | Backend server port                          | Optional (default 8080)    |
+| `GIN_MODE`                  | Gin mode (debug/release)                     | Optional (default release) |
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `make install` | Install Go tools, download modules, install npm deps |
-| `make install-e2e` | Install Playwright and its dependencies |
-| `make run-backend` | Backend with hot reload (Air) |
-| `make run-frontend` | Frontend dev server (Vite) |
-| `make build-backend` | Build backend binary |
-| `make build-frontend` | Build frontend for production |
-| `make test` | Run Go + frontend unit tests |
-| `make lint` | Run linters (golangci-lint + ESLint) |
-| `make e2e` | Run Playwright E2E tests |
-| `make db-up` | Start Supabase local + apply migrations + seed |
-| `make db-reset` | Reset database + re-apply migrations + seed |
-| `make db-down` | Stop Supabase local |
-| `make docker-up` | Build and run the stack in Docker |
-| `make docker-down` | Stop and remove Docker containers |
-| `make docker-up-remote`| Run in Docker connecting to remote Supabase |
+| Command                 | Description                                          |
+| ----------------------- | ---------------------------------------------------- |
+| `make install`          | Install Go tools, download modules, install npm deps |
+| `make install-e2e`      | Install Playwright and its dependencies              |
+| `make run-backend`      | Backend with hot reload (Air)                        |
+| `make run-frontend`     | Frontend dev server (Vite)                           |
+| `make build-backend`    | Build backend binary                                 |
+| `make build-frontend`   | Build frontend for production                        |
+| `make test`             | Run Go + frontend unit tests                         |
+| `make lint`             | Run linters (golangci-lint + ESLint)                 |
+| `make e2e`              | Run Playwright E2E tests                             |
+| `make db-up`            | Start Supabase local + apply migrations + seed       |
+| `make db-reset`         | Reset database + re-apply migrations + seed          |
+| `make db-down`          | Stop Supabase local                                  |
+| `make docker-up`        | Build and run the stack in Docker                    |
+| `make docker-down`      | Stop and remove Docker containers                    |
+| `make docker-up-remote` | Run in Docker connecting to remote Supabase          |
 
 ## API Endpoints
 
 ### Public
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/login` | Email/password login |
-| `POST` | `/api/register` | User registration |
-| `GET` | `/api/auth/google` | Google OAuth redirect |
-| `POST` | `/api/auth/sync` | Sync Google auth user |
+| Method | Path               | Description           |
+| ------ | ------------------ | --------------------- |
+| `POST` | `/api/login`       | Email/password login  |
+| `POST` | `/api/register`    | User registration     |
+| `GET`  | `/api/auth/google` | Google OAuth redirect |
+| `POST` | `/api/auth/sync`   | Sync Google auth user |
 
 ### Protected (requires `Authorization: Bearer <jwt>`)
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/users/me` | Get current user profile |
-| `PUT` | `/api/users/me` | Update profile (first/last name) |
-| `GET` | `/api/users/me/orders` | Get pending cafe orders |
-| `POST` | `/api/users/me/orders/:id/complete` | Complete order (spend energy, gain XP) |
-| `POST` | `/api/study/start` | Start study session |
-| `POST` | `/api/study/generate-quiz/:session_id` | Generate AI quiz from material |
-| `POST` | `/api/user/progress` | Update gamified stats (energy, XP, level) |
+| Method | Path                                   | Description                               |
+| ------ | -------------------------------------- | ----------------------------------------- |
+| `GET`  | `/api/users/me`                        | Get current user profile                  |
+| `PUT`  | `/api/users/me`                        | Update profile (first/last name)          |
+| `GET`  | `/api/users/me/orders`                 | Get pending cafe orders                   |
+| `POST` | `/api/users/me/orders/:id/complete`    | Complete order (spend energy, gain XP)    |
+| `POST` | `/api/study/start`                     | Start study session                       |
+| `POST` | `/api/study/generate-quiz/:session_id` | Generate AI quiz from material            |
+| `POST` | `/api/user/progress`                   | Update gamified stats (energy, XP, level) |
 
 ### Leaderboard
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/leaderboard` | Top 5 users by XP (admins excluded) |
-| `GET` | `/api/leaderboard/me` | Current user's global rank and profile |
+| Method | Path                  | Description                            |
+| ------ | --------------------- | -------------------------------------- |
+| `GET`  | `/api/leaderboard`    | Top 5 users by XP (admins excluded)    |
+| `GET`  | `/api/leaderboard/me` | Current user's global rank and profile |
 
 ### Groups (requires auth)
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/groups` | Create a new group (leader) |
-| `POST` | `/api/groups/join` | Join a group by invite code |
-| `POST` | `/api/groups/leave` | Leave current group |
-| `DELETE` | `/api/groups` | Delete group (leader only) |
+| Method   | Path                | Description                 |
+| -------- | ------------------- | --------------------------- |
+| `POST`   | `/api/groups`       | Create a new group (leader) |
+| `POST`   | `/api/groups/join`  | Join a group by invite code |
+| `POST`   | `/api/groups/leave` | Leave current group         |
+| `DELETE` | `/api/groups`       | Delete group (leader only)  |
 
 ### Admin (requires admin role)
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/admin/users` | List all users |
-| `GET` | `/api/admin/users/search?email=` | Search user by email |
-| `POST` | `/api/admin/users` | Create new user |
-| `DELETE` | `/api/admin/users/:id` | Delete user (DB + Supabase Auth) |
-| `GET` | `/api/admin/groups` | List all groups with members |
-| `DELETE` | `/api/admin/groups/:id` | Delete any group |
+| Method   | Path                             | Description                      |
+| -------- | -------------------------------- | -------------------------------- |
+| `GET`    | `/api/admin/users`               | List all users                   |
+| `GET`    | `/api/admin/users/search?email=` | Search user by email             |
+| `POST`   | `/api/admin/users`               | Create new user                  |
+| `DELETE` | `/api/admin/users/:id`           | Delete user (DB + Supabase Auth) |
+| `GET`    | `/api/admin/groups`              | List all groups with members     |
+| `DELETE` | `/api/admin/groups/:id`          | Delete any group                 |
 
 ### Real-Time (WebSocket)
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/ws` | WebSocket connection for real-time order and group updates |
+| Method | Path      | Description                                                |
+| ------ | --------- | ---------------------------------------------------------- |
+| `GET`  | `/api/ws` | WebSocket connection for real-time order and group updates |
 
 ### Health
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/health` | Server health check |
+| Method | Path      | Description         |
+| ------ | --------- | ------------------- |
+| `GET`  | `/health` | Server health check |
 
 ## Gamification System
 
@@ -245,13 +284,64 @@ The Vite dev server proxies `/api` requests to the backend.
 ## Database
 
 Supabase local is used for development:
+
 - `make db-up` starts PostgreSQL + Auth + Studio
 - Migrations live in `supabase/migrations/`
 - Seed data is applied automatically
-- Detailed setup: see `LOCAL_SETUP_GUIDE.md`
 
 ## Testing
 
-- **Go:** Table-driven unit tests for handlers, services, repositories, and integration (`go test ./...`)
-- **Frontend:** Production build verified via TypeScript compiler (`npm run build`)
-- **E2E:** Playwright end-to-end tests covering authentication, study sessions, collaborative orders, group management, admin dashboard, leaderboard, and WebSocket real-time updates
+FocusCafe includes a comprehensive testing suite across all layers of the stack.
+
+### Unit & Integration Tests
+
+Run all backend and frontend unit tests with a single command:
+```bash
+make test
+```
+*   **Backend (Go):** Uses table-driven tests for handlers, services, and repositories. Includes race detection.
+*   **Frontend (Vitest):** Unit tests for components and utility functions.
+
+### End-to-End (E2E) Tests
+
+We use **Playwright** to test full user journeys (authentication, study sessions, group management, etc.).
+
+1.  **Prerequisites:** Ensure the application is running (`make db-up`, `make run-backend`, `make run-frontend`).
+2.  **Install Playwright (first time only):**
+    ```bash
+    make install-e2e
+    ```
+3.  **Run Tests:**
+    ```bash
+    make e2e
+    ```
+
+After running the tests, you can view the detailed HTML report:
+```bash
+cd e2e && npx playwright show-report
+```
+
+### CI/CD
+
+Tests are automatically executed on every Push and Pull Request via **GitHub Actions**. You can find the workflow configurations in `.github/workflows/`.
+
+## Contributing
+
+We welcome contributions! To maintain code quality and consistency, please try to follow these guidelines:
+
+1. **Branching Strategy:**
+   - `main`: Production-ready code.
+   - `feat/feature-name`: For new features.
+   - `fix/bug-name`: For bug fixes.
+   - `docs/topic-name`: For documentation updates.
+2. **Commit Conventions:**
+   We follow [Conventional Commits](https://www.conventionalcommits.org/):
+   - `feat:` for new features.
+   - `fix:` for bug fixes.
+   - `docs:` for documentation changes.
+   - `chore:` for maintenance tasks.
+3. **Pull Requests:**
+   - Create a PR against the `main` branch.
+   - Ensure all tests pass (`make test` and `make e2e`).
+   - Describe your changes clearly in the PR description.
+   - Wait for a code review (via GitHub or in person) before merging.
