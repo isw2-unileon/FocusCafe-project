@@ -2,6 +2,8 @@
 
 **Where studying fuels progress.**
 
+[![Live Demo](https://img.shields.io/badge/demo-live-green?style=for-the-badge)](https://focuscafe-front.onrender.com/)
+
 ## The idea
 
 FocusCafe is a gamified web platform where every user owns a virtual café.
@@ -289,9 +291,39 @@ Supabase local is used for development:
 
 ## Testing
 
-- **Go:** Table-driven unit tests for handlers, services, repositories, and integration (`go test ./...`)
-- **Frontend:** Production build verified via TypeScript compiler (`npm run build`)
-- **E2E:** Playwright end-to-end tests covering authentication, study sessions, collaborative orders, group management, admin dashboard, leaderboard, and WebSocket real-time updates
+FocusCafe includes a comprehensive testing suite across all layers of the stack.
+
+### Unit & Integration Tests
+
+Run all backend and frontend unit tests with a single command:
+```bash
+make test
+```
+*   **Backend (Go):** Uses table-driven tests for handlers, services, and repositories. Includes race detection.
+*   **Frontend (Vitest):** Unit tests for components and utility functions.
+
+### End-to-End (E2E) Tests
+
+We use **Playwright** to test full user journeys (authentication, study sessions, group management, etc.).
+
+1.  **Prerequisites:** Ensure the application is running (`make db-up`, `make run-backend`, `make run-frontend`).
+2.  **Install Playwright (first time only):**
+    ```bash
+    make install-e2e
+    ```
+3.  **Run Tests:**
+    ```bash
+    make e2e
+    ```
+
+After running the tests, you can view the detailed HTML report:
+```bash
+cd e2e && npx playwright show-report
+```
+
+### CI/CD
+
+Tests are automatically executed on every Push and Pull Request via **GitHub Actions**. You can find the workflow configurations in `.github/workflows/`.
 
 ## Contributing
 
