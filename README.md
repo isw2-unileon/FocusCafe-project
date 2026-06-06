@@ -112,13 +112,12 @@ A full-stack application with a **Go** backend and a **React + TypeScript + Vite
 
 ## Getting Started
 
-1. Copy `.env.example` to `.env` and fill in the variables (see Environment Variables below).
-2. Read `LOCAL_SETUP_GUIDE.md` for detailed Supabase local configuration.
-3. Start the local database and dependencies:
+1. Create a `.env` file in the root directory and fill in the required variables (see Environment Variables table below).
+2. Start the local database and dependencies:
    ```bash
    make db-up
    ```
-4. Start the backend and frontend in separate terminals:
+3. Start the backend and frontend in separate terminals:
    ```bash
    # Terminal 1
    make run-backend    # port 8080
@@ -138,8 +137,9 @@ The Vite dev server proxies `/api` requests to the backend.
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (admin ops) | Yes |
 | `DATABASE_URL` | PostgreSQL connection string | Yes |
 | `GEMINI_API_KEY` | Gemini API key (AI quiz generation) | Yes |
-| `CLIENT_URL` | Frontend origin (CORS) | Yes |
+| `CORS_ALLOW_ORIGIN`| Frontend origin (e.g. http://localhost:5173) | Yes |
 | `PORT` | Backend server port | Optional (default 8080) |
+| `GIN_MODE` | Gin mode (debug/release) | Optional (default release) |
 
 ## Commands
 
