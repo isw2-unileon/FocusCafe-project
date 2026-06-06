@@ -66,6 +66,7 @@ A full-stack application with a **Go** backend and a **React + TypeScript + Vite
 │       ├── database/           # DB connection & migrations
 │       ├── domain/             # Domain entities
 │       ├── handlers/           # HTTP handlers (Gin)
+│       ├── integration/        # Integration test suite
 │       ├── models/             # GORM models
 │       ├── repository/         # Data access layer
 │       ├── services/           # Business logic
@@ -79,23 +80,32 @@ A full-stack application with a **Go** backend and a **React + TypeScript + Vite
 │       ├── pages/              # Route pages (Dashboard, Admin, EditProfile, ...)
 │       ├── services/           # API client functions
 │       └── types/              # TypeScript interfaces
-├── e2e/
-│   ├── tests/                  # Playwright E2E test specs
-│   └── lib/                    # E2E helpers (auth, setup)
+├── docker/
+│   ├── Dockerfile.backend      # Container definition for Go API
+│   ├── Dockerfile.frontend     # Container definition for React
+│   └── nginx.conf              # Reverse proxy configuration
 ├── docs/
 │   ├── adr/                    # Architecture Decision Records
 │   ├── images/                 # Screenshots and diagrams
 │   └── *.md                    # Guides and documentation
+├── e2e/
+│   ├── tests/                  # Playwright E2E test specs
+│   └── lib/                    # E2E helpers (auth, setup)
+├── .github/
+│   └── workflows/              # GitHub Actions (CI/CD)
 ├── supabase/
 │   ├── config.toml             # Supabase local config
 │   └── migrations/             # SQL migrations
+├── scripts/
+│   └── seed-local.ps1          # Test data seeding script
+├── docker-compose.yml          # Local container orchestration
 ├── Makefile
 └── .env                        # Single env file (no .env.local)
 ```
 
 ## Prerequisites
 
-- [Go](https://go.dev/dl/) 1.24+
+- [Go](https://go.dev/dl/) 1.25+
 - [Node.js](https://nodejs.org/) 22+
 - [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started) (for local database)
 - A Supabase project (for remote Auth & Database)
@@ -124,7 +134,7 @@ The Vite dev server proxies `/api` requests to the backend.
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `SUPABASE_URL` | Supabase project URL | Yes |
-| `SUPABASE_ANON_KEY` | Supabase anon/public key | Yes |
+| `SUPABASE_KEY` | Supabase anon/public key | Yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (admin ops) | Yes |
 | `DATABASE_URL` | PostgreSQL connection string | Yes |
 | `GEMINI_API_KEY` | Gemini API key (AI quiz generation) | Yes |
@@ -136,14 +146,20 @@ The Vite dev server proxies `/api` requests to the backend.
 | Command | Description |
 |---------|-------------|
 | `make install` | Install Go tools, download modules, install npm deps |
+| `make install-e2e` | Install Playwright and its dependencies |
 | `make run-backend` | Backend with hot reload (Air) |
 | `make run-frontend` | Frontend dev server (Vite) |
+| `make build-backend` | Build backend binary |
+| `make build-frontend` | Build frontend for production |
 | `make test` | Run Go + frontend unit tests |
 | `make lint` | Run linters (golangci-lint + ESLint) |
-| `make test-coverage` | Run Go tests with coverage report and open HTML |
+| `make e2e` | Run Playwright E2E tests |
 | `make db-up` | Start Supabase local + apply migrations + seed |
 | `make db-reset` | Reset database + re-apply migrations + seed |
 | `make db-down` | Stop Supabase local |
+| `make docker-up` | Build and run the stack in Docker |
+| `make docker-down` | Stop and remove Docker containers |
+| `make docker-up-remote`| Run in Docker connecting to remote Supabase |
 
 ## API Endpoints
 
@@ -189,7 +205,7 @@ The Vite dev server proxies `/api` requests to the backend.
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/admin/users` | List all users |
-| `GET` | `/api/admin/users?email=` | Search user by email |
+| `GET` | `/api/admin/users/search?email=` | Search user by email |
 | `POST` | `/api/admin/users` | Create new user |
 | `DELETE` | `/api/admin/users/:id` | Delete user (DB + Supabase Auth) |
 | `GET` | `/api/admin/groups` | List all groups with members |
@@ -199,7 +215,7 @@ The Vite dev server proxies `/api` requests to the backend.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/ws` | WebSocket connection for real-time order and group updates |
+| `GET` | `/api/ws` | WebSocket connection for real-time order and group updates |
 
 ### Health
 
