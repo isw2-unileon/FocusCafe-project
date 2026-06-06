@@ -5,29 +5,29 @@ FROM golang:1.25-alpine AS builder
 
 WORKDIR /app
 
-# go.mod y go.sum estan en la raiz del build context
+# go.mod y go.sum in root's build context
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copiar todo el codigo del backend
+# Copy backend's code
 COPY backend/ ./backend/
 
-# Compilar el binario
+# Compile the binary
 RUN CGO_ENABLED=0 GOOS=linux go build -o server ./backend/cmd/server/main.go
 
-# Stage 2: Final (imagen ligera)
+# Stage 2: Final (light image)
 FROM alpine:latest
 
 WORKDIR /app
 
-# Certificados CA para HTTPS (necesario para Supabase)
+# Certificates CA for HTTPS (necessary for Supabase)
 RUN apk --no-cache add ca-certificates
 
-# Copiar solo el binario compilado
+# Copy only the compiled binary
 COPY --from=builder /app/server .
 
-# Puerto que expone el backend
+# Port that exposes the backend
 EXPOSE 8080
 
-# Comando de arranque
+# Start command
 CMD ["./server"]

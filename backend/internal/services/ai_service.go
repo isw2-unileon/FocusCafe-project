@@ -47,7 +47,7 @@ func (s *AIService) GenerateQuiz(pdfText string) (string, error) {
 		"contents": []map[string]interface{}{
 			{
 				"parts": []map[string]interface{}{
-					{"text": fmt.Sprintf("%s\n\nTEXTO:\n%s", GenerateQuizSystemPrompt, pdfText)},
+					{"text": fmt.Sprintf("%s\n\nTEXT:\n%s", GenerateQuizSystemPrompt, pdfText)},
 				},
 			},
 		},

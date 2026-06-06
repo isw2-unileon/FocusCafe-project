@@ -198,7 +198,7 @@ to authenticated
 using ((auth.uid() = user_id))
 with check ((auth.uid() = user_id));
 
--- -- Sistema: Permite operaciones administrativas
+-- -- System: It allows administrative operations
 create policy "System can manage user progress"
 on "public"."user_progress"
 as permissive
